@@ -258,22 +258,6 @@
     <div class="page-sub">Próximamente</div>
   </div>
 
-  <!-- FINANZAS -->
-  <div class="screen" id="screen-finanzas">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;margin-bottom:8px;padding-right:96px">
-      <div class="page-title" style="padding:0">Finanzas</div>
-      <button class="add-btn" id="fin-add-btn" onclick="openNuevoMovimiento()">+ Nuevo</button>
-    </div>
-    <!-- Sub-pestañas -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px">
-      <button class="chip" id="fintab-resumen"   onclick="setFinTab('resumen')"  style="white-space:nowrap">📊 Resumen</button>
-      <button class="chip" id="fintab-egresos"   onclick="setFinTab('egresos')"  style="white-space:nowrap">📤 Egresos</button>
-      <button class="chip" id="fintab-ingresos"  onclick="setFinTab('ingresos')" style="white-space:nowrap">📥 Ingresos</button>
-      <button class="chip" id="fintab-flujo"     onclick="setFinTab('flujo')"    style="white-space:nowrap">🌊 Flujo</button>
-      <button class="chip" id="fintab-fiscal"    onclick="setFinTab('fiscal')"   style="white-space:nowrap">🧾 Fiscal</button>
-    </div>
-    <div id="finanzas-content"></div>
-  </div>
 
   <!-- NOMINAS -->
   <div class="screen" id="screen-nominas">
@@ -315,7 +299,6 @@
     <button class="tab" data-tab="materiales"><span class="tab-icon">📦</span><span class="tab-label">Stock</span></button>
     <button class="tab" data-tab="reportes"><span class="tab-icon">📊</span><span class="tab-label">Reportes</span></button>
     <button class="tab" data-tab="nominas"><span class="tab-icon">👷</span><span class="tab-label">Nóminas</span></button>
-    <button class="tab" data-tab="finanzas"><span class="tab-icon">💰</span><span class="tab-label">Finanzas</span></button>
   </div>
   <!-- USER CHIP -->
   <div id="user-chip" onclick="abrirUserMenu()" style="position:fixed;top:14px;right:16px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;display:none;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
@@ -379,7 +362,7 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-materiales" style="width:18px;height:18px;accent-color:var(--accent)"> 📦 Stock</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-reportes" style="width:18px;height:18px;accent-color:var(--accent)"> 📊 Reportes</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-nominas" style="width:18px;height:18px;accent-color:var(--accent)"> 👷 Nóminas</label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-finanzas" style="width:18px;height:18px;accent-color:var(--accent)"> 💰 Finanzas</label>
+      
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-tareas" style="width:18px;height:18px;accent-color:var(--accent)"> ✅ Tareas</label>
     </div>
     <div class="form-group">
@@ -3259,7 +3242,7 @@ function applyPermisos() {
   if(!currentUser) return;
   const p = currentUser.permisos;
   const isAdmin = currentUser.rol === 'admin' || currentUser.rol === 'director';
-  ['obras','materiales','reportes','finanzas','nominas'].forEach(mod => {
+  ['obras','materiales','reportes','nominas'].forEach(mod => {
     const el = document.querySelector('[data-tab="'+mod+'"]');
     if(el) el.style.display = (isAdmin || p[mod]) ? '' : 'none';
   });
@@ -3343,7 +3326,7 @@ function editarUsuario(uid) {
   document.getElementById('nu-pass-wrap').style.display = 'none';
   document.getElementById('nu-rol').value = u.rol||'campo';
   const p = u.permisos||{};
-  ['dashboard','obras','editar_obras','materiales','reportes','nominas','finanzas','tareas'].forEach(k => {
+  ['dashboard','obras','editar_obras','materiales','reportes','nominas','tareas'].forEach(k => {
     const el = document.getElementById('perm-'+k);
     if(el) el.checked = !!p[k];
   });
@@ -3367,7 +3350,7 @@ async function saveUsuario() {
   const rol   = document.getElementById('nu-rol').value;
   if(!nom || !email) { showToast('Nombre y correo requeridos',true); return; }
   const permisos = {};
-  ['dashboard','obras','editar_obras','materiales','reportes','nominas','finanzas','tareas'].forEach(k => {
+  ['dashboard','obras','editar_obras','materiales','reportes','nominas','tareas'].forEach(k => {
     const el = document.getElementById('perm-'+k);
     if(el) permisos[k] = el.checked;
   });
@@ -4160,435 +4143,6 @@ async function resolverDireccion(registro) {
   }
 }
 
-// ── FINANZAS ─────────────────────────────────────────
-// ── FINANZAS ──────────────────────────────────────────
-var _finTab = 'resumen';
-var movimientosData = [];
-
-var _catEgresos = ['Materiales','Mano de obra','Equipo y herramienta','Subcontrato','Transporte','Combustible','Nómina','Servicios','Impuestos','Gastos generales','Otro'];
-var _catIngresos = ['Anticipo','Estimación','Liquidación','Finiquito','Otro'];
-
-function setFinTab(tab) {
-  _finTab = tab;
-  ['resumen','egresos','ingresos','flujo','fiscal'].forEach(function(t){
-    var el = document.getElementById('fintab-'+t);
-    if(el) el.style.background = t===tab ? 'var(--accent)' : '';
-    if(el) el.style.color = t===tab ? 'var(--bg)' : '';
-  });
-  // Show/hide add button
-  var addBtn = document.getElementById('fin-add-btn');
-  if(addBtn) addBtn.style.display = (tab==='egresos'||tab==='ingresos') ? '' : 'none';
-  renderFinanzas();
-}
-
-async function loadMovimientos() {
-  try { movimientosData = await db('GET','movimientos?order=fecha.desc,created_at.desc') || []; } catch(e){ movimientosData=[]; }
-}
-
-async function openNuevoMovimiento() {
-  // Set defaults
-  document.getElementById('fmov-tipo-mov').value = _finTab==='ingresos' ? 'ingreso' : 'egreso';
-  onMovTipoChange(_finTab==='ingresos' ? 'ingreso' : 'egreso');
-  document.getElementById('fmov-descripcion').value = '';
-  document.getElementById('fmov-monto').value = '';
-  document.getElementById('fmov-iva').value = '0';
-  document.getElementById('fmov-proveedor').value = '';
-  document.getElementById('fmov-fecha').value = new Date().toISOString().slice(0,10);
-  document.getElementById('fmov-forma').value = 'transferencia';
-  document.getElementById('fmov-referencia').value = '';
-  // Populate obras
-  var sel = document.getElementById('fmov-obra');
-  sel.innerHTML = '<option value="">— Gasto general —</option>' + obrasData.map(function(o){ return '<option value="'+o.id+'">'+o.nombre+'</option>'; }).join('');
-  // Populate proveedores/clientes from movimientos in Supabase
-  try {
-    var dl = document.getElementById('fmov-prov-list');
-    if(dl) {
-      var provNames = [...new Set(movimientosData.map(function(m){ return m.proveedor_cliente; }).filter(Boolean))];
-      // Also fetch from proveedores table if available
-      try {
-        var provs = await db('GET','proveedores?select=nombre&order=nombre') || [];
-        provs.forEach(function(p){ if(p.nombre && !provNames.includes(p.nombre)) provNames.push(p.nombre); });
-      } catch(e2){}
-      dl.innerHTML = provNames.map(function(n){ return '<option value="'+n+'">'; }).join('');
-    }
-  } catch(e){}
-  document.getElementById('mov-save-btn').textContent = 'Guardar';
-  document.getElementById('mov-save-btn').disabled = false;
-  closeSheet('movimiento');
-  openSheet('fin-mov');
-}
-
-function onMovTipoChange(tipo) {
-  document.getElementById('mov-sheet-title').textContent = tipo==='ingreso' ? 'Nuevo Ingreso' : 'Nuevo Egreso';
-  var cats = tipo==='ingreso' ? _catIngresos : _catEgresos;
-  document.getElementById('fmov-categoria').innerHTML = cats.map(function(c){ return '<option>'+c+'</option>'; }).join('');
-}
-
-async function saveMovimiento() {
-  var tipo = document.getElementById('fmov-tipo-mov').value;
-  var descripcion = document.getElementById('fmov-descripcion').value.trim();
-  var monto = parseFloat(document.getElementById('fmov-monto').value)||0;
-  if(!descripcion){ showToast('Escribe una descripción',true); return; }
-  if(!monto){ showToast('Ingresa el monto',true); return; }
-  var btn = document.getElementById('mov-save-btn');
-  btn.textContent='Guardando...'; btn.disabled=true;
-  var ivaP = parseFloat(document.getElementById('fmov-iva').value)||0;
-  var ivaMonto = Math.round(monto * ivaP / 100 * 100)/100;
-  try {
-    await db('POST','movimientos',{
-      tipo: tipo,
-      categoria: document.getElementById('fmov-categoria').value,
-      descripcion: descripcion,
-      monto: monto,
-      iva: ivaMonto,
-      obra_id: document.getElementById('fmov-obra').value || null,
-      proveedor_cliente: document.getElementById('fmov-proveedor').value.trim()||null,
-      fecha: document.getElementById('fmov-fecha').value,
-      forma_pago: document.getElementById('fmov-forma').value,
-      referencia: document.getElementById('fmov-referencia').value.trim()||null,
-      created_by: currentUser ? currentUser.nombre : null
-    });
-    showToast('✅ '+(tipo==='ingreso'?'Ingreso':'Egreso')+' registrado');
-    closeSheet('fin-mov');
-    await loadMovimientos();
-    renderFinanzas();
-  } catch(e){ showToast('Error: '+e.message,true); }
-  btn.textContent='Guardar'; btn.disabled=false;
-}
-
-async function deleteMovimiento(id) {
-  if(!confirm('¿Eliminar este movimiento?')) return;
-  try {
-    await db('DELETE','movimientos?id=eq.'+id);
-    showToast('Movimiento eliminado');
-    await loadMovimientos();
-    renderFinanzas();
-  } catch(e){ showToast('Error',true); }
-}
-
-function renderFinanzas() {
-  const el = document.getElementById('finanzas-content');
-  if(!el) return;
-
-  // Init tab styles
-  ['resumen','egresos','ingresos','flujo','fiscal'].forEach(function(t){
-    var btn = document.getElementById('fintab-'+t);
-    if(btn){ btn.style.background = t===_finTab?'var(--accent)':''; btn.style.color = t===_finTab?'var(--bg)':''; }
-  });
-  var addBtn = document.getElementById('fin-add-btn');
-  if(addBtn) addBtn.style.display = (_finTab==='egresos'||_finTab==='ingresos') ? '' : 'none';
-
-  if(_finTab==='resumen') renderFinResumen(el);
-  else if(_finTab==='egresos') renderFinLista(el,'egreso');
-  else if(_finTab==='ingresos') renderFinLista(el,'ingreso');
-  else if(_finTab==='flujo') renderFinFlujo(el);
-  else if(_finTab==='fiscal') renderFinFiscal(el);
-}
-
-function renderFinResumen(el) {
-  var egresos = movimientosData.filter(function(m){ return m.tipo==='egreso'; });
-  var ingresos = movimientosData.filter(function(m){ return m.tipo==='ingreso'; });
-  var totalEgr = egresos.reduce(function(s,m){ return s+(m.monto||0); },0);
-  var totalIng = ingresos.reduce(function(s,m){ return s+(m.monto||0); },0);
-  var balance = totalIng - totalEgr;
-  var colorBal = balance>=0?'#10B981':'#EF4444';
-
-  // ── PRESUPUESTO GLOBAL — ejercido calculado desde movimientos ──
-  var totalPresupuesto = obrasData.reduce(function(s,o){ return s+(o.presupuesto||0); },0);
-
-  // Calculate gastado per obra from movimientos
-  var gastadoPorObra = {};
-  movimientosData.filter(function(m){ return m.tipo==='egreso' && m.obra_id; }).forEach(function(m){
-    gastadoPorObra[m.obra_id] = (gastadoPorObra[m.obra_id]||0) + (m.monto||0);
-  });
-  var totalGastado = Object.values(gastadoPorObra).reduce(function(s,v){ return s+v; },0);
-  // Also add egresos without obra_id
-  movimientosData.filter(function(m){ return m.tipo==='egreso' && !m.obra_id; }).forEach(function(m){
-    totalGastado += (m.monto||0);
-  });
-
-  var totalDisponible = totalPresupuesto - totalGastado;
-  var pctGlobal = totalPresupuesto>0 ? Math.round((totalGastado/totalPresupuesto)*100) : 0;
-  var colorGlobal = pctGlobal>=90?'#EF4444':pctGlobal>=70?'#F0A500':'#5BC4C0';
-
-  var html = '';
-
-  // ── Sección 1: Presupuesto vs Ejercido ──
-  html += `<div class="card" style="margin-bottom:12px">
-    <div class="card-label">RESUMEN GLOBAL</div>
-    <div class="grid2" style="margin-bottom:12px">
-      <div style="background:var(--bg);border-radius:10px;padding:12px">
-        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px">PRESUPUESTO TOTAL</div>
-        <div style="font-size:18px;font-weight:800;color:var(--text)">${fmt(totalPresupuesto)}</div>
-      </div>
-      <div style="background:var(--bg);border-radius:10px;padding:12px">
-        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px">EJERCIDO TOTAL</div>
-        <div style="font-size:18px;font-weight:800;color:${colorGlobal}">${fmt(totalGastado)}</div>
-      </div>
-    </div>
-    <div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px">DISPONIBLE</div>
-      <div style="font-size:22px;font-weight:800;color:${totalDisponible>=0?'#5BC4C0':'#EF4444'}">${fmt(totalDisponible)}</div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-      <span style="font-size:12px;color:var(--dim)">Ejercido global</span>
-      <span style="font-size:12px;font-weight:700;color:${colorGlobal}">${pctGlobal}%</span>
-    </div>
-    ${bar(pctGlobal, colorGlobal, 8)}
-  </div>`;
-
-  // ── Sección 2: Balance de movimientos (si hay) ──
-  if(movimientosData.length) {
-    html += `<div class="card" style="margin-bottom:12px">
-      <div class="card-label">BALANCE FINANCIERO</div>
-      <div class="grid2" style="margin-bottom:12px">
-        <div style="background:var(--bg);border-radius:10px;padding:12px">
-          <div style="font-size:11px;color:#10B981;font-weight:700;margin-bottom:4px">INGRESOS</div>
-          <div style="font-size:18px;font-weight:800;color:#10B981">${fmt(totalIng)}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:10px;padding:12px">
-          <div style="font-size:11px;color:#EF4444;font-weight:700;margin-bottom:4px">EGRESOS</div>
-          <div style="font-size:18px;font-weight:800;color:#EF4444">${fmt(totalEgr)}</div>
-        </div>
-      </div>
-      <div style="background:var(--bg);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:4px">BALANCE</div>
-        <div style="font-size:26px;font-weight:800;color:${colorBal}">${balance>=0?'+':''}${fmt(balance)}</div>
-      </div>
-    </div>`;
-
-    // Egresos por categoría
-    var porCat = {};
-    egresos.forEach(function(m){ porCat[m.categoria||'Otro']=(porCat[m.categoria||'Otro']||0)+(m.monto||0); });
-    var catSort = Object.keys(porCat).sort(function(a,b){ return porCat[b]-porCat[a]; });
-    if(catSort.length) {
-      html += `<div class="card" style="margin-bottom:12px"><div class="card-label">EGRESOS POR CATEGORÍA</div>`;
-      var maxCat = porCat[catSort[0]];
-      catSort.forEach(function(cat){
-        var pct = maxCat>0?Math.round((porCat[cat]/maxCat)*100):0;
-        html += `<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:12px;font-weight:600">${cat}</span>
-            <span style="font-size:12px;font-weight:700;color:#EF4444">${fmt(porCat[cat])}</span>
-          </div>
-          <div style="background:var(--bg);border-radius:4px;height:6px">
-            <div style="background:#EF4444;height:6px;border-radius:4px;width:${pct}%"></div>
-          </div></div>`;
-      });
-      html += `</div>`;
-    }
-  }
-
-  // ── Sección 3: Por obra (con ejercido dinámico) ──
-  html += `<div class="section-title">Por obra</div>`;
-  obrasData.forEach(function(o){
-    var pres = o.presupuesto||0;
-    var gast = gastadoPorObra[o.id]||0;
-    var disp = pres - gast;
-    var pct = pres>0 ? Math.round((gast/pres)*100) : 0;
-    var color = pct>=90?'#EF4444':pct>=70?'#F0A500':'#5BC4C0';
-    html += `<div class="card" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div>
-          <div style="font-size:14px;font-weight:700">${o.nombre}</div>
-          <div class="item-sub">${o.cliente||'—'} · ${o.tipo||'—'}</div>
-        </div>
-        ${badge(o.estado||'Iniciando', estadoColor[o.estado]||'#F0A500')}
-      </div>
-      <div class="grid2" style="margin-bottom:10px">
-        <div style="background:var(--bg);border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:3px">PRESUPUESTO</div>
-          <div style="font-size:15px;font-weight:700">${fmt(pres)}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:3px">EJERCIDO</div>
-          <div style="font-size:15px;font-weight:700;color:${color}">${fmt(gast)}</div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:11px;color:var(--dim)">Disponible: <span style="color:${disp>=0?'#5BC4C0':'#EF4444'};font-weight:700">${fmt(disp)}</span></span>
-        <span style="font-size:11px;font-weight:700;color:${color}">${pct}%</span>
-      </div>
-      ${bar(pct, color, 6)}
-    </div>`;
-  });
-
-  el.innerHTML = html;
-}
-
-function renderFinLista(el, tipo) {
-  var movs = movimientosData.filter(function(m){ return m.tipo===tipo; });
-  var total = movs.reduce(function(s,m){ return s+(m.monto||0); },0);
-  var color = tipo==='ingreso'?'#10B981':'#EF4444';
-  var icon = tipo==='ingreso'?'📥':'📤';
-
-  if(!movs.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">${icon}</div><div class="empty-title">Sin ${tipo==='ingreso'?'ingresos':'egresos'}</div><div class="empty-sub">Toca "+ Nuevo" para registrar</div></div>`;
-    return;
-  }
-
-  var html = `<div style="background:${color}18;border:1px solid ${color}44;border-radius:12px;padding:14px;margin-bottom:14px;text-align:center">
-    <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;margin-bottom:4px">Total ${tipo==='ingreso'?'Ingresos':'Egresos'}</div>
-    <div style="font-size:24px;font-weight:800;color:${color}">${fmt(total)}</div>
-  </div>`;
-
-  // Group by month
-  var porMes = {};
-  movs.forEach(function(m){
-    var mes = (m.fecha||'').slice(0,7);
-    if(!porMes[mes]) porMes[mes]=[];
-    porMes[mes].push(m);
-  });
-
-  Object.keys(porMes).sort().reverse().forEach(function(mes){
-    var mLabel = mes ? new Date(mes+'-01T12:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'}) : 'Sin fecha';
-    var totalMes = porMes[mes].reduce(function(s,m){ return s+(m.monto||0); },0);
-    html += `<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin:12px 0 6px">${mLabel} · ${fmt(totalMes)}</div>`;
-    porMes[mes].forEach(function(m){
-      var obra = obrasData.find(function(o){ return o.id===m.obra_id; });
-      html += `<div class="card" style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-          <div style="flex:1;margin-right:8px">
-            <div style="font-size:13px;font-weight:700">${m.descripcion||'—'}</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px">${m.categoria||'—'} · ${obra?obra.nombre:'General'}</div>
-            ${m.proveedor_cliente?`<div style="font-size:11px;color:var(--dim)">${m.proveedor_cliente}</div>`:''}
-            ${m.referencia?`<div style="font-size:11px;color:#5BC4C0">${m.referencia}</div>`:''}
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:15px;font-weight:800;color:${color}">${fmt(m.monto)}</div>
-            ${m.iva>0?`<div style="font-size:10px;color:var(--dim)">+IVA ${fmt(m.iva)}</div>`:''}
-            <div style="font-size:10px;color:var(--dim)">${fmtDate(m.fecha)}</div>
-          </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:10px;background:var(--bg);padding:2px 8px;border-radius:6px;color:var(--dim)">${m.forma_pago||'—'}</span>
-          <button onclick="deleteMovimiento('${m.id}')" style="border:none;background:none;color:#EF444488;font-size:12px;cursor:pointer;padding:4px 8px">🗑</button>
-        </div>
-      </div>`;
-    });
-  });
-
-  el.innerHTML = html;
-}
-
-function renderFinFlujo(el) {
-  if(!movimientosData.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🌊</div><div class="empty-title">Sin datos</div><div class="empty-sub">Registra movimientos para ver el flujo de caja</div></div>`;
-    return;
-  }
-
-  // Group by month
-  var meses = {};
-  movimientosData.forEach(function(m){
-    var mes = (m.fecha||'').slice(0,7);
-    if(!mes) return;
-    if(!meses[mes]) meses[mes]={ing:0,egr:0};
-    if(m.tipo==='ingreso') meses[mes].ing+=(m.monto||0);
-    else meses[mes].egr+=(m.monto||0);
-  });
-
-  var keys = Object.keys(meses).sort();
-  var saldoAcum = 0;
-
-  var html = `<div class="card-label" style="margin-bottom:10px">FLUJO POR MES</div>`;
-  keys.forEach(function(mes){
-    var d = meses[mes];
-    var bal = d.ing - d.egr;
-    saldoAcum += bal;
-    var mLabel = new Date(mes+'-01T12:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
-    var balColor = bal>=0?'#10B981':'#EF4444';
-    var acumColor = saldoAcum>=0?'#10B981':'#EF4444';
-    html += `<div class="card" style="margin-bottom:10px">
-      <div style="font-size:13px;font-weight:800;margin-bottom:10px;text-transform:capitalize">${mLabel}</div>
-      <div class="grid2" style="margin-bottom:8px">
-        <div style="background:var(--bg);border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:#10B981;font-weight:700;margin-bottom:3px">ENTRADAS</div>
-          <div style="font-size:14px;font-weight:700;color:#10B981">${fmt(d.ing)}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:10px">
-          <div style="font-size:10px;color:#EF4444;font-weight:700;margin-bottom:3px">SALIDAS</div>
-          <div style="font-size:14px;font-weight:700;color:#EF4444">${fmt(d.egr)}</div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><span style="font-size:11px;color:var(--dim)">Mes: </span><span style="font-size:13px;font-weight:700;color:${balColor}">${bal>=0?'+':''}${fmt(bal)}</span></div>
-        <div><span style="font-size:11px;color:var(--dim)">Acumulado: </span><span style="font-size:13px;font-weight:700;color:${acumColor}">${fmt(saldoAcum)}</span></div>
-      </div>
-    </div>`;
-  });
-
-  // Summary card
-  var totalIng = movimientosData.filter(function(m){ return m.tipo==='ingreso'; }).reduce(function(s,m){ return s+(m.monto||0); },0);
-  var totalEgr = movimientosData.filter(function(m){ return m.tipo==='egreso'; }).reduce(function(s,m){ return s+(m.monto||0); },0);
-  html = `<div class="card" style="margin-bottom:14px">
-    <div class="card-label">SALDO ACUMULADO</div>
-    <div style="font-size:28px;font-weight:800;color:${saldoAcum>=0?'#10B981':'#EF4444'};text-align:center;padding:8px 0">${saldoAcum>=0?'+':''}${fmt(saldoAcum)}</div>
-    <div style="display:flex;justify-content:space-between;margin-top:8px">
-      <div style="text-align:center;flex:1"><div style="font-size:10px;color:var(--dim);font-weight:700">TOTAL ENTRADAS</div><div style="font-size:14px;font-weight:700;color:#10B981">${fmt(totalIng)}</div></div>
-      <div style="text-align:center;flex:1"><div style="font-size:10px;color:var(--dim);font-weight:700">TOTAL SALIDAS</div><div style="font-size:14px;font-weight:700;color:#EF4444">${fmt(totalEgr)}</div></div>
-    </div>
-  </div>` + html;
-
-  el.innerHTML = html;
-}
-
-function renderFinFiscal(el) {
-  var conFactura = movimientosData.filter(function(m){ return m.referencia; });
-  var totalIvaTrasl = movimientosData.filter(function(m){ return m.tipo==='ingreso'&&m.iva>0; }).reduce(function(s,m){ return s+(m.iva||0); },0);
-  var totalIvaAcred = movimientosData.filter(function(m){ return m.tipo==='egreso'&&m.iva>0; }).reduce(function(s,m){ return s+(m.iva||0); },0);
-  var ivaACargo = totalIvaTrasl - totalIvaAcred;
-
-  // Group by month
-  var porMesFiscal = {};
-  movimientosData.filter(function(m){ return m.referencia||m.iva>0; }).forEach(function(m){
-    var mes = (m.fecha||'').slice(0,7);
-    if(!mes) return;
-    if(!porMesFiscal[mes]) porMesFiscal[mes]={factEmit:[],factRec:[]};
-    if(m.tipo==='ingreso') porMesFiscal[mes].factEmit.push(m);
-    else porMesFiscal[mes].factRec.push(m);
-  });
-
-  var html = `<div class="card" style="margin-bottom:14px">
-    <div class="card-label">RESUMEN IVA</div>
-    <div class="grid2" style="margin-bottom:10px">
-      <div style="background:var(--bg);border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:#10B981;font-weight:700;margin-bottom:4px">IVA TRASLADADO</div>
-        <div style="font-size:16px;font-weight:800;color:#10B981">${fmt(totalIvaTrasl)}</div>
-        <div style="font-size:10px;color:var(--dim)">Por cobrar a clientes</div>
-      </div>
-      <div style="background:var(--bg);border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:#5BC4C0;font-weight:700;margin-bottom:4px">IVA ACREDITABLE</div>
-        <div style="font-size:16px;font-weight:800;color:#5BC4C0">${fmt(totalIvaAcred)}</div>
-        <div style="font-size:10px;color:var(--dim)">Pagado a proveedores</div>
-      </div>
-    </div>
-    <div style="background:var(--bg);border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px">IVA A CARGO (por pagar)</div>
-      <div style="font-size:22px;font-weight:800;color:${ivaACargo>0?'#EF4444':'#10B981'}">${fmt(ivaACargo)}</div>
-    </div>
-  </div>`;
-
-  if(!Object.keys(porMesFiscal).length) {
-    html += `<div class="empty" style="margin-top:0"><div class="empty-icon">🧾</div><div class="empty-title">Sin facturas registradas</div><div class="empty-sub">Agrega No. de factura al registrar movimientos</div></div>`;
-  } else {
-    Object.keys(porMesFiscal).sort().reverse().forEach(function(mes){
-      var d = porMesFiscal[mes];
-      var mLabel = new Date(mes+'-01T12:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
-      var totalEmit = d.factEmit.reduce(function(s,m){ return s+(m.monto||0)+(m.iva||0); },0);
-      var totalRec = d.factRec.reduce(function(s,m){ return s+(m.monto||0)+(m.iva||0); },0);
-      html += `<div class="card" style="margin-bottom:10px">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px;text-transform:capitalize">${mLabel}</div>
-        ${d.factEmit.length?`<div style="font-size:10px;color:#10B981;font-weight:700;margin-bottom:6px">FACTURAS EMITIDAS (${d.factEmit.length}) · ${fmt(totalEmit)}</div>`:''}
-        ${d.factEmit.map(function(m){ return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${m.referencia} · ${m.proveedor_cliente||m.descripcion||'—'}</span><span style="color:#10B981;font-weight:700">${fmt((m.monto||0)+(m.iva||0))}</span></div>`; }).join('')}
-        ${d.factRec.length?`<div style="font-size:10px;color:#5BC4C0;font-weight:700;margin:8px 0 6px">FACTURAS RECIBIDAS (${d.factRec.length}) · ${fmt(totalRec)}</div>`:''}
-        ${d.factRec.map(function(m){ return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${m.referencia} · ${m.proveedor_cliente||m.descripcion||'—'}</span><span style="color:#5BC4C0;font-weight:700">${fmt((m.monto||0)+(m.iva||0))}</span></div>`; }).join('')}
-      </div>`;
-    });
-  }
-
-  el.innerHTML = html;
-}
-
 
 // ── GANTT ─────────────────────────────────────────────
 function setGanttZoom(zoom, obraId) {
@@ -4777,27 +4331,27 @@ async function eliminarEtapaGantt() {
 
 // Permisos por rol predefinido
 const PERMISOS_ROL = {
-  admin:         {dashboard:true, obras:true, editar_obras:true, materiales:true, reportes:true, nominas:true, finanzas:true, tareas:true},
-  director:      {dashboard:true, obras:true, editar_obras:true, materiales:true, reportes:true, nominas:true, finanzas:true, tareas:true},
-  campo:         {dashboard:true, obras:true, editar_obras:false, materiales:false, reportes:true, nominas:false, finanzas:false, tareas:true},
-  compras:       {dashboard:true, obras:false, editar_obras:false, materiales:true, reportes:false, nominas:false, finanzas:false, tareas:false},
-  taller:        {dashboard:true, obras:true, editar_obras:false, materiales:true, reportes:true, nominas:false, finanzas:false, tareas:true},
-  rrhh:          {dashboard:true, obras:false, editar_obras:false, materiales:false, reportes:false, nominas:true, finanzas:false, tareas:false},
-  contabilidad:  {dashboard:true, obras:false, editar_obras:false, materiales:false, reportes:false, nominas:true, finanzas:true, tareas:false},
+  admin:         {dashboard:true, obras:true, editar_obras:true, materiales:true, reportes:true, nominas:true, tareas:true},
+  director:      {dashboard:true, obras:true, editar_obras:true, materiales:true, reportes:true, nominas:true, tareas:true},
+  campo:         {dashboard:true, obras:true, editar_obras:false, materiales:false, reportes:true, nominas:false, tareas:true},
+  compras:       {dashboard:true, obras:false, editar_obras:false, materiales:true, reportes:false, nominas:false, tareas:false},
+  taller:        {dashboard:true, obras:true, editar_obras:false, materiales:true, reportes:true, nominas:false, tareas:true},
+  rrhh:          {dashboard:true, obras:false, editar_obras:false, materiales:false, reportes:false, nominas:true, tareas:false},
+  contabilidad:  {dashboard:true, obras:false, editar_obras:false, materiales:false, reportes:false, nominas:true, tareas:false},
   personalizado: null
 };
 
 function onRolChange(rol) {
   const perms = PERMISOS_ROL[rol];
   if(!perms) return; // personalizado - leave checkboxes as is
-  ['dashboard','obras','editar_obras','materiales','reportes','nominas','finanzas','tareas'].forEach(k=>{
+  ['dashboard','obras','editar_obras','materiales','reportes','nominas','tareas'].forEach(k=>{
     const el = document.getElementById('perm-'+k);
     if(el) el.checked = !!perms[k];
   });
 }
 
 function toggleAllPerms() {
-  const all = ['dashboard','obras','editar_obras','materiales','reportes','nominas','finanzas','tareas'];
+  const all = ['dashboard','obras','editar_obras','materiales','reportes','nominas','tareas'];
   const allChecked = all.every(k=>document.getElementById('perm-'+k)?.checked);
   all.forEach(k=>{
     const el = document.getElementById('perm-'+k);
@@ -4841,15 +4395,6 @@ function showTab(tabId) {
   if(tabId==='materiales') loadMateriales();
   if(tabId==='reportes') loadReportes();
   if(tabId==='admin') loadAdminUsers();
-  if(tabId==='finanzas') {
-    // Close any open sheets
-    document.querySelectorAll('.sheet-overlay.open').forEach(function(s){ s.classList.remove('open'); });
-    (async function(){
-      try { movimientosData = await db('GET','movimientos?order=fecha.desc,created_at.desc') || []; } catch(e){ movimientosData=[]; }
-      _finTab='resumen';
-      renderFinanzas();
-    })();
-  }
   if(tabId==='nominas') loadNominas();
 }
 document.querySelectorAll('.tab').forEach(tab=>{
