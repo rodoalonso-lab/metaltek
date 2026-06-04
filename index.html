@@ -917,6 +917,35 @@
   </div>
 </div>
 
+<!-- SHEET: Editar cotización -->
+<div class="sheet-overlay" id="sheet-edit-cotiz">
+  <div class="sheet" style="max-height:92vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">✏️ Editar Cotización</div>
+    <input type="hidden" id="ec-id">
+    <input type="hidden" id="ec-req-id">
+    <div class="form-group"><label class="form-label">Proveedor *</label>
+      <input class="form-input" id="ec-proveedor" type="text" placeholder="Nombre del proveedor">
+    </div>
+    <div class="card-label" style="margin-bottom:10px">PRECIOS POR MATERIAL</div>
+    <div id="ec-items-wrap" style="margin-bottom:12px"></div>
+    <div class="card" style="margin-bottom:14px;text-align:center">
+      <div class="card-label">TOTAL COTIZACIÓN</div>
+      <div id="ec-total-display" style="font-size:28px;font-weight:800;color:var(--accent)">$0</div>
+    </div>
+    <div class="form-group"><label class="form-label">Tiempo de entrega</label>
+      <input class="form-input" id="ec-entrega" type="text" placeholder="Ej. 3 días hábiles">
+    </div>
+    <div class="form-group"><label class="form-label">Notas / Condiciones</label>
+      <input class="form-input" id="ec-notas" type="text" placeholder="Forma de pago, condiciones...">
+    </div>
+    <input type="hidden" id="ec-monto-total" value="0">
+    <button class="btn-primary" id="ec-save-btn" onclick="saveEditCotiz()" style="margin-bottom:10px">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeSheet('edit-cotiz')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
 <!-- SHEET: Recepción -->
 <div class="sheet-overlay" id="sheet-recep">
   <div class="sheet">
@@ -1754,10 +1783,20 @@ async function showRequisicion(id) {
           +'<div style="font-size:13px;font-weight:800;color:var(--accent)">'+rec.cantidad_recibida+' uds</div></div>';
       }).join('')+'</div>' : ''}
     <div class="card"><div class="card-label">COMPARATIVA DE PRECIOS</div>
-      ${comps.length?comps.map(c=>`<div class="comp-card${c.seleccionado?' selected':''}">
-        <div class="row"><span style="font-weight:700">${c.proveedor}</span>${c.seleccionado?badge('✓ Seleccionado','#10B981'):''}</div>
-        <div class="row"><span class="item-sub">${fmt(c.precio_unitario)} · ${c.tiempo_entrega||'—'}</span></div>
-        ${c.notas?`<div class="item-sub">${c.notas}</div>`:''}
+      ${comps.length?comps.map(c=>`<div class="comp-card${c.seleccionado?' selected':''}" style="margin-bottom:10px">
+        <div class="row" style="margin-bottom:4px">
+          <span style="font-weight:800;font-size:14px">${c.proveedor}</span>
+          ${c.seleccionado?badge('✓ Seleccionado','#10B981'):''}
+        </div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent);margin-bottom:4px">${fmt(c.precio_unitario)}</div>
+        <div class="item-sub" style="margin-bottom:4px">⏱ ${c.tiempo_entrega||'—'}</div>
+        ${c.notas?`<div class="item-sub" style="margin-bottom:8px">📝 ${c.notas}</div>`:''}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          ${!c.seleccionado&&(_est==='pendiente'||_est==='en comparativa')?`<button onclick="seleccionarCotiz('${c.id}','${id}')" style="flex:1;background:#10B98122;border:1px solid #10B98144;color:#10B981;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✓ Seleccionar</button>`:''}
+          ${c.seleccionado?`<button onclick="generarPDFCotizacion('${c.id}')" style="flex:1;background:#3B82F622;border:1px solid #3B82F644;color:#3B82F6;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>`:''}
+          <button onclick="editarCotiz('${c.id}')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Editar</button>
+          <button onclick="eliminarCotiz('${c.id}','${id}')" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">🗑</button>
+        </div>
       </div>`).join(''):`<div class="item-sub" style="margin-bottom:10px">Sin cotizaciones aún</div>`}
       <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>
     </div>`;
@@ -2177,7 +2216,7 @@ async function openCompSheet(reqId) {
       // Row 1: PU y Descuento %
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">PRECIO UNIT. ($)</div>'
-      +'<input class="form-input fc-precio-unit" type="number" placeholder="0.00" data-idx="'+i+'" data-cant="'+it.cantidad+'" oninput="calcCompTotal()" style="padding:8px 10px"></div>'
+      +'<input class="form-input fc-precio-unit" type="number" placeholder="0.00" data-idx="'+i+'" data-cant="'+it.cantidad+'" data-nombre="'+nom+'" data-unidad="'+(it.unidad||'pza')+'" oninput="calcCompTotal()" style="padding:8px 10px"></div>'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">% DESCUENTO</div>'
       +'<input class="form-input fc-desc-pct" type="number" placeholder="0" min="0" max="100" data-idx="'+i+'" oninput="calcCompTotal()" style="padding:8px 10px"></div>'
       +'</div>'
@@ -2291,7 +2330,6 @@ function calcCompTotal() {
   if(hidden) hidden.value=totalConIva;
 }
 async function saveComparativa() {
-  // Get first proveedor as main (or combine)
   var provTxts = document.querySelectorAll('.fc-prov-txt');
   var firstProv = '';
   provTxts.forEach(function(el){ if(!firstProv && el.value.trim()) firstProv=el.value.trim(); });
@@ -2304,13 +2342,208 @@ async function saveComparativa() {
   const btn=document.getElementById('comp-save-btn');btn.textContent='Guardando...';btn.disabled=true;
   const montoTotal=parseFloat(document.getElementById('fc-monto-total').value)||0;
   try {
-    await db('POST','comparativas',{requisicion_id:document.getElementById('fc-req-id').value,proveedor,precio_unitario:montoTotal,tiempo_entrega:document.getElementById('fc-entrega').value,notas:document.getElementById('fc-notas').value,seleccionado:false});
-    // Save all proveedores
-  document.querySelectorAll('.fc-prov-txt').forEach(function(el){ if(el.value.trim()) guardarProveedor(el.value.trim()); });
-  showToast('✅ Cotización agregada');closeSheet('comp');await loadMateriales();
+    const [comp] = await db('POST','comparativas',{
+      requisicion_id:document.getElementById('fc-req-id').value,
+      proveedor, precio_unitario:montoTotal,
+      tiempo_entrega:document.getElementById('fc-entrega').value,
+      notas:document.getElementById('fc-notas').value,
+      seleccionado:false
+    });
+    // Save items desglose
+    if(comp && comp.id) {
+      const precioInputs = document.querySelectorAll('.fc-precio-unit');
+      for(var i=0; i<precioInputs.length; i++) {
+        const inp = precioInputs[i];
+        const idx = inp.dataset.idx;
+        const pu = parseFloat(inp.value)||0;
+        const cant = parseFloat(inp.dataset.cant)||1;
+        const descPct = parseFloat((document.querySelector('.fc-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
+        const ivaSel = document.querySelector('.fc-iva-sel[data-idx="'+idx+'"]');
+        const ivaPct = ivaSel ? parseFloat(ivaSel.value)||0 : 16;
+        const sub = pu*cant*(1-descPct/100)*(1+ivaPct/100);
+        const nomEl = document.querySelector('.fc-precio-unit[data-idx="'+idx+'"]');
+        if(pu > 0) {
+          await db('POST','comparativa_items',{
+            comparativa_id: comp.id,
+            nombre_material: inp.dataset.nombre||'',
+            cantidad: cant,
+            unidad: inp.dataset.unidad||'pza',
+            precio_unitario: pu,
+            descuento_pct: descPct,
+            iva_pct: ivaPct,
+            subtotal: Math.round(sub*100)/100
+          });
+        }
+      }
+    }
+    document.querySelectorAll('.fc-prov-txt').forEach(function(el){ if(el.value.trim()) guardarProveedor(el.value.trim()); });
+    showToast('✅ Cotización agregada');closeSheet('comp');await loadMateriales();
   } catch(e){showToast('Error: '+e.message,true); console.error(e);}
   btn.textContent='Guardar cotización';btn.disabled=false;
 }
+async function seleccionarCotiz(compId, reqId) {
+  try {
+    await db('PATCH','comparativas?requisicion_id=eq.'+reqId,{seleccionado:false});
+    await db('PATCH','comparativas?id=eq.'+compId,{seleccionado:true});
+    showToast('✅ Proveedor seleccionado');
+    await loadMateriales();
+    showRequisicion(reqId);
+  } catch(e){ showToast('Error: '+e.message,true); }
+}
+
+async function editarCotiz(compId) {
+  let c = comparativasData.find(x=>x.id===compId);
+  if(!c) {
+    try { const res = await db('GET','comparativas?id=eq.'+compId); c = res&&res[0]; } catch(e){}
+  }
+  if(!c) { showToast('No se encontró la cotización',true); return; }
+
+  document.getElementById('ec-id').value = compId;
+  document.getElementById('ec-req-id').value = c.requisicion_id||'';
+  document.getElementById('ec-proveedor').value = c.proveedor||'';
+  document.getElementById('ec-entrega').value = c.tiempo_entrega||'';
+  document.getElementById('ec-notas').value = c.notas||'';
+  document.getElementById('ec-monto-total').value = c.precio_unitario||0;
+  document.getElementById('ec-save-btn').textContent = 'Guardar cambios';
+  document.getElementById('ec-save-btn').disabled = false;
+
+  // Load requisicion items to show desglose
+  document.getElementById('ec-items-wrap').innerHTML = '<div class="item-sub">Cargando materiales...</div>';
+  openSheet('edit-cotiz');
+
+  var items = [];
+  try { items = await db('GET','requisicion_items?select=*&requisicion_id=eq.'+c.requisicion_id) || []; } catch(e){}
+
+  // Load comparativa_items first (real saved prices)
+  var citems = [];
+  try { citems = await db('GET','comparativa_items?comparativa_id=eq.'+compId+'&order=created_at.asc') || []; } catch(e){}
+
+  if(!items.length && !citems.length) {
+    document.getElementById('ec-items-wrap').innerHTML = `
+      <div class="form-group"><label class="form-label">Monto total *</label>
+        <input class="form-input" id="ec-monto-simple" type="number" placeholder="0.00" step="0.01" min="0" value="${c.precio_unitario||''}" oninput="document.getElementById('ec-monto-total').value=this.value;document.getElementById('ec-total-display').textContent='$'+parseFloat(this.value||0).toLocaleString('es-MX',{minimumFractionDigits:2})">
+      </div>`;
+    document.getElementById('ec-total-display').textContent = '$'+(parseFloat(c.precio_unitario)||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+    return;
+  }
+
+  // Use citems if available (real prices), else distribute total proportionally by quantity
+  const totalActual = parseFloat(c.precio_unitario)||0;
+  // Reverse-calculate subtotal sin IVA (assuming 16% IVA on all)
+  const subtotalBase = totalActual / 1.16;
+  const cantTotalUnidades = items.reduce(function(s,x){ return s+(x.cantidad||1); },0);
+  
+  const displayItems = citems.length ? citems : items.map(function(it){
+    // Distribute PU proportionally by item quantity
+    var puEstimado = cantTotalUnidades>0 ? Math.round((subtotalBase/cantTotalUnidades)*100)/100 : 0;
+    return { nombre_material: it.nombre_material||it.material||it.descripcion||'—', cantidad: it.cantidad||1, unidad: it.unidad||'pza', precio_unitario: puEstimado, descuento_pct:0, iva_pct:16 };
+  });
+
+  document.getElementById('ec-items-wrap').innerHTML = displayItems.map(function(it,i){
+    var nom = it.nombre_material||'—';
+    var pu = it.precio_unitario||0;
+    var desc = it.descuento_pct||0;
+    var iva = it.iva_pct!==undefined ? it.iva_pct : 16;
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">'
+      +'<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700">'+nom+'</div>'
+      +'<div style="font-size:11px;color:var(--dim)">Cant: '+it.cantidad+' '+(it.unidad||'pza')+'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">PRECIO UNIT. ($)</div>'
+      +'<input class="form-input ec-precio-unit" type="number" placeholder="0.00" data-idx="'+i+'" data-cant="'+(it.cantidad||1)+'" data-nombre="'+nom+'" data-unidad="'+(it.unidad||'pza')+'" value="'+pu+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">% DESCUENTO</div>'
+      +'<input class="form-input ec-desc-pct" type="number" placeholder="0" min="0" max="100" data-idx="'+i+'" value="'+desc+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">IVA (%)</div>'
+      +'<select class="form-input ec-iva-sel" data-idx="'+i+'" onchange="calcEcTotal()" style="padding:8px 10px">'
+      +'<option value="0"'+(iva===0?' selected':'')+'>Sin IVA</option>'
+      +'<option value="16"'+(iva===16?' selected':'')+'>16%</option>'
+      +'<option value="8"'+(iva===8?' selected':'')+'>8% frontera</option>'
+      +'</select></div>'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">SUBTOTAL C/IVA</div>'
+      +'<div id="ec-sub-'+i+'" style="font-size:13px;font-weight:800;color:var(--accent);padding:10px 0">$0</div></div>'
+      +'</div></div>';
+  }).join('');
+  calcEcTotal();
+}
+
+function calcEcTotal() {
+  var total = 0;
+  document.querySelectorAll('.ec-precio-unit').forEach(function(inp){
+    var precio = parseFloat(inp.value)||0;
+    var cant = parseFloat(inp.dataset.cant)||1;
+    var idx = inp.dataset.idx;
+    var descPct = parseFloat((document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
+    var ivaSel = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
+    var ivaPct = ivaSel ? parseFloat(ivaSel.value)||0 : 16;
+    var bruto = precio*cant;
+    var desc = bruto*(descPct/100);
+    var sub = bruto-desc;
+    var iva = sub*(ivaPct/100);
+    var subtotal = sub+iva;
+    total += subtotal;
+    var subEl = document.getElementById('ec-sub-'+idx);
+    if(subEl) subEl.textContent = '$'+subtotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  });
+  document.getElementById('ec-monto-total').value = total;
+  var fmt2 = function(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  document.getElementById('ec-total-display').innerHTML = '<div style="font-size:28px;font-weight:800;color:var(--accent)">'+fmt2(total)+'</div>';
+}
+
+async function saveEditCotiz() {
+  const compId = document.getElementById('ec-id').value;
+  const proveedor = document.getElementById('ec-proveedor').value.trim();
+  const montoSimple = document.getElementById('ec-monto-simple');
+  const montoFinal = montoSimple ? parseFloat(montoSimple.value)||0 : parseFloat(document.getElementById('ec-monto-total').value)||0;
+  if(!proveedor||!montoFinal){ showToast('Completa proveedor y monto',true); return; }
+  const btn = document.getElementById('ec-save-btn');
+  btn.textContent='Guardando...'; btn.disabled=true;
+  try {
+    await db('PATCH','comparativas?id=eq.'+compId,{
+      proveedor, precio_unitario:montoFinal,
+      tiempo_entrega:document.getElementById('ec-entrega').value.trim()||null,
+      notas:document.getElementById('ec-notas').value.trim()||null
+    });
+    // Delete old items and save new ones
+    try { await db('DELETE','comparativa_items?comparativa_id=eq.'+compId); } catch(e){}
+    const precioInputs = document.querySelectorAll('.ec-precio-unit');
+    for(var i=0; i<precioInputs.length; i++){
+      const inp = precioInputs[i];
+      const idx = inp.dataset.idx;
+      const pu = parseFloat(inp.value)||0;
+      const cant = parseFloat(inp.dataset.cant)||1;
+      const descPct = parseFloat((document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
+      const ivaSel = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
+      const ivaPct = ivaSel ? parseFloat(ivaSel.value)||0 : 16;
+      const sub = pu*cant*(1-descPct/100)*(1+ivaPct/100);
+      if(pu > 0) {
+        await db('POST','comparativa_items',{
+          comparativa_id:compId,
+          nombre_material:inp.dataset.nombre||'',
+          cantidad:cant, unidad:inp.dataset.unidad||'pza',
+          precio_unitario:pu, descuento_pct:descPct,
+          iva_pct:ivaPct, subtotal:Math.round(sub*100)/100
+        });
+      }
+    }
+    showToast('✅ Cotización actualizada');
+    closeSheet('edit-cotiz');
+    await loadMateriales();
+    showRequisicion(currentReqId);
+  } catch(e){ showToast('Error: '+e.message,true); }
+  btn.textContent='Guardar cambios'; btn.disabled=false;
+}
+
+async function eliminarCotiz(compId, reqId) {
+  if(!confirm('¿Eliminar esta cotización?')) return;
+  try {
+    await db('DELETE','comparativas?id=eq.'+compId);
+    showToast('Cotización eliminada');
+    await loadMateriales();
+    showRequisicion(reqId);
+  } catch(e){ showToast('Error',true); }
+}
+
 async function selectComparativa(compId,reqId) {
   try {
     await db('PATCH',`comparativas?requisicion_id=eq.${reqId}`,{seleccionado:false});
@@ -4517,6 +4750,109 @@ async function initApp() {
 </div>
 
 <script>
+async function generarPDFCotizacion(compId) {
+  const c = comparativasData.find(x=>x.id===compId);
+  if(!c) return;
+  const r = requisicionesData.find(x=>x.id===c.requisicion_id);
+  const obra = r ? obrasData.find(o=>o.id===r.obra_id) : null;
+  var citems = [];
+  try { citems = await db('GET','comparativa_items?comparativa_id=eq.'+compId+'&order=created_at.asc') || []; } catch(e){}
+  var reqItems = [];
+  if(!citems.length && c.requisicion_id) {
+    try { reqItems = await db('GET','requisicion_items?requisicion_id=eq.'+c.requisicion_id+'&order=created_at.asc') || []; } catch(e){}
+  }
+  const now = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const folio = r ? fmtFolio(r) : '—';
+  const total = parseFloat(c.precio_unitario)||0;
+  const subtotalSinIva = citems.length ? citems.reduce((s,it)=>s+((it.precio_unitario||0)*(it.cantidad||1)*(1-(it.descuento_pct||0)/100)),0) : total/1.16;
+  const totalIva = total - subtotalSinIva;
+
+  let itemsRows = '';
+  if(citems.length) {
+    itemsRows = citems.map(it=>{
+      const bruto=(it.precio_unitario||0)*(it.cantidad||1);
+      const desc=bruto*((it.descuento_pct||0)/100);
+      const sub=bruto-desc;
+      const iva=sub*((it.iva_pct||0)/100);
+      const tot=sub+iva;
+      return `<tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px">${it.nombre_material||'—'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:center">${it.cantidad} ${it.unidad||'pza'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right">$${(it.precio_unitario||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right;color:${(it.descuento_pct||0)>0?'#EF4444':'#9CA3AF'}">${(it.descuento_pct||0)>0?'-'+it.descuento_pct+'%':'—'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right">${it.iva_pct||0}%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right;font-weight:700">$${tot.toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+      </tr>`;
+    }).join('');
+  } else if(reqItems.length) {
+    // Show materials from requisicion without individual PU (not yet saved)
+    const cantTotalUn = reqItems.reduce((s,it)=>s+(it.cantidad||1),0);
+    const puBase = cantTotalUn>0 ? subtotalSinIva/cantTotalUn : 0;
+    itemsRows = reqItems.map(it=>{
+      const nom = it.nombre_material||it.material||it.descripcion||'—';
+      const pu = Math.round(puBase*100)/100;
+      const sub = pu*(it.cantidad||1);
+      const iva16 = sub*0.16;
+      return `<tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px">${nom}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:center">${it.cantidad||1} ${it.unidad||'pza'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right;color:#9CA3AF">*</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right;color:#9CA3AF">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right">16%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #E5E7EB;font-size:13px;text-align:right;font-weight:700">$${(sub+iva16).toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+      </tr>`;
+    }).join('') + `<tr><td colspan="6" style="padding:8px 10px;font-size:11px;color:#9CA3AF;font-style:italic">* P.U. no disponible en este PDF. Edita la cotización para guardar precios individuales.</td></tr>`;
+  } else {
+    itemsRows = `<tr><td colspan="6" style="padding:14px;text-align:center;color:#9CA3AF">Sin desglose de materiales</td></tr>`;
+  }
+  document.getElementById('pdf-doc').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #0D1117">
+      <div><div style="font-size:10px;font-weight:700;letter-spacing:3px;color:#5BC4C0;text-transform:uppercase;margin-bottom:4px">PROCEPAL — Cotización Autorizada</div>
+      <div style="font-size:26px;font-weight:800;color:#0D1117">${folio}</div>
+      <div style="font-size:12px;color:#6B7280;margin-top:4px">${now}</div></div>
+      <div style="display:inline-block;background:#10B98122;border:2px solid #10B981;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:800;color:#10B981">✓ AUTORIZADA</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:#F9FAFB;border-radius:10px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;margin-bottom:6px">Proveedor</div>
+        <div style="font-size:16px;font-weight:800;color:#111">${c.proveedor||'—'}</div>
+        ${c.tiempo_entrega?`<div style="font-size:12px;color:#6B7280;margin-top:4px">⏱ ${c.tiempo_entrega}</div>`:''}
+        ${c.notas?`<div style="font-size:12px;color:#6B7280;margin-top:2px">📝 ${c.notas}</div>`:''}
+      </div>
+      <div style="background:#F9FAFB;border-radius:10px;padding:14px">
+        <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;margin-bottom:6px">Obra / Proyecto</div>
+        <div style="font-size:15px;font-weight:700;color:#111">${obra?obra.nombre:'—'}</div>
+        ${r?`<div style="font-size:12px;color:#6B7280;margin-top:4px">Req: ${folio}</div>`:''}
+        ${r?`<div style="font-size:12px;color:#6B7280">Solicitante: ${r.solicitante||'—'}</div>`:''}
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-bottom:16px">
+      <thead><tr style="background:#F3F4F6">
+        <th style="padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">Material</th>
+        <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">Cant.</th>
+        <th style="padding:9px 10px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">P.U.</th>
+        <th style="padding:9px 10px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">Desc.</th>
+        <th style="padding:9px 10px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">IVA</th>
+        <th style="padding:9px 10px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">Total</th>
+      </tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+    <div style="background:#F9FAFB;border-radius:10px;padding:16px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#6B7280">Subtotal sin IVA</span><span style="font-size:13px;font-weight:600">$${subtotalSinIva.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:13px;color:#6B7280">IVA</span><span style="font-size:13px;font-weight:600">$${totalIva.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>
+      <div style="display:flex;justify-content:space-between;border-top:2px solid #E5E7EB;padding-top:10px">
+        <span style="font-size:16px;font-weight:800">TOTAL</span>
+        <span style="font-size:22px;font-weight:800;color:#10B981">$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span>
+      </div>
+    </div>
+    <div style="border-top:1px solid #E5E7EB;padding-top:14px;display:flex;justify-content:space-between">
+      <div style="font-size:10px;color:#9CA3AF">PROCEPAL · ${folio}</div>
+      <div style="font-size:10px;color:#9CA3AF">${now}</div>
+    </div>`;
+  document.getElementById('pdf-preview-overlay').classList.add('open');
+  document.getElementById('pdf-preview-overlay').scrollTop = 0;
+}
+
 async function generarPDFRequisicion(reqId) {
   const r = requisicionesData.find(x => x.id === reqId);
   if (!r) { showToast('No se encontró la requisición', true); return; }
