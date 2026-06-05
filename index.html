@@ -163,11 +163,11 @@
   <div style="font-size:12px;color:var(--dim);margin-bottom:40px;letter-spacing:1px;text-transform:uppercase">Sistema de Gestión de Proyectos</div>
   <div style="width:100%;max-width:340px">
     <div class="form-group">
-      <label class="form-label">Correo electrónico</label>
+      <label class="form-label" for="login-email">Correo electrónico</label>
       <input class="form-input" id="login-email" type="email" placeholder="tu@correo.com" autocomplete="email">
     </div>
     <div class="form-group">
-      <label class="form-label">Contraseña</label>
+      <label class="form-label" for="nu-nombre">Contraseña</label>
       <div style="position:relative">
         <input class="form-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" style="padding-right:48px">
         <button type="button" onclick="toggleLoginPass()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0;line-height:1" id="login-pass-eye">👁</button>
@@ -178,7 +178,7 @@
       <input type="checkbox" id="login-remember" checked style="width:18px;height:18px;accent-color:var(--accent)">
       Mantener sesión iniciada
     </label>
-    <button class="btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()" aria-label="Acción">Entrar</button>
   </div>
 </div>
 
@@ -284,7 +284,7 @@
   <!-- ADMIN SCREEN -->
   <div class="screen" id="screen-admin">
     <div style="display:flex;align-items:center;gap:12px;padding-top:20px;margin-bottom:4px">
-      <button onclick="showTab('dashboard')" style="background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0">←</button>
+      <button onclick="showTab('dashboard')" style="background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0" aria-label="Atrás">←</button>
       <div class="page-title" style="padding:0">Usuarios</div>
     </div>
     <div class="page-sub">Gestiona accesos y permisos</div>
@@ -322,7 +322,7 @@
       <button class="btn-secondary" onclick="closeSheet('usermenu');showTab('admin')" style="margin-bottom:10px">⚙️ Gestionar usuarios</button>
     </div>
     <button class="btn-danger" onclick="doLogout()" style="margin-bottom:10px">Cerrar sesión</button>
-    <button class="btn-secondary" onclick="closeSheet('usermenu')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('usermenu')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -333,10 +333,12 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="nu-title">Nuevo Usuario</div>
     <input type="hidden" id="nu-uid">
-    <div class="form-group"><label class="form-label">Nombre completo *</label><input class="form-input" id="nu-nombre" type="text" placeholder="Ej. Juan Pérez"></div>
-    <div class="form-group"><label class="form-label">Correo electrónico *</label><input class="form-input" id="nu-email" type="email" placeholder="juan@empresa.com"></div>
+    <div class="form-group"><label class="form-label">Nombre completo *</label>
+      <input class="form-input" id="nu-nombre" type="text" placeholder="Ej. Juan Pérez"></div>
+    <div class="form-group"><label class="form-label" for="nu-email">Correo electrónico *</label>
+      <input class="form-input" id="nu-email" type="email" placeholder="juan@empresa.com"></div>
     <div class="form-group" id="nu-pass-wrap">
-      <label class="form-label">Contraseña *</label>
+      <label class="form-label" for="nu-rol">Contraseña *</label>
       <div style="position:relative">
         <input class="form-input" id="nu-pass" type="password" placeholder="Mínimo 6 caracteres" style="padding-right:48px">
         <button onclick="togglePassVis()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0;line-height:1" id="nu-pass-eye">👁</button>
@@ -366,7 +368,7 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-tareas" style="width:18px;height:18px;accent-color:var(--accent)"> ✅ Tareas</label>
     </div>
     <div class="form-group">
-      <label class="form-label">PIN App Requisiciones (4 dígitos)</label>
+      <label class="form-label" for="nu-pin-app">PIN App Requisiciones (4 dígitos)</label>
       <input class="form-input" id="nu-pin-app" type="number" placeholder="Ej. 1234" maxlength="4"
         style="letter-spacing:8px;font-size:18px;font-weight:700">
       <div style="font-size:10px;color:var(--dim);margin-top:4px">El usuario usará este PIN para entrar a la app de requisiciones de campo</div>
@@ -376,8 +378,8 @@
       <button type="button" onclick="toggleTodasObras()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:Barlow,sans-serif;font-weight:700">Todas las obras</button>
     </div>
     <div id="nu-obras-list" style="margin-bottom:16px"></div>
-    <button class="btn-primary" id="nu-save-btn" onclick="saveUsuario()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('nusuario')">Cancelar</button>
+    <button class="btn-primary" id="nu-save-btn" onclick="saveUsuario()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('nusuario')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -391,7 +393,7 @@
     <input type="hidden" id="ft-id">
     <input type="hidden" id="ft-persona-id">
     <div class="form-group">
-      <label class="form-label">Persona *</label>
+      <label class="form-label" for="ft-persona">Persona *</label>
       <select class="form-input" id="ft-persona" onchange="onPersonaChange(this.value)">
         <option value="">Seleccionar persona...</option>
         <option value="__nueva__">➕ Nueva persona</option>
@@ -399,15 +401,21 @@
     </div>
     <div id="ft-nueva-persona-wrap" style="display:none;background:var(--bg);border-radius:10px;padding:12px;margin-bottom:14px">
       <div class="form-label" style="margin-bottom:10px">DATOS PERSONALES</div>
-      <div class="form-group"><label class="form-label">Nombre completo *</label><input class="form-input" id="ft-nombre" type="text" placeholder="Ej. Juan Pérez López"></div>
+      <div class="form-group"><label class="form-label" for="ft-nombre">Nombre completo *</label>
+      <input class="form-input" id="ft-nombre" type="text" placeholder="Ej. Juan Pérez López"></div>
       <div class="form-row">
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">RFC</label><input class="form-input" id="ft-rfc-per" type="text" placeholder="XXXX000000XXX"></div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">NSS (IMSS)</label><input class="form-input" id="ft-nss" type="text" placeholder="00000000000"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-rfc-per">RFC</label>
+      <input class="form-input" id="ft-rfc-per" type="text" placeholder="XXXX000000XXX"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-nss">NSS (IMSS)</label>
+      <input class="form-input" id="ft-nss" type="text" placeholder="00000000000"></div>
       </div>
-      <div class="form-group" style="margin-top:14px"><label class="form-label">Teléfono</label><input class="form-input" id="ft-tel" type="tel" placeholder="55 1234 5678"></div>
+      <div class="form-group" style="margin-top:14px"><label class="form-label" for="ft-tel">Teléfono</label>
+      <input class="form-input" id="ft-tel" type="tel" placeholder="55 1234 5678"></div>
       <div class="form-row" style="margin-top:0">
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">Contacto emergencia</label><input class="form-input" id="ft-cont-emer" type="text" placeholder="Nombre"></div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">Tel. emergencia</label><input class="form-input" id="ft-tel-emer" type="tel" placeholder="55 1234 5678"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-cont-emer">Contacto emergencia</label>
+      <input class="form-input" id="ft-cont-emer" type="text" placeholder="Nombre"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-tel-emer">Tel. emergencia</label>
+      <input class="form-input" id="ft-tel-emer" type="tel" placeholder="55 1234 5678"></div>
       </div>
     </div>
     <div id="ft-persona-info" style="display:none;background:var(--bg);border-radius:10px;padding:12px;margin-bottom:14px">
@@ -415,23 +423,26 @@
     </div>
     <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px">
       <div class="form-label" style="margin-bottom:10px">DATOS DE ASIGNACIÓN</div>
-      <div class="form-group"><label class="form-label">Puesto</label><input class="form-input" id="ft-puesto" type="text" placeholder="Ej. Instalador, Soldador"></div>
-      <div class="form-group"><label class="form-label">Área</label>
-        <select class="form-input" id="ft-area">
+      <div class="form-group"><label class="form-label" for="ft-puesto">Puesto</label>
+      <input class="form-input" id="ft-puesto" type="text" placeholder="Ej. Instalador, Soldador"></div>
+      <div class="form-group"><label class="form-label" for="ft-area">Área</label>
+      <select class="form-input" id="ft-area">
           <option value="campo">🏗 Campo</option>
           <option value="taller">🔧 Taller</option>
           <option value="oficina">🏢 Oficina</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Razón Social</label>
-        <select class="form-input" id="ft-razon">
+      <div class="form-group"><label class="form-label" for="ft-razon">Razón Social</label>
+      <select class="form-input" id="ft-razon">
           <option value="">Sin especificar</option>
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Obra asignada</label><select class="form-input" id="ft-obra"></select></div>
-    <div class="form-group"><label class="form-label">Sueldo diario ($)</label><input class="form-input" id="ft-sueldo" type="number" placeholder="0"></div>
-    <div class="form-group"><label class="form-label">Forma de pago</label>
+    <div class="form-group"><label class="form-label" for="ft-obra">Obra asignada</label>
+      <select class="form-input" id="ft-obra"></select></div>
+    <div class="form-group"><label class="form-label" for="ft-sueldo">Sueldo diario ($)</label>
+      <input class="form-input" id="ft-sueldo" type="number" placeholder="0"></div>
+    <div class="form-group"><label class="form-label" for="ft-forma">Forma de pago</label>
       <select class="form-input" id="ft-forma" onchange="onFormaPagoChange(this.value)">
         <option value="efectivo">💵 Efectivo</option>
         <option value="tarjeta">💳 Tarjeta</option>
@@ -439,13 +450,16 @@
       </select>
     </div>
     <div id="ft-tarjeta-wrap" style="display:none">
-      <div class="form-group"><label class="form-label">Banco</label><input class="form-input" id="ft-banco" type="text" placeholder="Ej. BBVA, Banamex"></div>
-      <div class="form-group"><label class="form-label">Últimos 4 dígitos</label><input class="form-input" id="ft-tarjeta" type="text" placeholder="1234" maxlength="4"></div>
+      <div class="form-group"><label class="form-label" for="ft-banco">Banco</label>
+      <input class="form-input" id="ft-banco" type="text" placeholder="Ej. BBVA, Banamex"></div>
+      <div class="form-group"><label class="form-label" for="ft-tarjeta">Últimos 4 dígitos</label>
+      <input class="form-input" id="ft-tarjeta" type="text" placeholder="1234" maxlength="4"></div>
     </div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha de ingreso</label><input class="form-input" id="ft-ingreso" type="date"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Registro Patronal</label>
-        <select class="form-input" id="ft-rp-alta">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-ingreso">Fecha de ingreso</label>
+      <input class="form-input" id="ft-ingreso" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="ft-rp-alta">Registro Patronal</label>
+      <select class="form-input" id="ft-rp-alta">
           <option value="">No especificado</option>
           <option value="imss">IMSS</option>
           <option value="issste">ISSSTE</option>
@@ -454,9 +468,10 @@
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">PIN checador (4 dígitos)</label><input class="form-input" id="ft-pin" type="number" placeholder="1234" maxlength="4"></div>
-    <button class="btn-primary" id="trab-save-btn" onclick="saveTrabajador()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('trabajador')">Cancelar</button>
+    <div class="form-group"><label class="form-label" for="ft-pin">PIN checador (4 dígitos)</label>
+      <input class="form-input" id="ft-pin" type="number" placeholder="1234" maxlength="4"></div>
+    <button class="btn-primary" id="trab-save-btn" onclick="saveTrabajador()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('trabajador')" aria-label="Acción">Cancelar</button>
     <div id="trab-delete-wrap" style="display:none;margin-top:10px"><button class="btn-danger" onclick="deleteTrabajador()">Dar de baja</button></div>
     <div style="height:20px"></div>
   </div>
@@ -467,14 +482,17 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Nueva Semana</div>
-    <div class="form-group"><label class="form-label">Obra</label><select class="form-input" id="fs-obra"></select></div>
+    <div class="form-group"><label class="form-label" for="fs-obra">Obra</label>
+      <select class="form-input" id="fs-obra"></select></div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha inicio</label><input class="form-input" id="fs-inicio" type="date"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha fin</label><input class="form-input" id="fs-fin" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fs-inicio">Fecha inicio</label>
+      <input class="form-input" id="fs-inicio" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fs-fin">Fecha fin</label>
+      <input class="form-input" id="fs-fin" type="date"></div>
     </div>
     <div style="height:14px"></div>
     <button class="btn-primary" id="semana-save-btn" onclick="saveSemana()" style="margin-bottom:10px">Crear semana</button>
-    <button class="btn-secondary" onclick="closeSheet('semana')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('semana')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -489,27 +507,33 @@
     <input type="hidden" id="fp-trab-id">
     <div id="fp-sueldo-base-info" style="font-size:13px;color:var(--dim);margin-bottom:16px"></div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Días trabajados</label><input class="form-input" id="fp-dias" type="number" placeholder="0" min="0" max="7" oninput="calcPagoTotal()"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Horas extra</label><input class="form-input" id="fp-horas-extra" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-dias">Días trabajados</label>
+      <input class="form-input" id="fp-dias" type="number" placeholder="0" min="0" max="7" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-horas-extra">Horas extra</label>
+      <input class="form-input" id="fp-horas-extra" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
     </div>
     <div class="form-row" style="margin-top:14px">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Viáticos ($)</label><input class="form-input" id="fp-viaticos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Bonos ($)</label><input class="form-input" id="fp-bonos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-viaticos">Viáticos ($)</label>
+      <input class="form-input" id="fp-viaticos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-bonos">Bonos ($)</label>
+      <input class="form-input" id="fp-bonos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">Deducciones ($)</label><input class="form-input" id="fp-deducciones" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
-    <div class="form-group"><label class="form-label">Forma de pago</label>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fp-deducciones">Deducciones ($)</label>
+      <input class="form-input" id="fp-deducciones" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+    <div class="form-group"><label class="form-label" for="fp-forma">Forma de pago</label>
       <select class="form-input" id="fp-forma">
         <option value="efectivo">💵 Efectivo</option>
         <option value="tarjeta">💳 Tarjeta</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="fp-notas" type="text" placeholder="Observaciones..."></div>
+    <div class="form-group"><label class="form-label" for="fp-notas">Notas</label>
+      <input class="form-input" id="fp-notas" type="text" placeholder="Observaciones..."></div>
     <div class="card" style="margin-bottom:16px;text-align:center">
       <div class="card-label">TOTAL A PAGAR</div>
       <div id="fp-total-display" style="font-size:32px;font-weight:800;color:var(--accent)">$0</div>
     </div>
-    <button class="btn-primary" id="pago-save-btn" onclick="savePago()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('pago')">Cancelar</button>
+    <button class="btn-primary" id="pago-save-btn" onclick="savePago()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('pago')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -520,8 +544,9 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">Programar Descanso</div>
     <input type="hidden" id="fd-id">
-    <div class="form-group"><label class="form-label">Trabajador</label><select class="form-input" id="fd-trab"></select></div>
-    <div class="form-group"><label class="form-label">Tipo</label>
+    <div class="form-group"><label class="form-label" for="fd-trab">Trabajador</label>
+      <select class="form-input" id="fd-trab"></select></div>
+    <div class="form-group"><label class="form-label" for="fd-tipo">Tipo</label>
       <select class="form-input" id="fd-tipo">
         <option value="descanso">😴 Descanso</option>
         <option value="vacaciones">🏖 Vacaciones</option>
@@ -530,12 +555,15 @@
       </select>
     </div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha inicio</label><input class="form-input" id="fd-inicio" type="date"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha fin</label><input class="form-input" id="fd-fin" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fd-inicio">Fecha inicio</label>
+      <input class="form-input" id="fd-inicio" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fd-fin">Fecha fin</label>
+      <input class="form-input" id="fd-fin" type="date"></div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">Notas</label><input class="form-input" id="fd-notas" type="text" placeholder="Motivo..."></div>
-    <button class="btn-primary" id="desc-save-btn" onclick="saveDescanso()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('descanso')">Cancelar</button>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fd-notas">Notas</label>
+      <input class="form-input" id="fd-notas" type="text" placeholder="Motivo..."></div>
+    <button class="btn-primary" id="desc-save-btn" onclick="saveDescanso()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('descanso')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -547,25 +575,25 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">Configurar Horario</div>
     <input type="hidden" id="fh-id">
-    <div class="form-group"><label class="form-label">Tipo de horario</label>
+    <div class="form-group"><label class="form-label" for="fh-tipo">Tipo de horario</label>
       <select class="form-input" id="fh-tipo" onchange="onHorarioTipoChange(this.value)">
         <option value="obra">🏗 Por obra (campo)</option>
         <option value="taller">🔧 Taller</option>
         <option value="oficina">🏢 Oficina</option>
       </select>
     </div>
-    <div id="fh-obra-wrap" class="form-group"><label class="form-label">Obra</label>
+    <div id="fh-obra-wrap" class="form-group"><label class="form-label" for="fh-obra">Obra</label>
       <select class="form-input" id="fh-obra"></select>
     </div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Hora entrada</label>
-        <input class="form-input" id="fh-entrada" type="time" value="08:00">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fh-entrada">Hora entrada</label>
+      <input class="form-input" id="fh-entrada" type="time" value="08:00">
       </div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Hora salida</label>
-        <input class="form-input" id="fh-salida" type="time" value="17:00">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fh-salida">Hora salida</label>
+      <input class="form-input" id="fh-salida" type="time" value="17:00">
       </div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">Días laborales</label>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fh-sab-entrada">Días laborales</label>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px" id="fh-dias">
         <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" class="fh-dia" value="1" checked style="accent-color:var(--accent)">Lun</label>
         <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" class="fh-dia" value="2" checked style="accent-color:var(--accent)">Mar</label>
@@ -587,18 +615,18 @@
       <div class="form-label" style="margin-bottom:10px">HORARIO SÁBADO</div>
       <div class="form-row" style="margin-bottom:0">
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Entrada</label>
-          <input class="form-input" id="fh-sab-entrada" type="time" value="08:00">
+      <input class="form-input" id="fh-sab-entrada" type="time" value="08:00">
         </div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">Salida</label>
-          <input class="form-input" id="fh-sab-salida" type="time" value="13:00">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fh-sab-salida">Salida</label>
+      <input class="form-input" id="fh-sab-salida" type="time" value="13:00">
         </div>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Tolerancia (minutos)</label>
+    <div class="form-group"><label class="form-label" for="fh-tolerancia">Tolerancia (minutos)</label>
       <input class="form-input" id="fh-tolerancia" type="number" placeholder="10" value="10">
     </div>
-    <button class="btn-primary" id="horario-save-btn" onclick="saveHorario()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('horario')">Cancelar</button>
+    <button class="btn-primary" id="horario-save-btn" onclick="saveHorario()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('horario')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -612,44 +640,44 @@
     <input type="hidden" id="fge-id">
     <input type="hidden" id="fge-obra-id">
     <input type="hidden" id="fge-orden">
-    <div class="form-group"><label class="form-label">Nombre *</label>
+    <div class="form-group"><label class="form-label" for="fge-nombre">Nombre *</label>
       <input class="form-input" id="fge-nombre" type="text" placeholder="Ej. Fabricación, Instalación...">
     </div>
-    <div class="form-group"><label class="form-label">Responsable</label>
+    <div class="form-group"><label class="form-label" for="fge-responsable">Responsable</label>
       <input class="form-input" id="fge-responsable" type="text" placeholder="Nombre del responsable">
     </div>
     <div class="card-label" style="margin-bottom:8px">FECHAS PROGRAMADAS</div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Inicio</label>
-        <input class="form-input" id="fge-inicio-prog" type="date">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fge-inicio-prog">Inicio</label>
+      <input class="form-input" id="fge-inicio-prog" type="date">
       </div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fin</label>
-        <input class="form-input" id="fge-fin-prog" type="date">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fge-fin-prog">Fin</label>
+      <input class="form-input" id="fge-fin-prog" type="date">
       </div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">% Avance programado</label>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fge-avance-prog">% Avance programado</label>
       <input class="form-input" id="fge-avance-prog" type="number" min="0" max="100" placeholder="0">
     </div>
     <div class="card-label" style="margin-bottom:8px;margin-top:4px">FECHAS REALES</div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Inicio real</label>
-        <input class="form-input" id="fge-inicio-real" type="date">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fge-inicio-real">Inicio real</label>
+      <input class="form-input" id="fge-inicio-real" type="date">
       </div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fin real</label>
-        <input class="form-input" id="fge-fin-real" type="date">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fge-fin-real">Fin real</label>
+      <input class="form-input" id="fge-fin-real" type="date">
       </div>
     </div>
     <div class="form-group" style="margin-top:14px">
-      <label class="form-label">% Avance real <span id="fge-avance-real-val" style="color:var(--accent);font-weight:800">0%</span></label>
+      <label class="form-label" for="fge-avance-real">% Avance real <span id="fge-avance-real-val" style="color:var(--accent);font-weight:800">0%</span></label>
       <input type="range" id="fge-avance-real" min="0" max="100" step="5" value="0"
         style="width:100%;accent-color:var(--accent);margin-top:6px"
         oninput="document.getElementById('fge-avance-real-val').textContent=this.value+'%'">
     </div>
-    <div class="form-group"><label class="form-label">Notas</label>
+    <div class="form-group"><label class="form-label" for="fge-notas">Notas</label>
       <input class="form-input" id="fge-notas" type="text" placeholder="Observaciones...">
     </div>
-    <button class="btn-primary" id="gantt-save-btn" onclick="saveEtapaGantt()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('gantt-etapa')">Cancelar</button>
+    <button class="btn-primary" id="gantt-save-btn" onclick="saveEtapaGantt()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('gantt-etapa')" aria-label="Acción">Cancelar</button>
     <div id="fge-delete-wrap" style="display:none;margin-top:10px">
       <button class="btn-danger" onclick="eliminarEtapaGantt()">🗑 Eliminar etapa</button>
     </div>
@@ -669,7 +697,7 @@
       <div id="fmov-stock-actual" style="font-size:28px;font-weight:800;color:var(--accent)">—</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Tipo de movimiento</label>
+      <label class="form-label" for="fmov-tipo">Tipo de movimiento</label>
       <select class="form-input" id="fmov-tipo">
         <option value="salida">📤 Salida (uso en obra)</option>
         <option value="ajuste_mas">📈 Ajuste + (agregar stock)</option>
@@ -677,11 +705,11 @@
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">Cantidad *</label>
+      <label class="form-label" for="fmov-cantidad">Cantidad *</label>
       <input class="form-input" id="fmov-cantidad" type="number" placeholder="0" min="0">
     </div>
     <div class="form-group">
-      <label class="form-label">Categoría de egreso</label>
+      <label class="form-label" for="fmov-cat-egreso">Categoría de egreso</label>
       <select class="form-input" id="fmov-cat-egreso">
         <option value="Materiales">Materiales</option>
         <option value="Mano de obra">Mano de obra</option>
@@ -694,18 +722,18 @@
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">Proyecto / Obra</label>
+      <label class="form-label" for="fmov-obra-inv">Proyecto / Obra</label>
       <select class="form-input" id="fmov-obra-inv">
         <option value="">— General —</option>
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">Motivo / Notas</label>
+      <label class="form-label" for="fmov-motivo">Motivo / Notas</label>
       <input class="form-input" id="fmov-motivo" type="text" placeholder="Ej. Instalación muro norte, Inventario físico...">
     </div>
     <button class="btn-primary" id="fmov-save-btn" onclick="saveMovimiento()" style="margin-bottom:10px">Registrar movimiento</button>
     <button class="btn-secondary" onclick="closeSheet('movimiento');editMaterial(document.getElementById('fmov-mat-id').value)" style="margin-bottom:10px">✏️ Editar material</button>
-    <button class="btn-secondary" onclick="closeSheet('movimiento')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('movimiento')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -718,7 +746,7 @@
     <div class="sheet-title" style="color:#EF4444">🗑 Eliminar requisición</div>
     <div id="confirm-delete-msg" style="font-size:14px;color:var(--muted);margin-bottom:20px">¿Estás seguro?</div>
     <button class="btn-danger" id="confirm-delete-btn" onclick="confirmarEliminarReq()" style="margin-bottom:10px">Sí, eliminar definitivamente</button>
-    <button class="btn-secondary" onclick="closeSheet('confirm-delete')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('confirm-delete')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -730,21 +758,21 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">✅ Autorizar compra</div>
     <div class="form-group">
-      <label class="form-label">Tipo de pago</label>
+      <label class="form-label" for="fap-tipo">Tipo de pago</label>
       <select class="form-input" id="fap-tipo" onchange="toggleVencimiento(this.value)">
         <option value="contado">💵 Contado</option>
         <option value="credito">💳 Crédito</option>
       </select>
     </div>
     <div class="form-group" id="fap-vencimiento-wrap" style="display:none">
-      <label class="form-label">Fecha de vencimiento</label>
+      <label class="form-label" for="fap-vencimiento">Fecha de vencimiento</label>
       <input class="form-input" id="fap-vencimiento" type="date">
     </div>
     <div class="card" style="margin-bottom:16px;background:var(--bg)">
       <div id="fap-efecto" style="font-size:13px;color:var(--muted)">💵 Contado: el monto se suma al ejercido inmediatamente.</div>
     </div>
     <button class="btn-primary" id="fap-save-btn" onclick="confirmarAutorizacion()" style="margin-bottom:10px">Autorizar</button>
-    <button class="btn-secondary" onclick="closeSheet('autorizar-pago')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('autorizar-pago')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -755,9 +783,10 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="obra-sheet-title">Nueva Obra</div>
     <input type="hidden" id="obra-edit-id">
-    <div class="form-group"><label class="form-label">Nombre del proyecto *</label><input class="form-input" id="f-nombre" type="text" placeholder="Ej. Torre Corporativa Centro"></div>
+    <div class="form-group"><label class="form-label" for="f-nombre">Nombre del proyecto *</label>
+      <input class="form-input" id="f-nombre" type="text" placeholder="Ej. Torre Corporativa Centro"></div>
     <div class="form-group">
-      <label class="form-label">Cliente</label>
+      <label class="form-label" for="f-cliente-select">Cliente</label>
       <select class="form-input" id="f-cliente-select" onchange="onClienteChange(this.value)">
         <option value="">Seleccionar cliente...</option>
         <option value="__nuevo__">➕ Agregar nuevo cliente</option>
@@ -772,7 +801,7 @@
       <input type="hidden" id="f-cliente">
     </div>
     <div class="form-group">
-      <label class="form-label">Tipo de obra</label>
+      <label class="form-label" for="f-tipo">Tipo de obra</label>
       <select class="form-input" id="f-tipo" onchange="onTipoChange(this.value)">
         <option value="">Seleccionar tipo...</option>
         <option value="__nuevo__">➕ Agregar nuevo tipo</option>
@@ -781,26 +810,31 @@
         <input class="form-input" id="f-tipo-nuevo" type="text" placeholder="Ej. Muro cortina">
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Ubicación</label><input class="form-input" id="f-ubicacion" type="text" placeholder="Ej. Av. Tecnológico 123, Aguascalientes"></div>
+    <div class="form-group"><label class="form-label" for="f-ubicacion">Ubicación</label>
+      <input class="form-input" id="f-ubicacion" type="text" placeholder="Ej. Av. Tecnológico 123, Aguascalientes"></div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha inicio</label><input class="form-input" id="f-inicio" type="date"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fecha entrega</label><input class="form-input" id="f-entrega" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-inicio">Fecha inicio</label>
+      <input class="form-input" id="f-inicio" type="date"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-entrega">Fecha entrega</label>
+      <input class="form-input" id="f-entrega" type="date"></div>
     </div>
     <div class="form-row" style="margin-top:14px">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Presupuesto ($)</label><input class="form-input" id="f-presupuesto" type="number" placeholder="0"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Gastado ($)</label><input class="form-input" id="f-gastado" type="number" placeholder="0"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-presupuesto">Presupuesto ($)</label>
+      <input class="form-input" id="f-presupuesto" type="number" placeholder="0"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-gastado">Gastado ($)</label>
+      <input class="form-input" id="f-gastado" type="number" placeholder="0"></div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">Estado</label>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="f-estado">Estado</label>
       <select class="form-input" id="f-estado">
         <option value="Iniciando">Iniciando</option><option value="En progreso">En progreso</option>
         <option value="Pausada">Pausada</option><option value="Completada">Completada</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Avance: <span id="avance-label">0</span>%</label>
+    <div class="form-group"><label class="form-label" for="f-avance">Avance: <span id="avance-label">0</span>%</label>
       <input type="range" id="f-avance" min="0" max="100" value="0" oninput="document.getElementById('avance-label').textContent=this.value">
     </div>
     <button class="btn-primary" id="obra-save-btn" onclick="saveObra()" style="margin-bottom:10px">Guardar obra</button>
-    <button class="btn-secondary" onclick="closeSheet('obra')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('obra')" aria-label="Acción">Cancelar</button>
     <div id="obra-delete-wrap" style="margin-top:10px;display:none"><button class="btn-danger" onclick="deleteObra()">Eliminar obra</button></div>
     <div style="height:20px"></div>
   </div>
@@ -812,35 +846,39 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="mat-sheet-title">Nuevo Material</div>
     <input type="hidden" id="mat-edit-id">
-    <div class="form-group"><label class="form-label">Nombre *</label><input class="form-input" id="fm-nombre" type="text" placeholder="Ej. Perfil aluminio serie 45"></div>
-    <div class="form-group"><label class="form-label">Inventario *</label>
+    <div class="form-group"><label class="form-label" for="fm-nombre">Nombre *</label>
+      <input class="form-input" id="fm-nombre" type="text" placeholder="Ej. Perfil aluminio serie 45"></div>
+    <div class="form-group"><label class="form-label" for="fm-tipo">Inventario *</label>
       <select class="form-input" id="fm-tipo">
         <option value="campo">🏗 Campo</option>
         <option value="taller">🔧 Taller</option>
       </select>
     </div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Categoría</label>
-        <select class="form-input" id="fm-categoria">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fm-categoria">Categoría</label>
+      <select class="form-input" id="fm-categoria">
           <option value="">Seleccionar</option>
           <option>Aluminio</option><option>Vidrio</option><option>Acero</option>
           <option>Consumibles</option><option>Herrajes</option><option>Otro</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Unidad</label>
-        <select class="form-input" id="fm-unidad">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fm-unidad">Unidad</label>
+      <select class="form-input" id="fm-unidad">
           <option>m</option><option>m²</option><option>kg</option>
           <option>pza</option><option>caja</option><option>lt</option><option>rollo</option>
         </select>
       </div>
     </div>
     <div class="form-row" style="margin-top:14px">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Stock actual</label><input class="form-input" id="fm-stock" type="number" placeholder="0"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Stock mínimo</label><input class="form-input" id="fm-stock-min" type="number" placeholder="0"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fm-stock">Stock actual</label>
+      <input class="form-input" id="fm-stock" type="number" placeholder="0"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fm-stock-min">Stock mínimo</label>
+      <input class="form-input" id="fm-stock-min" type="number" placeholder="0"></div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label">Precio unitario ($)</label><input class="form-input" id="fm-precio" type="number" placeholder="0"></div>
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fm-precio">Precio unitario ($)</label>
+      <input class="form-input" id="fm-precio" type="number" placeholder="0"></div>
     <button class="btn-primary" id="mat-save-btn" onclick="saveMaterial()" style="margin-bottom:10px">Guardar material</button>
-    <button class="btn-secondary" onclick="closeSheet('material')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('material')" aria-label="Acción">Cancelar</button>
     <div id="mat-delete-wrap" style="margin-top:10px;display:none"><button class="btn-danger" onclick="deleteMaterial()">Eliminar material</button></div>
     <div style="height:20px"></div>
   </div>
@@ -851,33 +889,33 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Nueva Requisición</div>
-    <div class="form-group"><label class="form-label">Obra</label>
+    <div class="form-group"><label class="form-label" for="fr-obra">Obra</label>
       <select class="form-input" id="fr-obra"></select>
     </div>
-    <div class="form-group"><label class="form-label">Tipo de inventario *</label>
+    <div class="form-group"><label class="form-label" for="fr-tipo">Tipo de inventario *</label>
       <select class="form-input" id="fr-tipo">
         <option value="campo">🏗 Campo</option>
         <option value="taller">🔧 Taller</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Solicitante</label>
+    <div class="form-group"><label class="form-label" for="fr-solicitante">Solicitante</label>
       <input class="form-input" id="fr-solicitante" type="text" placeholder="Ej. Jefe de taller">
     </div>
-    <div class="form-group"><label class="form-label">Prioridad</label>
+    <div class="form-group"><label class="form-label" for="fr-prioridad">Prioridad</label>
       <select class="form-input" id="fr-prioridad">
         <option value="baja">🟢 Baja</option>
         <option value="media" selected>🟠 Media</option>
         <option value="alta">🔴 Alta</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Notas</label>
+    <div class="form-group"><label class="form-label" for="fr-notas">Notas</label>
       <input class="form-input" id="fr-notas" type="text" placeholder="Observaciones...">
     </div>
     <div class="section-title">Materiales solicitados</div>
     <div id="req-items-list"></div>
     <button class="btn-secondary" onclick="addReqItem()" style="margin-bottom:14px">+ Agregar material</button>
     <button class="btn-primary" id="req-save-btn" onclick="saveRequisicion()" style="margin-bottom:10px">Crear requisición</button>
-    <button class="btn-secondary" onclick="closeSheet('req');_editingReq=false;document.getElementById('sheet-req').querySelector('.sheet-title').textContent='Nueva Requisición';document.getElementById('req-save-btn').textContent='Crear requisición';document.getElementById('req-save-btn').onclick=saveRequisicion;">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('req');_editingReq=false;document.getElementById('sheet-req').querySelector('.sheet-title').textContent='Nueva Requisición';document.getElementById('req-save-btn').textContent='Crear requisición';document.getElementById('req-save-btn').onclick=saveRequisicion;" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -909,10 +947,12 @@
       <div class="card-label">TOTAL COTIZACIÓN</div>
       <div id="fc-total-display" style="font-size:28px;font-weight:800;color:var(--accent)">$0</div>
     </div>
-    <div class="form-group"><label class="form-label">Tiempo de entrega</label><input class="form-input" id="fc-entrega" type="text" placeholder="Ej. 3 días hábiles"></div>
-    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="fc-notas" type="text" placeholder="Condiciones, forma de pago..."></div>
+    <div class="form-group"><label class="form-label" for="fc-entrega">Tiempo de entrega</label>
+      <input class="form-input" id="fc-entrega" type="text" placeholder="Ej. 3 días hábiles"></div>
+    <div class="form-group"><label class="form-label" for="fc-notas">Notas</label>
+      <input class="form-input" id="fc-notas" type="text" placeholder="Condiciones, forma de pago..."></div>
     <button class="btn-primary" id="comp-save-btn" onclick="saveComparativa()" style="margin-bottom:10px">Guardar cotización</button>
-    <button class="btn-secondary" onclick="closeSheet('comp')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('comp')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -924,7 +964,7 @@
     <div class="sheet-title">✏️ Editar Cotización</div>
     <input type="hidden" id="ec-id">
     <input type="hidden" id="ec-req-id">
-    <div class="form-group"><label class="form-label">Proveedor *</label>
+    <div class="form-group"><label class="form-label" for="ec-proveedor">Proveedor *</label>
       <input class="form-input" id="ec-proveedor" type="text" placeholder="Nombre del proveedor">
     </div>
     <div class="card-label" style="margin-bottom:10px">PRECIOS POR MATERIAL</div>
@@ -933,15 +973,15 @@
       <div class="card-label">TOTAL COTIZACIÓN</div>
       <div id="ec-total-display" style="font-size:28px;font-weight:800;color:var(--accent)">$0</div>
     </div>
-    <div class="form-group"><label class="form-label">Tiempo de entrega</label>
+    <div class="form-group"><label class="form-label" for="ec-entrega">Tiempo de entrega</label>
       <input class="form-input" id="ec-entrega" type="text" placeholder="Ej. 3 días hábiles">
     </div>
-    <div class="form-group"><label class="form-label">Notas / Condiciones</label>
+    <div class="form-group"><label class="form-label" for="ec-notas">Notas / Condiciones</label>
       <input class="form-input" id="ec-notas" type="text" placeholder="Forma de pago, condiciones...">
     </div>
     <input type="hidden" id="ec-monto-total" value="0">
     <button class="btn-primary" id="ec-save-btn" onclick="saveEditCotiz()" style="margin-bottom:10px">Guardar cambios</button>
-    <button class="btn-secondary" onclick="closeSheet('edit-cotiz')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('edit-cotiz')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -953,7 +993,7 @@
     <div class="sheet-title">Recepción de Material</div>
     <div id="frec-items-ref" style="margin-bottom:12px"></div>
     <div class="form-group">
-      <label class="form-label">Recibió *</label>
+      <label class="form-label" for="frec-recibio">Recibió *</label>
       <input class="form-input" id="frec-recibio" type="text" placeholder="Nombre de quien recibe" list="frec-recibio-list" autocomplete="off">
       <datalist id="frec-recibio-list"></datalist>
     </div>
@@ -961,7 +1001,7 @@
       <input type="checkbox" id="frec-parcial" style="width:18px;height:18px;accent-color:var(--accent)">
       Entrega parcial (quedan materiales pendientes)
     </label>
-    <div class="form-group"><label class="form-label">Ubicación</label>
+    <div class="form-group"><label class="form-label" for="frec-ubicacion">Ubicación</label>
       <select class="form-input" id="frec-ubicacion">
         <option value="Almacén central">Almacén central</option>
         <option value="Obra">Directo en obra</option>
@@ -969,13 +1009,13 @@
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">No. Factura / Remisión</label>
+      <label class="form-label" for="frec-factura">No. Factura / Remisión</label>
       <input class="form-input" id="frec-factura" type="text" placeholder="Ej. FAC-00123 o REM-456">
     </div>
     <input type="hidden" id="frec-req-id">
     <input type="hidden" id="frec-mat-id">
     <div class="form-group">
-      <label class="form-label">📷 Foto de evidencia (opcional)</label>
+      <label class="form-label" for="fns-nombre">📷 Foto de evidencia (opcional)</label>
       <div id="frec-fotos-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <label style="display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:12px;cursor:pointer;font-size:13px;color:var(--accent);font-weight:700;min-height:48px;text-align:center">
@@ -989,7 +1029,7 @@
       </div>
     </div>
     <button class="btn-primary" id="recep-save-btn" onclick="saveRecepcion()" style="margin-bottom:10px">Confirmar recepción</button>
-    <button class="btn-secondary" onclick="closeSheet('recep')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('recep')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1007,8 +1047,8 @@
       <label class="form-label">Nombre de la subtarea *</label>
       <input class="form-input" id="fns-nombre" type="text" placeholder="Ej. Verificar medidas">
     </div>
-    <button class="btn-primary" id="ns-save-btn" onclick="saveNuevaSubtarea()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('ns')">Cancelar</button>
+    <button class="btn-primary" id="ns-save-btn" onclick="saveNuevaSubtarea()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('ns')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1020,15 +1060,15 @@
     <div class="sheet-title">Nueva Actividad</div>
     <input type="hidden" id="fnt-obra-id">
     <div class="form-group">
-      <label class="form-label">Nombre de la actividad *</label>
+      <label class="form-label" for="fnt-nombre">Nombre de la actividad *</label>
       <input class="form-input" id="fnt-nombre" type="text" placeholder="Ej. Corte de perfiles">
     </div>
     <div class="form-group">
-      <label class="form-label">Etapa</label>
+      <label class="form-label" for="fnt-etapa">Etapa</label>
       <select class="form-input" id="fnt-etapa"></select>
     </div>
-    <button class="btn-primary" id="nt-save-btn" onclick="saveNuevaTarea()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('nt')">Cancelar</button>
+    <button class="btn-primary" id="nt-save-btn" onclick="saveNuevaTarea()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('nt')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1040,45 +1080,45 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Reporte Diario de Avance</div>
-    <div class="form-group"><label class="form-label">Obra *</label>
+    <div class="form-group"><label class="form-label" for="frep-obra">Obra *</label>
       <select class="form-input" id="frep-obra"></select>
     </div>
-    <div class="form-group"><label class="form-label">Elaboró</label>
+    <div class="form-group"><label class="form-label" for="frep-elaboro">Elaboró</label>
       <input class="form-input" id="frep-elaboro" type="text" placeholder="Nombre del responsable">
     </div>
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Personal presente</label>
-        <input class="form-input" id="frep-personal" type="number" placeholder="0">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="frep-personal">Personal presente</label>
+      <input class="form-input" id="frep-personal" type="number" placeholder="0">
       </div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Clima</label>
-        <select class="form-input" id="frep-clima">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="frep-clima">Clima</label>
+      <select class="form-input" id="frep-clima">
           <option>☀️ Soleado</option><option>⛅ Nublado</option>
           <option>🌧️ Lluvia</option><option>🌬️ Viento</option>
         </select>
       </div>
     </div>
     <div class="form-group" style="margin-top:14px">
-      <label class="form-label">Avance general: <span id="frep-avance-label">0</span>%</label>
+      <label class="form-label" for="frep-avance">Avance general: <span id="frep-avance-label">0</span>%</label>
       <input type="range" id="frep-avance" min="0" max="100" value="0" oninput="document.getElementById('frep-avance-label').textContent=this.value">
     </div>
     <div class="section-title">Avance por etapa</div>
     <div id="frep-etapas"></div>
     <div class="form-group">
-      <label class="form-label">Actividades realizadas hoy</label>
+      <label class="form-label" for="frep-actividades">Actividades realizadas hoy</label>
       <textarea class="form-input" id="frep-actividades" rows="3" placeholder="Describe las actividades del día..." style="resize:none;line-height:1.5"></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label">Observaciones / Problemas</label>
+      <label class="form-label" for="frep-observaciones">Observaciones / Problemas</label>
       <textarea class="form-input" id="frep-observaciones" rows="2" placeholder="Incidencias, faltantes, retrasos..." style="resize:none;line-height:1.5"></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label">📸 Fotos del avance</label>
+      <label class="form-label" for="frep-fotos">📸 Fotos del avance</label>
       <input type="file" id="frep-fotos" accept="image/*" multiple style="display:none" onchange="previewFotos(this)">
       <button onclick="document.getElementById('frep-fotos').click()" class="btn-secondary" style="margin-bottom:8px">📷 Seleccionar fotos</button>
       <div id="frep-fotos-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
     <button class="btn-primary" id="rep-save-btn" onclick="saveReporte()" style="margin-bottom:10px">Guardar reporte</button>
-    <button class="btn-secondary" onclick="closeSheet('reporte')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('reporte')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1089,10 +1129,12 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">Nueva Etapa</div>
     <input type="hidden" id="fet-tipo-id">
-    <div class="form-group"><label class="form-label">Nombre de la etapa *</label><input class="form-input" id="fet-nombre" type="text" placeholder="Ej. Fabricación en taller"></div>
-    <div class="form-group"><label class="form-label">Orden</label><input class="form-input" id="fet-orden" type="number" value="1"></div>
+    <div class="form-group"><label class="form-label" for="fet-nombre">Nombre de la etapa *</label>
+      <input class="form-input" id="fet-nombre" type="text" placeholder="Ej. Fabricación en taller"></div>
+    <div class="form-group"><label class="form-label" for="fet-orden">Orden</label>
+      <input class="form-input" id="fet-orden" type="number" value="1"></div>
     <button class="btn-primary" onclick="saveEtapa()" style="margin-bottom:10px">Guardar etapa</button>
-    <button class="btn-secondary" onclick="closeSheet('et')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('et')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1102,9 +1144,10 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title">Nueva Tarea</div>
     <input type="hidden" id="ftp-et-id">
-    <div class="form-group"><label class="form-label">Nombre *</label><input class="form-input" id="ftp-nombre" type="text" placeholder="Ej. Corte de perfiles"></div>
+    <div class="form-group"><label class="form-label" for="ftp-nombre">Nombre *</label>
+      <input class="form-input" id="ftp-nombre" type="text" placeholder="Ej. Corte de perfiles"></div>
     <button class="btn-primary" onclick="saveTareaP()" style="margin-bottom:10px">Agregar tarea</button>
-    <button class="btn-secondary" onclick="closeSheet('tp')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('tp')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1116,9 +1159,10 @@
     <input type="hidden" id="fct-id">
     <input type="hidden" id="fct-obra-id">
     <div id="fct-nombre" style="font-size:15px;font-weight:600;margin-bottom:20px;color:var(--text)"></div>
-    <div class="form-group"><label class="form-label">Tu nombre</label><input class="form-input" id="fct-resp" type="text" placeholder="¿Quién completa esta tarea?"></div>
+    <div class="form-group"><label class="form-label" for="fct-resp">Tu nombre</label>
+      <input class="form-input" id="fct-resp" type="text" placeholder="¿Quién completa esta tarea?"></div>
     <button class="btn-success" onclick="completarT()" style="margin-bottom:10px">✅ Marcar completada</button>
-    <button class="btn-secondary" onclick="closeSheet('ct')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeSheet('ct')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
@@ -1801,7 +1845,7 @@ async function showRequisicion(id) {
           ${!c.seleccionado&&(_est==='pendiente'||_est==='en comparativa')?`<button onclick="seleccionarCotiz('${c.id}','${id}')" style="flex:1;background:#10B98122;border:1px solid #10B98144;color:#10B981;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✓ Seleccionar</button>`:''}
           <button onclick="generarPDFCotizacion('${c.id}')" style="flex:1;background:#3B82F622;border:1px solid #3B82F644;color:#3B82F6;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">📄 PDF</button>
           <button onclick="editarCotiz('${c.id}')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Editar</button>
-          <button onclick="eliminarCotiz('${c.id}','${id}')" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">🗑</button>
+          <button onclick="eliminarCotiz('${c.id}','${id}')" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer" aria-label="Eliminar">🗑</button>
         </div>
       </div>`).join(''):`<div class="item-sub" style="margin-bottom:10px">Sin cotizaciones aún</div>`}
       <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>
@@ -1931,11 +1975,13 @@ async function editarRequisicion(reqId) {
     reqItems.push({nombre:it.nombre_material||'',cantidad:it.cantidad||1,unidad:it.unidad||'pza'});
     const div=document.createElement('div');div.className='req-item-row';div.id='req-item-'+idx;
     div.innerHTML=`<div class="form-row" style="margin-bottom:8px">
-      <div><label class="form-label">Material</label><input class="form-input" id="ri-nombre-${idx}" type="text" value="${(it.nombre_material||'').replace(/"/g,'&quot;')}" list="mat-sugg-list" autocomplete="off"></div>
-      <div><label class="form-label">Cantidad</label><input class="form-input" id="ri-cant-${idx}" type="number" value="${it.cantidad||1}" min="0" step="any"></div>
+      <div><label class="form-label" for="ri-nombre-${idx}">Material</label>
+      <input class="form-input" id="ri-nombre-${idx}" type="text" value="${(it.nombre_material||'').replace(/"/g,'&quot;')}" list="mat-sugg-list" autocomplete="off"></div>
+      <div><label class="form-label" for="ri-cant-${idx}">Cantidad</label>
+      <input class="form-input" id="ri-cant-${idx}" type="number" value="${it.cantidad||1}" min="0" step="any"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-      <label class="form-label" style="margin:0;white-space:nowrap">Unidad:</label>
+      <label class="form-label" for="ri-nombre-${idx}" style="margin:0;white-space:nowrap">Unidad:</label>
       ${buildUnidadSelect('ri-unidad-'+idx, it.unidad||'pza')}
       <button onclick="removeReqItem(${idx})" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
     </div>`;
@@ -2135,11 +2181,13 @@ function addReqItem() {
   reqItems.push({nombre:'',cantidad:1,unidad:'pza'});
   const div=document.createElement('div');div.className='req-item-row';div.id='req-item-'+idx;
   div.innerHTML=`<div class="form-row" style="margin-bottom:8px">
-    <div><label class="form-label">Material</label><input class="form-input" id="ri-nombre-${idx}" type="text" placeholder="Nombre del material" list="mat-sugg-list" autocomplete="off"></div>
-    <div><label class="form-label">Cantidad</label><input class="form-input" id="ri-cant-${idx}" type="number" placeholder="0" value="1" min="0" step="any"></div>
+    <div><label class="form-label">Material</label>
+      <input class="form-input" id="ri-nombre-${idx}" type="text" placeholder="Nombre del material" list="mat-sugg-list" autocomplete="off"></div>
+    <div><label class="form-label" for="ri-cant-${idx}">Cantidad</label>
+      <input class="form-input" id="ri-cant-${idx}" type="number" placeholder="0" value="1" min="0" step="any"></div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-    <label class="form-label" style="margin:0;white-space:nowrap">Unidad:</label>
+    <label class="form-label" for="ec-monto-simple" style="margin:0;white-space:nowrap">Unidad:</label>
     ${buildUnidadSelect('ri-unidad-'+idx,'pza')}
     <button onclick="removeReqItem(${idx})" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
   </div>`;
@@ -2155,18 +2203,29 @@ async function saveRequisicion() {
   const obraId=document.getElementById('fr-obra').value;
   if(!obraId){showToast('Selecciona una obra',true);return;}
   const btn=document.getElementById('req-save-btn');btn.textContent='Creando...';btn.disabled=true;
+  // Folio anti-colisión: se consulta el MAX numérico existente y se añade
+  // un sufijo de timestamp para que dos guardados simultáneos no produzcan el mismo string
   let folio;
   try {
     const anio = new Date().getFullYear();
-    const todas = await db('GET','requisiciones?order=created_at.asc') || [];
-    const desteAnio = todas.filter(function(x){
-      return x.folio && x.folio.toString().startsWith('REQ-'+anio+'-');
+    const prefix = 'REQ-'+anio+'-';
+    const todas = await db('GET','requisiciones?select=folio&order=created_at.desc') || [];
+    // Buscar el número más alto ya usado este año
+    let maxNum = 0;
+    todas.forEach(function(x){
+      if(x.folio && x.folio.toString().startsWith(prefix)){
+        // El número puede tener sufijo -TS, tomar solo la parte numérica después del prefijo
+        var parts = x.folio.toString().slice(prefix.length).split('-');
+        var n = parseInt(parts[0], 10);
+        if(!isNaN(n) && n > maxNum) maxNum = n;
+      }
     });
-    const siguiente = desteAnio.length + 1;
-    // Add timestamp suffix to avoid duplicates on concurrent submissions
-    folio = 'REQ-'+anio+'-'+String(siguiente).padStart(3,'0');
+    const siguiente = maxNum + 1;
+    // Sufijo de timestamp (últimos 4 dígitos en ms) para evitar colisiones en concurrencia
+    const tsSuffix = String(Date.now()).slice(-4);
+    folio = prefix + String(siguiente).padStart(3,'0') + '-' + tsSuffix;
   } catch(e2) {
-    folio = 'REQ-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-3);
+    folio = 'REQ-'+new Date().getFullYear()+'-000-'+String(Date.now()).slice(-4);
   }
   try {
     const [req]=await db('POST','requisiciones',{folio,obra_id:obraId,solicitante:document.getElementById('fr-solicitante').value.trim(),notas:document.getElementById('fr-notas').value.trim(),estado:'Pendiente',fecha:new Date().toISOString().slice(0,10),tipo:document.getElementById('fr-tipo')?.value||'campo'});
@@ -2300,28 +2359,33 @@ async function guardarProveedor(nombre) {
 function calcCompTotal() {
   var totalBruto=0, totalDesc=0, totalSinIva=0, totalIva=0, totalConIva=0;
   document.querySelectorAll('.fc-precio-unit').forEach(function(inp){
-    var precio=parseFloat(inp.value)||0;
-    var cant=parseFloat(inp.dataset.cant)||1;
-    var idx=inp.dataset.idx;
-    var descPct=parseFloat((document.querySelector('.fc-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
-    var ivaSel=document.querySelector('.fc-iva-sel[data-idx="'+idx+'"]');
-    var ivaPct=ivaSel?parseFloat(ivaSel.value)||0:16;
-    var bruto=precio*cant;
-    var descMonto=bruto*(descPct/100);
-    var sub=bruto-descMonto;
-    var iva=sub*(ivaPct/100);
-    var total=sub+iva;
-    totalBruto+=bruto; totalDesc+=descMonto; totalSinIva+=sub; totalIva+=iva; totalConIva+=total;
-    var descEl=document.getElementById('fc-desc-'+idx);
-    var subEl=document.getElementById('fc-sub-'+idx);
-    var ivaEl=document.getElementById('fc-iva-'+idx);
-    if(descEl) descEl.textContent=descMonto>0?'-$'+descMonto.toLocaleString('es-MX',{minimumFractionDigits:2}):'$0';
-    if(subEl) subEl.textContent='$'+sub.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
-    if(ivaEl) ivaEl.textContent='$'+total.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var precio = _safeNum(inp.value);
+    var cant   = _safeNum(inp.dataset.cant, 1) || 1;
+    var idx    = inp.dataset.idx;
+    var descEl2 = document.querySelector('.fc-desc-pct[data-idx="'+idx+'"]');
+    var descPct = descEl2 ? Math.min(100, Math.max(0, _safeNum(descEl2.value))) : 0;
+    var ivaSel  = document.querySelector('.fc-iva-sel[data-idx="'+idx+'"]');
+    var ivaPct  = ivaSel ? _safeNum(ivaSel.value, 16) : 16;
+    var bruto     = precio * cant;
+    var descMonto = bruto * (descPct / 100);
+    var sub       = bruto - descMonto;
+    var iva       = sub * (ivaPct / 100);
+    var total     = sub + iva;
+    if(isFinite(bruto))     totalBruto   += bruto;
+    if(isFinite(descMonto)) totalDesc    += descMonto;
+    if(isFinite(sub))       totalSinIva  += sub;
+    if(isFinite(iva))       totalIva     += iva;
+    if(isFinite(total))     totalConIva  += total;
+    var descEl = document.getElementById('fc-desc-'+idx);
+    var subEl  = document.getElementById('fc-sub-'+idx);
+    var ivaEl  = document.getElementById('fc-iva-'+idx);
+    if(descEl) descEl.textContent = descMonto>0 ? '-$'+descMonto.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}) : '$0';
+    if(subEl)  subEl.textContent  = '$'+sub.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(ivaEl)  ivaEl.textContent  = '$'+total.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   });
-  var fmt2=function(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-  var el=document.getElementById('fc-total-display');
-  if(el) el.innerHTML=
+  var fmt2 = function(n){ return '$'+(isFinite(n)?n:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var el = document.getElementById('fc-total-display');
+  if(el) el.innerHTML =
     '<div style="font-size:28px;font-weight:800;color:var(--accent)">'+fmt2(totalConIva)+'</div>'
     +'<div style="display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px">'
     +(totalDesc>0?'<div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Subtotal bruto</span><span>'+fmt2(totalBruto)+'</span></div>':'')
@@ -2330,8 +2394,8 @@ function calcCompTotal() {
     +'<div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">IVA</span><span>+'+fmt2(totalIva)+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;font-weight:800;border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><span>Total c/IVA</span><span style="color:var(--accent)">'+fmt2(totalConIva)+'</span></div>'
     +'</div>';
-  var hidden=document.getElementById('fc-monto-total');
-  if(hidden) hidden.value=totalConIva;
+  var hidden = document.getElementById('fc-monto-total');
+  if(hidden) hidden.value = isFinite(totalConIva) ? totalConIva : 0;
 }
 let _savingComparativa = false;
 async function saveComparativa() {
@@ -2433,7 +2497,7 @@ async function editarCotiz(compId) {
   if(!items.length && !citems.length) {
     document.getElementById('ec-items-wrap').innerHTML = `
       <div class="form-group"><label class="form-label">Monto total *</label>
-        <input class="form-input" id="ec-monto-simple" type="number" placeholder="0.00" step="0.01" min="0" value="${c.precio_unitario||''}" oninput="document.getElementById('ec-monto-total').value=this.value;document.getElementById('ec-total-display').textContent='$'+parseFloat(this.value||0).toLocaleString('es-MX',{minimumFractionDigits:2})">
+      <input class="form-input" id="ec-monto-simple" type="number" placeholder="0.00" step="0.01" min="0" value="${c.precio_unitario||''}" oninput="document.getElementById('ec-monto-total').value=this.value;document.getElementById('ec-total-display').textContent='$'+parseFloat(this.value||0).toLocaleString('es-MX',{minimumFractionDigits:2})">
       </div>`;
     document.getElementById('ec-total-display').textContent = '$'+(parseFloat(c.precio_unitario)||0).toLocaleString('es-MX',{minimumFractionDigits:2});
     return;
@@ -2482,24 +2546,28 @@ async function editarCotiz(compId) {
 function calcEcTotal() {
   var total = 0;
   document.querySelectorAll('.ec-precio-unit').forEach(function(inp){
-    var precio = parseFloat(inp.value)||0;
-    var cant = parseFloat(inp.dataset.cant)||1;
-    var idx = inp.dataset.idx;
-    var descPct = parseFloat((document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
-    var ivaSel = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
-    var ivaPct = ivaSel ? parseFloat(ivaSel.value)||0 : 16;
-    var bruto = precio*cant;
-    var desc = bruto*(descPct/100);
-    var sub = bruto-desc;
-    var iva = sub*(ivaPct/100);
-    var subtotal = sub+iva;
-    total += subtotal;
+    var precio = _safeNum(inp.value);
+    var cant   = _safeNum(inp.dataset.cant, 1) || 1;
+    var idx    = inp.dataset.idx;
+    var descEl2 = document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]');
+    var descPct = descEl2 ? Math.min(100, Math.max(0, _safeNum(descEl2.value))) : 0;
+    var ivaSel  = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
+    var ivaPct  = ivaSel ? _safeNum(ivaSel.value, 16) : 16;
+    var bruto    = precio * cant;
+    var desc     = bruto * (descPct / 100);
+    var sub      = bruto - desc;
+    var iva      = sub * (ivaPct / 100);
+    var subtotal = sub + iva;
+    if(isFinite(subtotal)) total += subtotal;
     var subEl = document.getElementById('ec-sub-'+idx);
-    if(subEl) subEl.textContent = '$'+subtotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(subEl) subEl.textContent = '$'+(isFinite(subtotal)?subtotal:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   });
-  document.getElementById('ec-monto-total').value = total;
-  var fmt2 = function(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-  document.getElementById('ec-total-display').innerHTML = '<div style="font-size:28px;font-weight:800;color:var(--accent)">'+fmt2(total)+'</div>';
+  total = isFinite(total) ? total : 0;
+  var montoEl = document.getElementById('ec-monto-total');
+  if(montoEl) montoEl.value = total;
+  var fmt2 = function(n){ return '$'+(isFinite(n)?n:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var displayEl = document.getElementById('ec-total-display');
+  if(displayEl) displayEl.innerHTML = '<div style="font-size:28px;font-weight:800;color:var(--accent)">'+fmt2(total)+'</div>';
 }
 
 async function saveEditCotiz() {
@@ -4026,18 +4094,26 @@ function abrirPago(detalleId, semanaId, trabId){
   openSheet('pago');
 }
 
+function _safeNum(val, fallback) {
+  // Convierte cualquier valor a número seguro; evita NaN, Infinity y undefined
+  var n = parseFloat(val);
+  return (isFinite(n) && !isNaN(n)) ? n : (fallback || 0);
+}
 function calcPagoTotal(){
-  const trabId=document.getElementById('fp-trab-id').value;
-  const t=trabajadoresData.find(x=>x.id===trabId);
-  const sd=t?parseFloat(t.sueldo_diario)||0:0;
-  const dias=parseFloat(document.getElementById('fp-dias').value)||0;
-  const hExtra=parseFloat(document.getElementById('fp-horas-extra').value)||0;
-  const viat=parseFloat(document.getElementById('fp-viaticos').value)||0;
-  const bonos=parseFloat(document.getElementById('fp-bonos').value)||0;
-  const ded=parseFloat(document.getElementById('fp-deducciones').value)||0;
-  const valorHora=(sd/8)*1.5;
-  const total=Math.max(0,(dias*sd)+(hExtra*valorHora)+viat+bonos-ded);
-  document.getElementById('fp-total-display').textContent=fmt(total);
+  var trabId = document.getElementById('fp-trab-id') ? document.getElementById('fp-trab-id').value : '';
+  var t = trabajadoresData.find(function(x){ return x.id === trabId; });
+  var sd = t ? _safeNum(t.sueldo_diario) : 0;
+  var dias   = _safeNum(document.getElementById('fp-dias')         ? document.getElementById('fp-dias').value         : 0);
+  var hExtra = _safeNum(document.getElementById('fp-horas-extra')  ? document.getElementById('fp-horas-extra').value  : 0);
+  var viat   = _safeNum(document.getElementById('fp-viaticos')     ? document.getElementById('fp-viaticos').value     : 0);
+  var bonos  = _safeNum(document.getElementById('fp-bonos')        ? document.getElementById('fp-bonos').value        : 0);
+  var ded    = _safeNum(document.getElementById('fp-deducciones')  ? document.getElementById('fp-deducciones').value  : 0);
+  // Evitar división por cero si sueldo_diario y jornada son 0
+  var valorHora = sd > 0 ? (sd / 8) * 1.5 : 0;
+  var bruto = (dias * sd) + (hExtra * valorHora) + viat + bonos - ded;
+  var total = Math.max(0, isFinite(bruto) ? bruto : 0);
+  var el = document.getElementById('fp-total-display');
+  if(el) el.textContent = fmt(total);
   return total;
 }
 
@@ -4094,7 +4170,7 @@ function renderDescansos(){
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
         ${!d.aprobado?`<button class="edit-btn" onclick="aprobarDescanso('${d.id}')" style="color:#5BC4C0;border-color:#5BC4C044">✓ Aprobar</button>`:''}
-        <button class="edit-btn" onclick="eliminarDescanso('${d.id}')" style="color:#EF4444;border-color:#EF444433">🗑</button>
+        <button class="edit-btn" onclick="eliminarDescanso('${d.id}')" style="color:#EF4444;border-color:#EF444433" aria-label="Eliminar">🗑</button>
       </div>
     </div>`;
   });
@@ -4167,12 +4243,12 @@ async function renderAsistencias(){
       <div class="card-label">FILTROS</div>
       <div class="form-row" style="margin-bottom:0">
         <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Fecha</label>
-          <input class="form-input" id="asis-filtro-fecha" type="date" value="${filtroFecha}" onchange="renderAsistencias()">
+          <label class="form-label" for="asis-filtro-fecha">Fecha</label>
+      <input class="form-input" id="asis-filtro-fecha" type="date" value="${filtroFecha}" onchange="renderAsistencias()">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Obra</label>
-          <select class="form-input" id="asis-filtro-obra" onchange="renderAsistencias()">
+          <label class="form-label" for="asis-filtro-obra">Obra</label>
+      <select class="form-input" id="asis-filtro-obra" onchange="renderAsistencias()">
             <option value="">Todas</option>
             ${obrasData.map(o=>`<option value="${o.id}" ${o.id===filtroObra?'selected':''}>${o.nombre}</option>`).join('')}
           </select>
@@ -4664,35 +4740,83 @@ async function initApp() {
   showTab(lastTab);
 }
 
-(async function(){
-  try {
-    const saved = localStorage.getItem('sb-session');
-    if(saved) {
-      const sess = JSON.parse(saved);
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-        method:'POST',
-        headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
-        body: JSON.stringify({refresh_token: sess.refresh_token})
-      });
-      if(res.ok) {
-        const data = await res.json();
-        currentSession = data;
-        localStorage.setItem('sb-session', JSON.stringify(data));
-        const perfiles = await db('GET', `perfiles?user_id=eq.${data.user.id}`);
-        if(perfiles && perfiles.length) {
-          const p = perfiles[0];
-          const rawIds2 = p.obras_ids;
-          currentUser = { id:data.user.id, email:data.user.email, nombre:p.nombre, rol:p.rol, permisos:p.permisos||{}, obras_ids: Array.isArray(rawIds2)?rawIds2:[] };
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('app').style.display = 'flex';
-          applyPermisos();
-          await initApp();
-          return;
-        }
-      }
-    }
-  } catch(e) {}
+// ── Helpers de sesión ──────────────────────────────
+function _showLoginScreen(motivo) {
+  // Limpia sesión persistida y muestra login con mensaje amigable si hay motivo
+  try { localStorage.removeItem('sb-session'); } catch(e2){}
+  currentSession = null; currentUser = null;
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  if(motivo) {
+    // Muestra toast si la función ya existe, o un alert simple
+    if(typeof showToast === 'function') showToast(motivo, true);
+  }
+}
+
+async function _refreshSession(sess) {
+  // Intenta renovar el token; retorna el nuevo objeto de sesión o null si falla
+  try {
+    const res = await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token', {
+      method:'POST',
+      headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({refresh_token: sess.refresh_token})
+    });
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!data || !data.access_token) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+(async function(){
+  var saved = null;
+  try { saved = localStorage.getItem('sb-session'); } catch(e){}
+
+  if(!saved) {
+    // Sin sesión guardada → pantalla de login directamente
+    _showLoginScreen();
+    return;
+  }
+
+  var sess = null;
+  try { sess = JSON.parse(saved); } catch(e){ _showLoginScreen(); return; }
+
+  if(!sess || !sess.refresh_token) { _showLoginScreen(); return; }
+
+  // Intentar refresh del token
+  var data = await _refreshSession(sess);
+
+  if(!data) {
+    // Token expirado o red caída → avisar y pedir login de nuevo
+    _showLoginScreen('Tu sesión expiró. Inicia sesión de nuevo.');
+    return;
+  }
+
+  try {
+    currentSession = data;
+    try { localStorage.setItem('sb-session', JSON.stringify(data)); } catch(e2){}
+
+    var perfiles = await db('GET', 'perfiles?user_id=eq.'+data.user.id);
+    if(!perfiles || !perfiles.length) {
+      _showLoginScreen('No se encontró tu perfil. Contacta al administrador.');
+      return;
+    }
+    var p = perfiles[0];
+    var rawIds2 = p.obras_ids;
+    currentUser = {
+      id: data.user.id, email: data.user.email,
+      nombre: p.nombre, rol: p.rol,
+      permisos: p.permisos || {},
+      obras_ids: Array.isArray(rawIds2) ? rawIds2 : []
+    };
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    applyPermisos();
+    await initApp();
+  } catch(e) {
+    // Error de red al cargar perfil → no romper la UI, ir a login con aviso
+    _showLoginScreen('No se pudo conectar. Revisa tu conexión e intenta de nuevo.');
+  }
 })();
 </script>
 
@@ -4702,41 +4826,41 @@ async function initApp() {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="mov-sheet-title">Nuevo Egreso</div>
-    <div class="form-group"><label class="form-label">Tipo *</label>
+    <div class="form-group"><label class="form-label" for="fmov-tipo-mov">Tipo *</label>
       <select class="form-input" id="fmov-tipo-mov" onchange="onMovTipoChange(this.value)">
         <option value="egreso">📤 Egreso (gasto)</option>
         <option value="ingreso">📥 Ingreso (cobro)</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Categoría *</label>
+    <div class="form-group"><label class="form-label" for="fmov-categoria">Categoría *</label>
       <select class="form-input" id="fmov-categoria"></select>
     </div>
-    <div class="form-group"><label class="form-label">Descripción *</label>
+    <div class="form-group"><label class="form-label" for="fmov-descripcion">Descripción *</label>
       <input class="form-input" id="fmov-descripcion" type="text" placeholder="Ej. Compra de varilla corrugada">
     </div>
-    <div class="form-group"><label class="form-label">Monto *</label>
+    <div class="form-group"><label class="form-label" for="fmov-monto">Monto *</label>
       <input class="form-input" id="fmov-monto" type="number" placeholder="0.00" min="0" step="0.01">
     </div>
-    <div class="form-group"><label class="form-label">IVA</label>
+    <div class="form-group"><label class="form-label" for="fmov-iva">IVA</label>
       <select class="form-input" id="fmov-iva">
         <option value="0">Sin IVA</option>
         <option value="16">16%</option>
         <option value="8">8% (frontera)</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Obra / Proyecto</label>
+    <div class="form-group"><label class="form-label" for="fmov-obra">Obra / Proyecto</label>
       <select class="form-input" id="fmov-obra">
         <option value="">— Gasto general —</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Proveedor / Cliente</label>
+    <div class="form-group"><label class="form-label" for="fmov-proveedor">Proveedor / Cliente</label>
       <input class="form-input" id="fmov-proveedor" type="text" placeholder="Nombre del proveedor o cliente" list="fmov-prov-list" autocomplete="off">
       <datalist id="fmov-prov-list"></datalist>
     </div>
-    <div class="form-group"><label class="form-label">Fecha *</label>
+    <div class="form-group"><label class="form-label" for="fmov-fecha">Fecha *</label>
       <input class="form-input" id="fmov-fecha" type="date">
     </div>
-    <div class="form-group"><label class="form-label">Forma de pago</label>
+    <div class="form-group"><label class="form-label" for="fmov-forma">Forma de pago</label>
       <select class="form-input" id="fmov-forma">
         <option value="transferencia">🏦 Transferencia</option>
         <option value="efectivo">💵 Efectivo</option>
@@ -4744,11 +4868,11 @@ async function initApp() {
         <option value="cheque">📄 Cheque</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">No. Factura / Referencia</label>
+    <div class="form-group"><label class="form-label" for="fmov-referencia">No. Factura / Referencia</label>
       <input class="form-input" id="fmov-referencia" type="text" placeholder="Folio de factura o referencia">
     </div>
-    <button class="btn-primary" id="mov-save-btn" onclick="saveMovimiento()" style="margin-bottom:10px">Guardar</button>
-    <button class="btn-secondary" onclick="closeSheet('fin-mov')">Cancelar</button>
+    <button class="btn-primary" id="mov-save-btn" onclick="saveMovimiento()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('fin-mov')" aria-label="Acción">Cancelar</button>
     <div style="height:20px"></div>
   </div>
 </div>
