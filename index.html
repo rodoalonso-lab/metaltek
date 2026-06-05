@@ -1747,6 +1747,74 @@ function renderRequisiciones() {
 }
 
 
+// Cache de items por cotización para no recargar cada vez
+var _compItemsCache = {};
+
+async function toggleCompDetalle(compId, btnEl) {
+  var container = document.getElementById('comp-detalle-'+compId);
+  if(!container) return;
+  var isOpen = container.style.display !== 'none';
+  if(isOpen) {
+    container.style.display = 'none';
+    btnEl.textContent = '▼ Ver conceptos';
+    return;
+  }
+  container.style.display = 'block';
+  container.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:8px 0">Cargando...</div>';
+  btnEl.textContent = '▲ Ocultar conceptos';
+  if(!_compItemsCache[compId]) {
+    try {
+      var items = await db('GET','comparativa_items?comparativa_id=eq.'+compId+'&order=created_at.asc') || [];
+      _compItemsCache[compId] = items;
+    } catch(e) {
+      container.innerHTML = '<div style="color:#EF4444;font-size:12px;padding:8px 0">Error al cargar conceptos</div>';
+      return;
+    }
+  }
+  var items = _compItemsCache[compId];
+  var fmt2 = function(n){ return '$'+(isFinite(n)?n:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  if(!items.length) {
+    container.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:8px 0;font-style:italic">Sin desglose de conceptos — solo monto global</div>';
+    return;
+  }
+  var rows = items.map(function(it){
+    var pu      = _safeNum(it.precio_unitario);
+    var cant    = _safeNum(it.cantidad, 1) || 1;
+    var descPct = Math.min(100, Math.max(0, _safeNum(it.descuento_pct)));
+    var ivaPct  = _safeNum(it.iva_pct, 16);
+    var sub     = pu * cant * (1 - descPct/100);
+    var total   = Math.round(sub * (1 + ivaPct/100) * 100) / 100;
+    var hasDesc = descPct > 0;
+    return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px 12px;align-items:center;'+
+      'padding:7px 0;border-bottom:1px solid var(--border);font-size:12px">'+
+      '<div style="font-weight:600;color:var(--text)">' + (it.nombre_material||'—') + '<br>'+
+      '<span style="font-size:10px;color:var(--dim)">' + cant + ' ' + (it.unidad||'pza') +
+      (hasDesc ? ' · <span style="color:#F0A500">-'+descPct+'%</span>' : '') +
+      ' · IVA ' + ivaPct + '%</span></div>'+
+      '<div style="text-align:right;color:var(--dim);font-size:11px">' + (pu>0 ? fmt2(pu)+'/u' : '—') + '</div>'+
+      '<div style="text-align:right;font-weight:700;color:var(--accent)">' + fmt2(total) + '</div>'+
+      '</div>';
+  }).join('');
+  var subtotalSinIva = items.reduce(function(s,it){
+    var pu=_safeNum(it.precio_unitario), cant=_safeNum(it.cantidad,1)||1;
+    var descPct=Math.min(100,Math.max(0,_safeNum(it.descuento_pct)));
+    var sub = pu*cant*(1-descPct/100);
+    return s + (isFinite(sub)?sub:0);
+  }, 0);
+  var totalConIva = items.reduce(function(s,it){
+    var pu=_safeNum(it.precio_unitario), cant=_safeNum(it.cantidad,1)||1;
+    var descPct=Math.min(100,Math.max(0,_safeNum(it.descuento_pct)));
+    var ivaPct=_safeNum(it.iva_pct,16);
+    var tot = pu*cant*(1-descPct/100)*(1+ivaPct/100);
+    return s + (isFinite(tot)?tot:0);
+  }, 0);
+  container.innerHTML = rows
+    + '<div style="display:flex;justify-content:space-between;padding:8px 0 4px;font-size:12px">'+
+      '<span style="color:var(--dim)">Subtotal s/IVA</span><span>' + fmt2(subtotalSinIva) + '</span></div>'+
+    '<div style="display:flex;justify-content:space-between;padding:6px 0 0;font-size:13px;font-weight:800;border-top:1px solid var(--border)">'+
+      '<span>Total</span><span style="color:var(--accent)">' + fmt2(totalConIva) + '</span></div>';
+}
+
 function renderComparativas() {
   const pendientes = requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'||e==='autorizada'; });
   let html=`<div class="item-sub" style="margin-bottom:12px">${comparativasData.length} cotizaciones registradas</div>`;
@@ -1757,27 +1825,41 @@ function renderComparativas() {
     pendientes.forEach(r=>{
       const obra=obrasData.find(o=>o.id===r.obra_id);
       const comps=comparativasData.filter(c=>c.requisicion_id===r.id);
-      html+=`<div class="card">
-        <div class="row" style="margin-bottom:8px">
-          <div><div class="item-title">${fmtFolio(r)}</div><div class="item-sub">${obra?obra.nombre:'—'}</div></div>
-          ${reqBadge(r.estado)}
-        </div>
-        <div style="margin-bottom:10px">${comps.map(c=>`
-          <div class="comp-card${c.seleccionado?' selected':''}">
-            <div class="row" style="margin-bottom:4px"><span style="font-weight:700;font-size:13px">${c.proveedor}</span>${c.seleccionado?badge('✓ Seleccionado','#10B981'):''}</div>
-            <div class="row"><span class="item-sub">${fmt(c.precio_unitario)} · ${c.tiempo_entrega||'—'}</span>${!c.seleccionado?`<button class="edit-btn" onclick="selectComparativa('${c.id}','${r.id}')">Seleccionar</button>`:''}</div>
-            ${c.notas?`<div class="item-sub">${c.notas}</div>`:''}
-          </div>`).join('')}
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId='"+r.id+"';openCotizarSheet(currentReqId)">+ Cotización</button>
-          ${comps.some(c=>c.seleccionado)?`<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId='`+r.id+`';autorizarReq(currentReqId)">✓ Autorizar</button>`:''}
-        </div>
-      </div>`;
+      html+='<div class="card">'+
+        '<div class="row" style="margin-bottom:8px">'+
+          '<div><div class="item-title">'+fmtFolio(r)+'</div><div class="item-sub">'+( obra?obra.nombre:'—')+'</div></div>'+
+          reqBadge(r.estado)+
+        '</div>'+
+        '<div style="margin-bottom:10px">'+
+        comps.map(c=>{
+          return '<div class="comp-card'+(c.seleccionado?' selected':'')+'" style="margin-bottom:8px">'+
+            '<div class="row" style="margin-bottom:4px">'+
+              '<span style="font-weight:700;font-size:13px">'+c.proveedor+'</span>'+
+              (c.seleccionado ? badge('✓ Seleccionado','#10B981') : '')+
+            '</div>'+
+            '<div class="row" style="margin-bottom:6px">'+
+              '<span class="item-sub">'+fmt(c.precio_unitario)+' · '+(c.tiempo_entrega||'—')+'</span>'+
+              (!c.seleccionado ? '<button class="edit-btn" onclick="selectComparativa(\''+ c.id +'\',\''+ r.id +'\')">Seleccionar</button>' : '')+
+            '</div>'+
+            (c.notas ? '<div class="item-sub" style="margin-bottom:6px">📝 '+c.notas+'</div>' : '')+
+            '<button onclick="toggleCompDetalle(\''+ c.id +'\',this)" '+
+              'style="width:100%;background:none;border:1px dashed var(--border);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--dim);cursor:pointer;font-family:Barlow,sans-serif;text-align:left">'+
+              '▼ Ver conceptos'+
+            '</button>'+
+            '<div id="comp-detalle-'+ c.id +'" style="display:none;margin-top:8px;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)"></div>'+
+          '</div>';
+        }).join('')+
+        '</div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
+          (comps.some(c=>c.seleccionado) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
+        '</div>'+
+      '</div>';
     });
   }
   document.getElementById('mat-comparativas-view').innerHTML=html;
 }
+
 
 async function showRequisicion(id) {
   currentReqId=id;
