@@ -969,9 +969,23 @@
     </div>
     <div class="card-label" style="margin-bottom:10px">PRECIOS POR MATERIAL</div>
     <div id="ec-items-wrap" style="margin-bottom:12px"></div>
-    <div class="card" style="margin-bottom:14px;text-align:center">
-      <div class="card-label">TOTAL COTIZACIÓN</div>
-      <div id="ec-total-display" style="font-size:28px;font-weight:800;color:var(--accent)">$0</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-label" style="text-align:center;margin-bottom:12px">TOTAL COTIZACIÓN</div>
+      <div id="ec-total-display" style="font-size:28px;font-weight:800;color:var(--accent);text-align:center;margin-bottom:12px">$0</div>
+      <div style="font-size:12px;display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--dim)">Subtotal s/IVA</span>
+          <span id="ec-resumen-siniva">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--dim)">IVA</span>
+          <span id="ec-resumen-iva">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:800;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">
+          <span>Total c/IVA</span>
+          <span id="ec-resumen-total" style="color:var(--accent)">$0.00</span>
+        </div>
+      </div>
     </div>
     <div class="form-group"><label class="form-label" for="ec-entrega">Tiempo de entrega</label>
       <input class="form-input" id="ec-entrega" type="text" placeholder="Ej. 3 días hábiles">
@@ -2598,19 +2612,32 @@ async function editarCotiz(compId) {
   });
 
   document.getElementById('ec-items-wrap').innerHTML = displayItems.map(function(it,i){
-    var nom = it.nombre_material||'—';
-    var pu = it.precio_unitario||0;
+    var nom  = (it.nombre_material||'—').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    var pu   = it.precio_unitario||0;
     var desc = it.descuento_pct||0;
-    var iva = it.iva_pct!==undefined ? it.iva_pct : 16;
+    var iva  = it.iva_pct !== undefined ? it.iva_pct : 16;
+    var cant = it.cantidad || 1;
+    var uni  = (it.unidad || 'pza').replace(/"/g,'&quot;');
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">'
-      +'<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700">'+nom+'</div>'
-      +'<div style="font-size:11px;color:var(--dim)">Cant: '+it.cantidad+' '+(it.unidad||'pza')+'</div></div>'
+      // Nombre editable
+      +'<div style="margin-bottom:8px">'
+      +'<div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">MATERIAL / DESCRIPCI\u00d3N</div>'
+      +'<input class="form-input ec-nombre" type="text" data-idx="'+i+'" value="'+nom+'" placeholder="Nombre del material" style="padding:8px 10px;font-weight:600"></div>'
+      // Cantidad + Unidad
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">CANTIDAD</div>'
+      +'<input class="form-input ec-cant" type="number" min="0.001" step="any" data-idx="'+i+'" value="'+cant+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
+      +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">UNIDAD</div>'
+      +'<input class="form-input ec-unidad" type="text" data-idx="'+i+'" value="'+uni+'" placeholder="pza" style="padding:8px 10px"></div>'
+      +'</div>'
+      // Precio + Descuento
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">PRECIO UNIT. ($)</div>'
-      +'<input class="form-input ec-precio-unit" type="number" placeholder="0.00" data-idx="'+i+'" data-cant="'+(it.cantidad||1)+'" data-nombre="'+nom+'" data-unidad="'+(it.unidad||'pza')+'" value="'+pu+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
+      +'<input class="form-input ec-precio-unit" type="number" placeholder="0.00" data-idx="'+i+'" value="'+pu+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">% DESCUENTO</div>'
       +'<input class="form-input ec-desc-pct" type="number" placeholder="0" min="0" max="100" data-idx="'+i+'" value="'+desc+'" oninput="calcEcTotal()" style="padding:8px 10px"></div>'
       +'</div>'
+      // IVA + Subtotal
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">IVA (%)</div>'
       +'<select class="form-input ec-iva-sel" data-idx="'+i+'" onchange="calcEcTotal()" style="padding:8px 10px">'
@@ -2619,8 +2646,14 @@ async function editarCotiz(compId) {
       +'<option value="8"'+(iva===8?' selected':'')+'>8% frontera</option>'
       +'</select></div>'
       +'<div><div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px">SUBTOTAL C/IVA</div>'
-      +'<div id="ec-sub-'+i+'" style="font-size:13px;font-weight:800;color:var(--accent);padding:10px 0">$0</div></div>'
-      +'</div></div>';
+      +'<div id="ec-sub-'+i+'" style="font-size:13px;font-weight:800;color:var(--accent);padding:6px 0">$0</div></div>'
+      +'</div>'
+      +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;display:flex;flex-direction:column;gap:3px">'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">Subtotal s/IVA</span><span id="ec-siniva-'+i+'">$0</span></div>'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">IVA</span><span id="ec-ivamonto-'+i+'">$0</span></div>'
+      +'<div style="display:flex;justify-content:space-between;font-weight:800;border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><span>Total</span><span id="ec-total-'+i+'" style="color:var(--accent)">$0</span></div>'
+      +'</div>'
+      +'</div>';
   }).join('');
   calcEcTotal();
 }
@@ -2629,8 +2662,9 @@ function calcEcTotal() {
   var total = 0;
   document.querySelectorAll('.ec-precio-unit').forEach(function(inp){
     var precio = _safeNum(inp.value);
-    var cant   = _safeNum(inp.dataset.cant, 1) || 1;
     var idx    = inp.dataset.idx;
+    var cantEl = document.querySelector('.ec-cant[data-idx="'+idx+'"]');
+    var cant   = cantEl ? (_safeNum(cantEl.value, 1) || 1) : 1;
     var descEl2 = document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]');
     var descPct = descEl2 ? Math.min(100, Math.max(0, _safeNum(descEl2.value))) : 0;
     var ivaSel  = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
@@ -2641,10 +2675,39 @@ function calcEcTotal() {
     var iva      = sub * (ivaPct / 100);
     var subtotal = sub + iva;
     if(isFinite(subtotal)) total += subtotal;
+    var fmt2l = function(n){ return '$'+(isFinite(n)?Math.round(n*100)/100:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
     var subEl = document.getElementById('ec-sub-'+idx);
-    if(subEl) subEl.textContent = '$'+(isFinite(subtotal)?subtotal:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(subEl) subEl.textContent = fmt2l(subtotal);
+    var sinivaEl = document.getElementById('ec-siniva-'+idx);
+    if(sinivaEl) sinivaEl.textContent = fmt2l(sub);
+    var ivaMontoEl = document.getElementById('ec-ivamonto-'+idx);
+    if(ivaMontoEl) ivaMontoEl.textContent = fmt2l(iva);
+    var totalEl = document.getElementById('ec-total-'+idx);
+    if(totalEl) totalEl.textContent = fmt2l(subtotal);
   });
   total = isFinite(total) ? total : 0;
+  var totalSinIva = 0, totalIvaMonto = 0;
+  document.querySelectorAll('.ec-precio-unit').forEach(function(inp2){
+    var idx2    = inp2.dataset.idx;
+    var precio2 = _safeNum(inp2.value);
+    var cantEl2 = document.querySelector('.ec-cant[data-idx="'+idx2+'"]');
+    var cant2   = cantEl2 ? (_safeNum(cantEl2.value,1)||1) : 1;
+    var descEl2b= document.querySelector('.ec-desc-pct[data-idx="'+idx2+'"]');
+    var descPct2= descEl2b ? Math.min(100,Math.max(0,_safeNum(descEl2b.value))) : 0;
+    var ivaSel2 = document.querySelector('.ec-iva-sel[data-idx="'+idx2+'"]');
+    var ivaPct2 = ivaSel2 ? _safeNum(ivaSel2.value,16) : 16;
+    var sub2    = precio2 * cant2 * (1 - descPct2/100);
+    var iva2    = sub2 * (ivaPct2/100);
+    if(isFinite(sub2)) totalSinIva  += sub2;
+    if(isFinite(iva2)) totalIvaMonto += iva2;
+  });
+  var fmt2g = function(n){ return '$'+(isFinite(n)?Math.round(n*100)/100:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var rSiniva = document.getElementById('ec-resumen-siniva');
+  var rIva    = document.getElementById('ec-resumen-iva');
+  var rTotal  = document.getElementById('ec-resumen-total');
+  if(rSiniva) rSiniva.textContent = fmt2g(totalSinIva);
+  if(rIva)    rIva.textContent    = fmt2g(totalIvaMonto);
+  if(rTotal)  rTotal.textContent  = fmt2g(total);
   var montoEl = document.getElementById('ec-monto-total');
   if(montoEl) montoEl.value = total;
   var fmt2 = function(n){ return '$'+(isFinite(n)?n:0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
@@ -2673,7 +2736,8 @@ async function saveEditCotiz() {
       const inp = precioInputs[i];
       const idx = inp.dataset.idx;
       const pu = parseFloat(inp.value)||0;
-      const cant = parseFloat(inp.dataset.cant)||1;
+      const cantEl2 = document.querySelector('.ec-cant[data-idx="'+idx+'"]');
+      const cant = cantEl2 ? (parseFloat(cantEl2.value)||1) : 1;
       const descPct = parseFloat((document.querySelector('.ec-desc-pct[data-idx="'+idx+'"]')||{}).value)||0;
       const ivaSel = document.querySelector('.ec-iva-sel[data-idx="'+idx+'"]');
       const ivaPct = ivaSel ? parseFloat(ivaSel.value)||0 : 16;
@@ -2681,8 +2745,8 @@ async function saveEditCotiz() {
       if(pu > 0) {
         await db('POST','comparativa_items',{
           comparativa_id:compId,
-          nombre_material:inp.dataset.nombre||'',
-          cantidad:cant, unidad:inp.dataset.unidad||'pza',
+          nombre_material:(document.querySelector('.ec-nombre[data-idx="'+idx+'"]')||{value:''}).value.trim()||'',
+          cantidad:cant, unidad:(document.querySelector('.ec-unidad[data-idx="'+idx+'"]')||{value:'pza'}).value.trim()||'pza',
           precio_unitario:pu, descuento_pct:descPct,
           iva_pct:ivaPct, subtotal:Math.round(sub*100)/100
         });
