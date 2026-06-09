@@ -1400,7 +1400,7 @@ async function loadObras() {
 
 function renderObras() {
   const rol = currentUser?.rol;
-  const lista = (!rol || rol==='admin') ? obrasData : obrasData.filter(o=>{
+  const lista = (!rol || rol==='admin' || rol==='director' || rol==='compras') ? obrasData : obrasData.filter(o=>{
     const ids = Array.isArray(currentUser.obras_ids) ? currentUser.obras_ids : [];
     return ids.includes(o.id);
   });
@@ -1409,14 +1409,17 @@ function renderObras() {
     document.getElementById('obras-list').innerHTML = `<div class="empty"><div class="empty-icon">🏗</div><div class="empty-title">Sin obras</div><div class="empty-sub">Toca "+ Nueva" para agregar</div></div>`;
     return;
   }
-  document.getElementById('obras-list').innerHTML = lista.map(o=>`
-    <div class="card clickable" onclick="showObra('${o.id}')">
+  document.getElementById('obras-list').innerHTML = lista.map(o=>{
+    var sinPresupuesto = (!o.presupuesto || parseFloat(o.presupuesto) <= 0) && o.estado !== 'Completada' && o.estado !== 'Cancelada';
+    return `<div class="card clickable" onclick="showObra('${o.id}')">
       <div class="row-start" style="margin-bottom:10px">
         <div style="flex:1"><div class="item-title">${o.nombre}</div><div class="item-sub">${o.cliente||'Sin cliente'}</div><div class="item-sub">${o.tipo||''} ${o.ubicacion?'· '+o.ubicacion:''}</div></div>
         <div style="text-align:right">${badge(o.estado||'Iniciando',estadoColor[o.estado]||'#F59E0B')}</div>
       </div>
+      ${sinPresupuesto ? `<div style="background:#F59E0B22;border:1px solid #F59E0B55;border-radius:6px;padding:5px 8px;font-size:11px;color:#F59E0B;margin-bottom:8px">⚠️ Sin presupuesto asignado — edita la obra para capturarlo</div>` : ''}
       <div style="display:flex;align-items:center;gap:10px">${bar(o.avance,o.avance>=100?'#10B981':'#F59E0B')}<span style="font-size:13px;font-weight:700;color:#F59E0B;min-width:34px;text-align:right">${o.avance||0}%</span></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function showObra(id) {
@@ -2833,26 +2836,7 @@ async function confirmarAutorizacion() {
   btn.textContent='Autorizando...'; btn.disabled=true;
   try {
     await db('PATCH','requisiciones?id=eq.'+id,{estado:'autorizada', monto_cotizado: montoCotizado});
-    var r = requisicionesData.find(function(x){ return x.id===id; });
-    var comps = comparativasData.filter(function(c){ return c.requisicion_id===id; });
-    var monto = montoCotizado;
-    if(monto > 0) {
-      try {
-        await db('POST','movimientos_financieros',{
-          obra_id: r ? r.obra_id : null,
-          concepto: 'requisicion',
-          descripcion: fmtFolio(r)+(comps[0]?' - '+comps[0].proveedor:''),
-          monto: monto,
-          tipo_pago: tipoPago,
-          estado_pago: tipoPago==='contado' ? 'pagado' : 'pendiente',
-          fecha_vencimiento: vencimiento||null,
-          requisicion_id: id,
-          registrado_por: currentUser ? currentUser.nombre : 'Sistema'
-        });
-        movFinData = await db('GET','movimientos_financieros?order=created_at.desc')||[];
-      } catch(e2){ console.log('Finanzas no registrado:', e2.message); }
-    }
-    showToast('Compra autorizada');
+    showToast('✅ Compra autorizada');
     closeSheet('autorizar-pago');
     await loadMateriales();
     hideMatDetail();
@@ -3061,7 +3045,13 @@ async function saveRecepcion() {
 
 // ── DASHBOARD ────────────────────────────────────────
 function renderDashboard() {
-  const activas=obrasData.filter(o=>{ var e=(o.estado||'').toLowerCase(); return e==='en progreso'||e==='activa'||e==='en curso'; }).length;
+  // Mismo filtro de rol que renderObras
+  const rol = currentUser?.rol;
+  const obrasFiltradas = (!rol || rol==='admin' || rol==='director' || rol==='compras') ? obrasData : obrasData.filter(o=>{
+    const ids = Array.isArray(currentUser.obras_ids) ? currentUser.obras_ids : [];
+    return ids.includes(o.id);
+  });
+  const activas=obrasFiltradas.filter(o=>{ var e=(o.estado||'').toLowerCase(); return e==='en progreso'||e==='activa'||e==='en curso'; }).length;
   const alertas=materialesData.filter(m=>m.stock<m.stock_minimo).length;
   const reqPend=requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'; }).length;
   const reqAuth=requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='autorizada'; }).length;
@@ -3081,9 +3071,9 @@ function renderDashboard() {
       <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-val" style="color:#F59E0B">${tareasPend}</div><div class="kpi-label">Tareas pend.</div></div>
     </div>`;
 
-  if(obrasData.length) {
+  if(obrasFiltradas.length) {
     html+=`<div class="section-title">Obras activas</div>`;
-    obrasData.filter(o=>o.estado!=='Completada').slice(0,3).forEach(o=>{
+    obrasFiltradas.filter(o=>o.estado!=='Completada').slice(0,3).forEach(o=>{
       html+=`<div class="card clickable" onclick="showTab('obras');showObra('${o.id}')">
         <div class="row-start" style="margin-bottom:8px"><div style="flex:1"><div class="item-title">${o.nombre}</div><div class="item-sub">${o.tipo||''}</div></div>${badge(o.estado||'Iniciando',estadoColor[o.estado]||'#F59E0B')}</div>
         <div style="display:flex;align-items:center;gap:10px">${bar(o.avance,o.avance>=100?'#10B981':'#F59E0B')}<span style="font-size:13px;font-weight:700;color:#F59E0B">${o.avance||0}%</span></div>
@@ -3324,7 +3314,7 @@ async function saveReporte() {
 
 
 // TAREAS
-var etapasData=[], tareasData=[], subtareasData=[], ganttData=[], proveedoresData=[], movFinData=[], curTTab=0, currentObraId=null, ganttZoom='semanas', currentReqId=null;
+var etapasData=[], tareasData=[], subtareasData=[], ganttData=[], proveedoresData=[], curTTab=0, currentObraId=null, ganttZoom='semanas', currentReqId=null;
 
 async function loadTareas(){
   try{ etapasData=await db('GET','etapas_tipo_obra?order=orden')||[]; }catch(e){ etapasData=[]; }
@@ -4914,7 +4904,6 @@ async function initApp() {
   try{ await loadObras(); }catch(e){}
   try{ ganttData=await db('GET','gantt_etapas?order=orden')||[]; }catch(e){ ganttData=[]; }
   try{ proveedoresData=await db('GET','proveedores?order=nombre')||[]; }catch(e){ proveedoresData=[]; }
-  try{ movFinData=await db('GET','movimientos_financieros?order=created_at.desc')||[]; }catch(e){ movFinData=[]; }
   try{ await loadMateriales(); }catch(e){}
   try{ await loadReportes(); }catch(e){}
   try{ await loadTareas(); }catch(e){}
