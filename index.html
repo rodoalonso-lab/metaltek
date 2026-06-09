@@ -768,6 +768,13 @@
       <label class="form-label" for="fap-vencimiento">Fecha de vencimiento</label>
       <input class="form-input" id="fap-vencimiento" type="date">
     </div>
+    <div class="form-group">
+      <label class="form-label" for="fap-monto-cotizado">Monto cotizado *</label>
+      <input class="form-input" id="fap-monto-cotizado" type="number" min="0" step="0.01" placeholder="0.00" oninput="this.setCustomValidity('')">
+      <div id="fap-monto-ref" style="font-size:11px;color:var(--dim);margin-top:5px;display:none">
+        💡 Referencia de cotización: <strong id="fap-monto-ref-val"></strong>
+      </div>
+    </div>
     <div class="card" style="margin-bottom:16px;background:var(--bg)">
       <div id="fap-efecto" style="font-size:13px;color:var(--muted)">💵 Contado: el monto se suma al ejercido inmediatamente.</div>
     </div>
@@ -2782,6 +2789,25 @@ async function autorizarReq(reqId) {
   document.getElementById('fap-tipo').value = 'contado';
   document.getElementById('fap-vencimiento-wrap').style.display = 'none';
   document.getElementById('fap-efecto').textContent = 'Contado: el monto se suma al ejercido inmediatamente.';
+  // Limpiar campo monto
+  var montoInput = document.getElementById('fap-monto-cotizado');
+  if(montoInput) { montoInput.value = ''; montoInput.setCustomValidity(''); }
+  // Mostrar referencia si hay cotizaciones
+  var refWrap = document.getElementById('fap-monto-ref');
+  var refVal  = document.getElementById('fap-monto-ref-val');
+  if(refWrap && refVal) {
+    var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
+    if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
+    var montoRef = comps.reduce(function(s,c){ return s+(_safeNum ? _safeNum(c.precio_unitario) : (parseFloat(c.precio_unitario)||0)); }, 0);
+    if(montoRef > 0) {
+      refVal.textContent = '$' + montoRef.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+      refWrap.style.display = 'block';
+      // Prellenar el campo con el monto de referencia para agilizar
+      if(montoInput) montoInput.value = montoRef.toFixed(2);
+    } else {
+      refWrap.style.display = 'none';
+    }
+  }
   openSheet('autorizar-pago');
 }
 
@@ -2790,13 +2816,26 @@ async function confirmarAutorizacion() {
   if(!id) return;
   var tipoPago = document.getElementById('fap-tipo').value;
   var vencimiento = document.getElementById('fap-vencimiento').value;
+  // Validar monto cotizado obligatorio
+  var montoInput = document.getElementById('fap-monto-cotizado');
+  var montoCotizado = montoInput ? parseFloat(montoInput.value) : 0;
+  if(!montoCotizado || montoCotizado <= 0) {
+    if(montoInput) {
+      montoInput.setCustomValidity('Requerido');
+      montoInput.style.borderColor = '#EF4444';
+      montoInput.focus();
+      showToast('Ingresa el monto cotizado', true);
+    }
+    return;
+  }
+  if(montoInput) { montoInput.style.borderColor = ''; montoInput.setCustomValidity(''); }
   var btn = document.getElementById('fap-save-btn');
   btn.textContent='Autorizando...'; btn.disabled=true;
   try {
-    await db('PATCH','requisiciones?id=eq.'+id,{estado:'autorizada'});
+    await db('PATCH','requisiciones?id=eq.'+id,{estado:'autorizada', monto_cotizado: montoCotizado});
     var r = requisicionesData.find(function(x){ return x.id===id; });
     var comps = comparativasData.filter(function(c){ return c.requisicion_id===id; });
-    var monto = comps.reduce(function(s,c){ return s+(parseFloat(c.precio_unitario)||0); },0);
+    var monto = montoCotizado;
     if(monto > 0) {
       try {
         await db('POST','movimientos_financieros',{
