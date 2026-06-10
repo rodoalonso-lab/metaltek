@@ -300,6 +300,8 @@
     <button class="tab" data-tab="reportes"><span class="tab-icon">📊</span><span class="tab-label">Reportes</span></button>
     <button class="tab" data-tab="nominas"><span class="tab-icon">👷</span><span class="tab-label">Nóminas</span></button>
   </div>
+  <!-- REFRESH BTN -->
+  <button id="refresh-btn" onclick="doRefresh()" title="Actualizar datos" style="position:fixed;top:14px;left:16px;z-index:50;background:none;border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:14px;color:var(--dim);cursor:pointer;transition:color .2s,border-color .2s;display:none" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='var(--border)'">↻</button>
   <!-- USER CHIP -->
   <div id="user-chip" onclick="abrirUserMenu()" style="position:fixed;top:14px;right:16px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;display:none;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
     <span id="user-chip-name">—</span> ▾
@@ -769,10 +771,27 @@
       <input class="form-input" id="fap-vencimiento" type="date">
     </div>
     <div class="form-group">
-      <label class="form-label" for="fap-monto-cotizado">Monto cotizado *</label>
-      <input class="form-input" id="fap-monto-cotizado" type="number" min="0" step="0.01" placeholder="0.00" oninput="this.setCustomValidity('')">
+      <label class="form-label" for="fap-monto-cotizado">Subtotal sin IVA *</label>
+      <input class="form-input" id="fap-monto-cotizado" type="number" min="0" step="0.01" placeholder="0.00"
+        oninput="this.setCustomValidity('');calcTotalAutorizacion()">
       <div id="fap-monto-ref" style="font-size:11px;color:var(--dim);margin-top:5px;display:none">
         💡 Referencia de cotización: <strong id="fap-monto-ref-val"></strong>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="fap-iva-pct">IVA (%)</label>
+      <select class="form-input" id="fap-iva-pct" onchange="calcTotalAutorizacion()">
+        <option value="16">16% (estándar)</option>
+        <option value="0">0% (exento)</option>
+        <option value="8">8% (frontera)</option>
+      </select>
+    </div>
+    <div id="fap-total-wrap" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:4px">
+        <span>IVA</span><span id="fap-iva-monto">$0.00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--text)">
+        <span>Total con IVA</span><span id="fap-total-monto" style="color:var(--accent)">$0.00</span>
       </div>
     </div>
     <div class="card" style="margin-bottom:16px;background:var(--bg)">
@@ -2841,29 +2860,51 @@ async function autorizarReq(reqId) {
   openSheet('autorizar-pago');
 }
 
+function calcTotalAutorizacion() {
+  var subtotal = parseFloat(document.getElementById('fap-monto-cotizado')?.value)||0;
+  var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
+  var ivaMonto = Math.round(subtotal * ivaPct / 100 * 100) / 100;
+  var total    = Math.round((subtotal + ivaMonto) * 100) / 100;
+  var wrap     = document.getElementById('fap-total-wrap');
+  if(wrap) wrap.style.display = subtotal > 0 ? '' : 'none';
+  var ivaEl    = document.getElementById('fap-iva-monto');
+  var totEl    = document.getElementById('fap-total-monto');
+  if(ivaEl) ivaEl.textContent = '$' + ivaMonto.toLocaleString('es-MX', {minimumFractionDigits:2});
+  if(totEl) totEl.textContent = '$' + total.toLocaleString('es-MX', {minimumFractionDigits:2});
+}
+
 async function confirmarAutorizacion() {
   var id = window._autorizarReqId;
   if(!id) return;
-  var tipoPago = document.getElementById('fap-tipo').value;
+  var tipoPago   = document.getElementById('fap-tipo').value;
   var vencimiento = document.getElementById('fap-vencimiento').value;
-  // Validar monto cotizado obligatorio
-  var montoInput = document.getElementById('fap-monto-cotizado');
-  var montoCotizado = montoInput ? parseFloat(montoInput.value) : 0;
-  if(!montoCotizado || montoCotizado <= 0) {
+  // Validar subtotal obligatorio
+  var montoInput  = document.getElementById('fap-monto-cotizado');
+  var subtotal    = montoInput ? parseFloat(montoInput.value) : 0;
+  if(!subtotal || subtotal <= 0) {
     if(montoInput) {
       montoInput.setCustomValidity('Requerido');
       montoInput.style.borderColor = '#EF4444';
       montoInput.focus();
-      showToast('Ingresa el monto cotizado', true);
+      showToast('Ingresa el subtotal sin IVA', true);
     }
     return;
   }
   if(montoInput) { montoInput.style.borderColor = ''; montoInput.setCustomValidity(''); }
+  var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
+  var ivaMonto = Math.round(subtotal * ivaPct / 100 * 100) / 100;
+  var totalConIva = Math.round((subtotal + ivaMonto) * 100) / 100;
   var btn = document.getElementById('fap-save-btn');
   btn.textContent='Autorizando...'; btn.disabled=true;
   try {
-    await db('PATCH','requisiciones?id=eq.'+id,{estado:'autorizada', monto_cotizado: montoCotizado});
-    showToast('✅ Compra autorizada');
+    await db('PATCH','requisiciones?id=eq.'+id,{
+      estado:              'autorizada',
+      monto_cotizado:      subtotal,       // siempre sin IVA
+      iva_pct:             ivaPct,
+      iva_cotizado:        ivaMonto,
+      monto_total_con_iva: totalConIva
+    });
+    showToast('✅ Compra autorizada · Total con IVA: $'+totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2}));
     closeSheet('autorizar-pago');
     await loadMateriales();
     hideMatDetail();
@@ -4955,6 +4996,19 @@ async function initApp() {
   try { lastTab = sessionStorage.getItem('currentTab') || 'dashboard'; } catch(e){}
   if(!puedeVer(lastTab) && lastTab !== 'dashboard') lastTab = 'dashboard';
   showTab(lastTab);
+  // Mostrar botón de refresh
+  var rb = document.getElementById('refresh-btn');
+  if(rb) rb.style.display = '';
+}
+
+async function doRefresh() {
+  var btn = document.getElementById('refresh-btn');
+  if(btn) { btn.textContent='↻'; btn.style.transform='rotate(0deg)'; btn.style.transition='transform .6s linear'; btn.style.transform='rotate(360deg)'; }
+  try {
+    await initApp();
+    showToast('✓ Datos actualizados');
+  } catch(e) { showToast('Error al actualizar', true); }
+  setTimeout(function(){ if(btn){ btn.style.transition=''; btn.style.transform=''; } }, 650);
 }
 
 // ── Helpers de sesión ──────────────────────────────
