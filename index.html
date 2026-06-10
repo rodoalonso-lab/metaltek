@@ -321,7 +321,7 @@
       <div id="um-rol-badge" style="margin-top:8px"></div>
     </div>
     <div id="um-admin-section" style="display:none">
-      <button class="btn-secondary" onclick="closeSheet('usermenu');showTab('admin')" style="margin-bottom:10px">⚙️ Gestionar usuarios</button>
+      <button class="btn-secondary" onclick="closeSheet('usermenu');window.location.href='https://rodoalonso-lab.github.io/finanzas-procepal/admin.html'" style="margin-bottom:10px">⚙️ Panel de administración</button>
     </div>
     <button class="btn-danger" onclick="doLogout()" style="margin-bottom:10px">Cerrar sesión</button>
     <button class="btn-secondary" onclick="closeSheet('usermenu')" aria-label="Acción">Cancelar</button>
@@ -3835,7 +3835,7 @@ function abrirUserMenu() {
   document.getElementById('um-email').textContent = currentUser?.email || '—';
   const rolLabels = { admin:'👑 Admin', campo:'🏗 Campo', compras:'📦 Compras' };
   document.getElementById('um-rol-badge').innerHTML = badge(rolLabels[currentUser?.rol]||currentUser?.rol||'—','#5BC4C0');
-  document.getElementById('um-admin-section').style.display = currentUser?.rol==='admin' ? 'block' : 'none';
+  document.getElementById('um-admin-section').style.display = (currentUser?.rol==='admin' || currentUser?.rol==='director') ? 'block' : 'none';
   openSheet('usermenu');
 }
 
