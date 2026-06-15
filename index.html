@@ -774,8 +774,14 @@
       <label class="form-label" for="fap-monto-cotizado">Subtotal sin IVA *</label>
       <input class="form-input" id="fap-monto-cotizado" type="number" min="0" step="0.01" placeholder="0.00"
         oninput="this.setCustomValidity('');calcTotalAutorizacion()">
-      <div id="fap-monto-ref" style="font-size:11px;color:var(--dim);margin-top:5px;display:none">
-        💡 Referencia de cotización: <strong id="fap-monto-ref-val"></strong>
+      <div id="fap-monto-ref" style="font-size:11px;margin-top:6px;display:none;background:rgba(77,142,255,.08);border:1px solid rgba(77,142,255,.25);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--accent2);font-weight:700;margin-bottom:3px">💡 Referencia de cotización</div>
+        <div style="color:var(--dim)">Subtotal sin IVA: <strong id="fap-monto-ref-siniva" style="color:var(--text)"></strong></div>
+        <div style="color:var(--dim)">Total con IVA: <strong id="fap-monto-ref-val" style="color:var(--text)"></strong></div>
+        <div style="color:#EF4444;font-size:10px;margin-top:3px">⚠️ Ingresa el SUBTOTAL SIN IVA — no el total</div>
+      </div>
+      <div id="fap-iva-warning" style="display:none;font-size:11px;color:#EF4444;margin-top:5px;padding:6px 10px;background:rgba(239,68,68,.08);border-radius:6px;border:1px solid rgba(239,68,68,.25)">
+        ⚠️ El monto ingresado coincide con el <strong>total con IVA</strong> de la cotización. Verifica que sea el subtotal sin IVA.
       </div>
     </div>
     <div class="form-group">
@@ -2842,26 +2848,38 @@ async function autorizarReq(reqId) {
   var montoInput = document.getElementById('fap-monto-cotizado');
   if(montoInput) { montoInput.value = ''; montoInput.setCustomValidity(''); }
   // Mostrar referencia si hay cotizaciones
-  var refWrap = document.getElementById('fap-monto-ref');
-  var refVal  = document.getElementById('fap-monto-ref-val');
-  if(refWrap && refVal) {
+  var refWrap   = document.getElementById('fap-monto-ref');
+  var refVal    = document.getElementById('fap-monto-ref-val');
+  var refSinIva = document.getElementById('fap-monto-ref-siniva');
+  var ivaWarn   = document.getElementById('fap-iva-warning');
+  if(ivaWarn) ivaWarn.style.display = 'none';
+  if(refWrap) {
     var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
     if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
-    var montoRef = comps.reduce(function(s,c){ return s+(_safeNum ? _safeNum(c.precio_unitario) : (parseFloat(c.precio_unitario)||0)); }, 0);
-    if(montoRef > 0) {
-      refVal.textContent = '$' + montoRef.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+    // precio_unitario en comparativas = TOTAL CON IVA (así lo guarda calcCompTotal)
+    var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum ? _safeNum(c.precio_unitario) : (parseFloat(c.precio_unitario)||0)); }, 0);
+    if(montoRefConIva > 0) {
+      var ivaPct = parseFloat(document.getElementById('fap-iva-pct')?.value) || 16;
+      // Calcular subtotal real sin IVA
+      var montoRefSinIva = Math.round(montoRefConIva / (1 + ivaPct/100) * 100) / 100;
+      // Guardar el total con IVA en data-attr para validación posterior
+      if(montoInput) montoInput.dataset.refConIva = montoRefConIva.toFixed(2);
+      if(refVal)    refVal.textContent    = '$' + montoRefConIva.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+      if(refSinIva) refSinIva.textContent = '$' + montoRefSinIva.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
       refWrap.style.display = 'block';
-      // Prellenar el campo con el monto de referencia para agilizar
-      if(montoInput) montoInput.value = montoRef.toFixed(2);
+      // Pre-llenar con SUBTOTAL SIN IVA (no el total)
+      if(montoInput) { montoInput.value = montoRefSinIva.toFixed(2); calcTotalAutorizacion(); }
     } else {
       refWrap.style.display = 'none';
+      if(montoInput) delete montoInput.dataset.refConIva;
     }
   }
   openSheet('autorizar-pago');
 }
 
 function calcTotalAutorizacion() {
-  var subtotal = parseFloat(document.getElementById('fap-monto-cotizado')?.value)||0;
+  var input    = document.getElementById('fap-monto-cotizado');
+  var subtotal = parseFloat(input?.value)||0;
   var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
   var ivaMonto = Math.round(subtotal * ivaPct / 100 * 100) / 100;
   var total    = Math.round((subtotal + ivaMonto) * 100) / 100;
@@ -2871,6 +2889,14 @@ function calcTotalAutorizacion() {
   var totEl    = document.getElementById('fap-total-monto');
   if(ivaEl) ivaEl.textContent = '$' + ivaMonto.toLocaleString('es-MX', {minimumFractionDigits:2});
   if(totEl) totEl.textContent = '$' + total.toLocaleString('es-MX', {minimumFractionDigits:2});
+  // Advertir si el monto ingresado coincide con el total con IVA de la cotización
+  var ivaWarn = document.getElementById('fap-iva-warning');
+  if(ivaWarn && input && input.dataset.refConIva) {
+    var refConIva = parseFloat(input.dataset.refConIva) || 0;
+    var pareceTotal = refConIva > 0 && Math.abs(subtotal - refConIva) < 1;
+    ivaWarn.style.display = pareceTotal ? '' : 'none';
+    if(input) input.style.borderColor = pareceTotal ? '#EF4444' : '';
+  }
 }
 
 async function confirmarAutorizacion() {
@@ -2891,6 +2917,13 @@ async function confirmarAutorizacion() {
     return;
   }
   if(montoInput) { montoInput.style.borderColor = ''; montoInput.setCustomValidity(''); }
+  // Bloquear si el monto parece ser el total con IVA de la cotización
+  var refConIva = montoInput ? parseFloat(montoInput.dataset.refConIva) || 0 : 0;
+  if(refConIva > 0 && Math.abs(subtotal - refConIva) < 1) {
+    if(montoInput) { montoInput.style.borderColor = '#EF4444'; montoInput.focus(); }
+    showToast('⚠️ El monto ingresado es el TOTAL CON IVA. Ingresa el subtotal sin IVA.', true);
+    return;
+  }
   var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
   var ivaMonto = Math.round(subtotal * ivaPct / 100 * 100) / 100;
   var totalConIva = Math.round((subtotal + ivaMonto) * 100) / 100;
