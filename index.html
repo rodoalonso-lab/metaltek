@@ -301,7 +301,7 @@
     <button class="tab" data-tab="nominas"><span class="tab-icon">👷</span><span class="tab-label">Nóminas</span></button>
   </div>
   <!-- REFRESH BTN -->
-  <button id="refresh-btn" onclick="doRefresh()" title="Actualizar datos" style="position:fixed;top:14px;left:16px;z-index:50;background:none;border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:14px;color:var(--dim);cursor:pointer;transition:color .2s,border-color .2s;display:none" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='var(--border)'">↻</button>
+  <button id="refresh-btn" onclick="doRefresh()" title="Actualizar datos" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:50;background:none;border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:14px;color:var(--dim);cursor:pointer;transition:color .2s,border-color .2s;display:none" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='var(--border)'">↻</button>
   <!-- USER CHIP -->
   <div id="user-chip" onclick="abrirUserMenu()" style="position:fixed;top:14px;right:16px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;display:none;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
     <span id="user-chip-name">—</span> ▾
