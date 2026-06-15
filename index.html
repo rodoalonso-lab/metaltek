@@ -2379,11 +2379,9 @@ async function saveRequisicion() {
       }
     });
     const siguiente = maxNum + 1;
-    // Sufijo de timestamp (últimos 4 dígitos en ms) para evitar colisiones en concurrencia
-    const tsSuffix = String(Date.now()).slice(-4);
-    folio = prefix + String(siguiente).padStart(3,'0') + '-' + tsSuffix;
+    folio = prefix + String(siguiente).padStart(3,'0');
   } catch(e2) {
-    folio = 'REQ-'+new Date().getFullYear()+'-000-'+String(Date.now()).slice(-4);
+    folio = 'REQ-'+new Date().getFullYear()+'-001';
   }
   try {
     const [req]=await db('POST','requisiciones',{folio,obra_id:obraId,solicitante:document.getElementById('fr-solicitante').value.trim(),notas:document.getElementById('fr-notas').value.trim(),estado:'Pendiente',fecha:new Date().toISOString().slice(0,10),tipo:document.getElementById('fr-tipo')?.value||'campo'});
