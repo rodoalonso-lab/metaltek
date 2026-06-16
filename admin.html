@@ -240,6 +240,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Space 
     </div>
     <div class="topbar-right">
       <span id="topbar-name" style="font-size:13px;color:var(--text2)"></span>
+      <a href="https://rodoalonso-lab.github.io/metaltek/metalek.html" style="display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:12px;font-family:'Space Grotesk',sans-serif;cursor:pointer;text-decoration:none;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">🔩 MetalTek</a>
       <button class="btn-logout" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -635,8 +636,9 @@ async function loadUsuarios() {
 
 async function loadPerfiles() {
   try {
+    const tok = await getRefreshedToken();
     const res = await fetch(SUPABASE_URL + '/rest/v1/perfiles?select=user_id,nombre,email,rol,pin_app&order=nombre.asc', {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getAdminToken() }
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + tok }
     });
     if (!res.ok) throw new Error(await res.text());
     perfilesData = await res.json();
@@ -648,8 +650,9 @@ async function loadPerfiles() {
 
 async function loadTrabajadores() {
   try {
+    const tok = await getRefreshedToken();
     const res = await fetch(SUPABASE_URL + '/rest/v1/trabajadores?select=id,nombre,departamento,pin_checador,activo&order=nombre.asc', {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + getAdminToken() }
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + tok }
     });
     if (!res.ok) throw new Error(await res.text());
     trabajadoresData = await res.json();
@@ -880,16 +883,18 @@ async function eliminarPerfil(userId, email, nombre) {
 }
 
 async function editarPinPerfil(userId, email, nombre, pinActual) {
-  const nuevoPin = prompt(`PIN actual de ${nombre}: ${pinActual||'(vacío)'}\n\nNuevo PIN para ${nombre}:`, pinActual||'');
+  const tienePin = !!(pinActual && pinActual.trim());
+  const nuevoPin = prompt(`Nuevo PIN para ${nombre}${tienePin ? ' (ya tiene PIN asignado)' : ''}:`, '');
   if (nuevoPin === null) return;
   const pinLimpio = nuevoPin.trim();
   try {
+    const tok = await getRefreshedToken();
     const filtro = userId ? 'user_id=eq.'+userId : 'email=eq.'+encodeURIComponent(email);
     const res = await fetch(SUPABASE_URL + '/rest/v1/perfiles?' + filtro, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + getAdminToken(),
+        'Authorization': 'Bearer ' + tok,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
@@ -905,15 +910,17 @@ async function editarPinPerfil(userId, email, nombre, pinActual) {
 }
 
 async function editarPinTrabajador(id, nombre, pinActual) {
-  const nuevoPin = prompt(`PIN actual de ${nombre}: ${pinActual||'(vacío)'}\n\nNuevo PIN para ${nombre}:`, pinActual||'');
+  const tienePin = !!(pinActual && pinActual.trim());
+  const nuevoPin = prompt(`Nuevo PIN para ${nombre}${tienePin ? ' (ya tiene PIN asignado)' : ''}:`, '');
   if (nuevoPin === null) return; // canceló
   const pinLimpio = nuevoPin.trim();
   try {
+    const tok = await getRefreshedToken();
     const res = await fetch(SUPABASE_URL + '/rest/v1/trabajadores?id=eq.' + id, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + getAdminToken(),
+        'Authorization': 'Bearer ' + tok,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
@@ -1222,7 +1229,7 @@ async function quitarAccesoApp(userId, appId) {
   if (!confirm(`¿Quitar acceso de ${u.nombre || u.email} a ${def.nombre}?`)) return;
   try {
     const permisosActuales = { ...(u.permisos || {}) };
-    if (permisosActuales[appId]) permisosActuales[appId] = { ...permisosActuales[appId], acceso: false };
+    delete permisosActuales[appId]; // eliminar la key limpiamente en vez de dejar { acceso: false }
     const appsActualizadas = (u.apps || []).filter(a => a !== appId);
     await updateProfile(userId, { permisos: permisosActuales, apps: appsActualizadas });
     const idx = usuarios.findIndex(x => x.id === userId);
@@ -1376,7 +1383,7 @@ async function openEditUser(userId) {
     fieldPin.style.display = 'none';
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/perfiles?email=eq.' + encodeURIComponent(u.email) + '&select=pin_app&limit=1', {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + adminSession.access_token }
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + await getRefreshedToken() }
       });
       const data = await res.json();
       if (data && data[0] && data[0].pin_app) {
@@ -1420,11 +1427,25 @@ async function saveUser() {
       const permisos = {};
       apps.forEach(a => { permisos[a] = defaultPermisos(a); });
       await adminCall('create_user', { email, password: pass, nombre, rol, apps });
-      // Actualizar permisos y referencia de contraseña por separado después
-      const nuevosList = await adminCall('list_users');
-      const nuevoU = (nuevosList.users || []).find(x => x.email === email);
-      if (nuevoU) await updateProfile(nuevoU.id, { permisos, contrasena_ref: pass });
-      showToast('✅ Usuario creado correctamente');
+      // Buscar nuevo usuario con reintentos para evitar timing issue con Supabase
+      let nuevoU = null;
+      for (let intento = 0; intento < 3; intento++) {
+        await new Promise(r => setTimeout(r, 600));
+        const nuevosList = await adminCall('list_users');
+        nuevoU = (nuevosList.users || []).find(x => x.email === email);
+        if (nuevoU) break;
+      }
+      if (nuevoU) {
+        await updateProfile(nuevoU.id, { permisos, contrasena_ref: pass });
+        // Si se agregó a Requisiciones, avisar que falta asignar PIN
+        if (apps.includes('requisiciones')) {
+          showToast('✅ Usuario creado — recuerda asignar PIN de Requisiciones');
+        } else {
+          showToast('✅ Usuario creado correctamente');
+        }
+      } else {
+        showToast('⚠️ Usuario creado, pero no se pudieron asignar permisos. Edítalo manualmente.', true);
+      }
     } else {
       const u = usuarios.find(x => x.id === id);
       // Para edición, actualizar apps y reconstruir permisos
