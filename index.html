@@ -3797,7 +3797,7 @@ async function doLogin() {
     currentSession = data;
 
     // Verificar acceso a esta app en user_profiles
-    const upRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${data.user.id}&select=nombre,rol,apps,activo`, {
+    const upRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${data.user.id}&select=nombre,rol,apps,activo,permisos`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + data.access_token }
     });
     const upData = await upRes.json();
@@ -3806,7 +3806,10 @@ async function doLogin() {
       currentSession = null;
       throw new Error(!up ? 'Sin perfil de acceso. Contacta al administrador.' : 'Tu cuenta está desactivada.');
     }
-    if (!Array.isArray(up.apps) || !up.apps.includes('metalek')) {
+    // Acceso: nuevo sistema (permisos.metalek.acceso) O sistema anterior (apps[])
+    const metPerm = up.permisos?.metalek;
+    const tieneAccesoMet = (metPerm?.acceso === true) || (Array.isArray(up.apps) && up.apps.includes('metalek'));
+    if (!tieneAccesoMet) {
       currentSession = null;
       throw new Error('No tienes acceso a MetalTek. Contacta al administrador.');
     }
@@ -3816,7 +3819,12 @@ async function doLogin() {
     const p = perfiles[0];
     const rawIds = p.obras_ids;
     const obraIds = Array.isArray(rawIds) ? rawIds : [];
-    currentUser = { id: data.user.id, email: data.user.email, nombre: p.nombre, rol: p.rol, permisos: p.permisos||{}, obras_ids: obraIds };
+    // Permisos de módulo: vienen de user_profiles.permisos.metalek.modulos (nuevo)
+    // Fallback: perfiles.permisos (sistema anterior)
+    const modPermisos = (up.permisos?.metalek?.modulos && Object.keys(up.permisos.metalek.modulos).length > 0)
+      ? up.permisos.metalek.modulos
+      : (p.permisos || {});
+    currentUser = { id: data.user.id, email: data.user.email, nombre: p.nombre, rol: p.rol, permisos: modPermisos, obras_ids: obraIds };
     const remember = document.getElementById('login-remember')?.checked !== false;
     if(remember) localStorage.setItem('sb-session', JSON.stringify(data));
     else localStorage.removeItem('sb-session');
