@@ -3814,17 +3814,19 @@ async function doLogin() {
       throw new Error('No tienes acceso a MetalTek. Contacta al administrador.');
     }
 
+    // perfiles es opcional — si no existe, se usan datos de user_profiles
     const perfiles = await db('GET', `perfiles?user_id=eq.${data.user.id}`);
-    if(!perfiles || !perfiles.length) throw new Error('Sin perfil asignado. Contacta al administrador.');
-    const p = perfiles[0];
-    const rawIds = p.obras_ids;
+    const p = (perfiles && perfiles.length) ? perfiles[0] : null;
+    const rawIds = p ? p.obras_ids : [];
     const obraIds = Array.isArray(rawIds) ? rawIds : [];
     // Permisos de módulo: vienen de user_profiles.permisos.metalek.modulos (nuevo)
     // Fallback: perfiles.permisos (sistema anterior)
     const modPermisos = (up.permisos?.metalek?.modulos && Object.keys(up.permisos.metalek.modulos).length > 0)
       ? up.permisos.metalek.modulos
-      : (p.permisos || {});
-    currentUser = { id: data.user.id, email: data.user.email, nombre: p.nombre, rol: p.rol, permisos: modPermisos, obras_ids: obraIds };
+      : (p?.permisos || {});
+    const nombre = (p?.nombre) || up.nombre || data.user.email;
+    const rol    = (p?.rol)    || up.rol    || 'operativo';
+    currentUser = { id: data.user.id, email: data.user.email, nombre, rol, permisos: modPermisos, obras_ids: obraIds };
     const remember = document.getElementById('login-remember')?.checked !== false;
     if(remember) localStorage.setItem('sb-session', JSON.stringify(data));
     else localStorage.removeItem('sb-session');
@@ -5106,17 +5108,28 @@ async function _refreshSession(sess) {
     currentSession = data;
     try { localStorage.setItem('sb-session', JSON.stringify(data)); } catch(e2){}
 
-    var perfiles = await db('GET', 'perfiles?user_id=eq.'+data.user.id);
-    if(!perfiles || !perfiles.length) {
+    // Cargar user_profiles para nombre, rol y permisos (fuente principal)
+    var upRes2 = await fetch(SUPABASE_URL+'/rest/v1/user_profiles?id=eq.'+data.user.id+'&select=nombre,rol,apps,activo,permisos', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+data.access_token }
+    });
+    var upData2 = await upRes2.json();
+    var up2 = Array.isArray(upData2) ? upData2[0] : null;
+    if(!up2 || !up2.activo) {
       _showLoginScreen('No se encontró tu perfil. Contacta al administrador.');
       return;
     }
-    var p = perfiles[0];
-    var rawIds2 = p.obras_ids;
+    // perfiles es opcional (se usa para obras_ids)
+    var perfiles = await db('GET', 'perfiles?user_id=eq.'+data.user.id);
+    var p = (perfiles && perfiles.length) ? perfiles[0] : null;
+    var rawIds2 = p ? p.obras_ids : [];
+    var modPermisos2 = (up2.permisos?.metalek?.modulos && Object.keys(up2.permisos.metalek.modulos).length > 0)
+      ? up2.permisos.metalek.modulos
+      : (p?.permisos || {});
     currentUser = {
       id: data.user.id, email: data.user.email,
-      nombre: p.nombre, rol: p.rol,
-      permisos: p.permisos || {},
+      nombre: (p?.nombre) || up2.nombre || data.user.email,
+      rol:    (p?.rol)    || up2.rol    || 'operativo',
+      permisos: modPermisos2,
       obras_ids: Array.isArray(rawIds2) ? rawIds2 : []
     };
     document.getElementById('login-screen').style.display = 'none';
