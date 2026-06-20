@@ -292,6 +292,275 @@
     <div id="admin-users-list"></div>
   </div>
 
+
+  <!-- COSTEO SCREEN -->
+  <div class="screen" id="screen-costeo">
+
+    <!-- Vista 1: Lista de presupuestos -->
+    <div id="co-list-v">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;margin-bottom:4px;padding-right:96px">
+        <div class="page-title" style="padding:0">Costeo</div>
+        <button class="add-btn" onclick="abrirNuevoPresupuesto()">+ Presupuesto</button>
+      </div>
+      <div class="page-sub">Presupuestos y análisis de precios unitarios</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
+        <button class="chip active" id="cotab-pres" onclick="setCotab('pres')">📋 Presupuestos</button>
+        <button class="chip" id="cotab-cat" onclick="setCotab('cat')">📚 Catálogo</button>
+      </div>
+      <div id="co-pres-v"></div>
+      <div id="co-cat-v" style="display:none"></div>
+    </div>
+
+    <!-- Vista 2: Capítulos y Conceptos -->
+    <div id="co-pres-detail" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;padding-top:20px;margin-bottom:4px">
+        <button onclick="backToCoList()" style="background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0">←</button>
+        <div>
+          <div class="page-title" style="padding:0" id="co-pres-title">Presupuesto</div>
+          <div class="page-sub" id="co-pres-sub" style="margin:0"></div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="chip" onclick="abrirNuevoCapitulo()" style="background:var(--accent);color:#fff;border-color:var(--accent)">+ Capítulo</button>
+        </div>
+      </div>
+      <!-- Totales header -->
+      <div id="co-pres-totales" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"></div>
+      <!-- Capítulos accordion -->
+      <div id="co-capitulos-v"></div>
+    </div>
+
+    <!-- Vista 3: APU Editor -->
+    <div id="co-apu-v" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;padding-top:20px;margin-bottom:4px">
+        <button onclick="backToPresDet()" style="background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0">←</button>
+        <div>
+          <div class="page-title" style="padding:0">APU</div>
+          <div class="page-sub" id="co-apu-sub" style="margin:0"></div>
+        </div>
+      </div>
+      <!-- Cuadro resumen APU -->
+      <div id="co-apu-resumen" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px"></div>
+      <!-- Secciones de insumos -->
+      <div id="co-apu-mat" class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">🧱 Materiales</span>
+          <button class="chip" onclick="abrirNuevoInsumoAPU('material')" style="padding:3px 10px;font-size:11px">+ Agregar</button>
+        </div>
+        <div id="co-apu-mat-rows"></div>
+        <div id="co-apu-mat-total" style="text-align:right;font-size:12px;color:var(--dim);padding-top:6px;border-top:1px solid var(--border);margin-top:6px"></div>
+      </div>
+      <div id="co-apu-mo" class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">👷 Mano de Obra <span id="co-fsr-badge" style="font-size:10px;font-weight:400;color:var(--dim)"></span></span>
+          <button class="chip" onclick="abrirNuevoInsumoAPU('mano_obra')" style="padding:3px 10px;font-size:11px">+ Agregar</button>
+        </div>
+        <div id="co-apu-mo-rows"></div>
+        <div id="co-apu-mo-total" style="text-align:right;font-size:12px;color:var(--dim);padding-top:6px;border-top:1px solid var(--border);margin-top:6px"></div>
+      </div>
+      <div id="co-apu-eq" class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">🚜 Equipo</span>
+          <button class="chip" onclick="abrirNuevoInsumoAPU('equipo')" style="padding:3px 10px;font-size:11px">+ Agregar</button>
+        </div>
+        <div id="co-apu-eq-rows"></div>
+        <div id="co-apu-eq-total" style="text-align:right;font-size:12px;color:var(--dim);padding-top:6px;border-top:1px solid var(--border);margin-top:6px"></div>
+      </div>
+      <div id="co-apu-sub2" class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">🔧 Subcontratos</span>
+          <button class="chip" onclick="abrirNuevoInsumoAPU('subcontrato')" style="padding:3px 10px;font-size:11px">+ Agregar</button>
+        </div>
+        <div id="co-apu-sub2-rows"></div>
+        <div id="co-apu-sub2-total" style="text-align:right;font-size:12px;color:var(--dim);padding-top:6px;border-top:1px solid var(--border);margin-top:6px"></div>
+      </div>
+      <!-- Parámetros del presupuesto -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">⚙️ Parámetros del Presupuesto</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">FSR (Factor Salario Real)</label>
+            <input type="number" id="apu-fsr" step="0.01" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">Herramienta (%)</label>
+            <input type="number" id="apu-herr" step="0.1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">Indirectos (%)</label>
+            <input type="number" id="apu-indir" step="0.1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">Financiamiento (%)</label>
+            <input type="number" id="apu-fin" step="0.1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">Utilidad (%)</label>
+            <input type="number" id="apu-util" step="0.1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+          <div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px">IVA (%)</label>
+            <input type="number" id="apu-iva" step="0.1" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" oninput="recalcAPU()"></div>
+        </div>
+        <button onclick="guardarParamsPresupuesto()" class="btn-primary" style="margin-top:12px;width:100%">Guardar parámetros</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BS: Nuevo Presupuesto -->
+  <div class="sheet-overlay" id="sheet-co-presupuesto">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="bs-co-pres-title">Nuevo Presupuesto</div>
+    <div class="form-group">
+      <label>Obra</label>
+      <select id="co-pres-obra" class="form-input">
+        <option value="">-- Sin obra asignada --</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Nombre del presupuesto</label>
+      <input class="form-input" id="co-pres-nombre" placeholder="Ej: Presupuesto Etapa 1"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Versión</label>
+        <input class="form-input" id="co-pres-ver" value="v1"></div>
+      <div class="form-group"><label>Estado</label>
+        <select id="co-pres-estado" class="form-input">
+          <option value="borrador">Borrador</option>
+          <option value="revisión">En revisión</option>
+          <option value="aprobado">Aprobado</option>
+          <option value="cerrado">Cerrado</option>
+        </select>
+      </div>
+    </div>
+    <details style="margin-bottom:12px">
+      <summary style="font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:8px">⚙️ Parámetros avanzados</summary>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="form-group"><label style="font-size:11px">FSR</label><input class="form-input" id="co-p-fsr" type="number" step="0.01" value="1.45"></div>
+        <div class="form-group"><label style="font-size:11px">Herramienta %</label><input class="form-input" id="co-p-herr" type="number" step="0.1" value="3"></div>
+        <div class="form-group"><label style="font-size:11px">Indirectos %</label><input class="form-input" id="co-p-indir" type="number" step="0.1" value="15"></div>
+        <div class="form-group"><label style="font-size:11px">Financiamiento %</label><input class="form-input" id="co-p-fin" type="number" step="0.1" value="2"></div>
+        <div class="form-group"><label style="font-size:11px">Utilidad %</label><input class="form-input" id="co-p-util" type="number" step="0.1" value="10"></div>
+        <div class="form-group"><label style="font-size:11px">IVA %</label><input class="form-input" id="co-p-iva" type="number" step="0.1" value="16"></div>
+      </div>
+    </details>
+    <button class="btn-primary" onclick="savePresupuesto()">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('co-presupuesto')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+  <!-- BS: Nuevo Capítulo -->
+  <div class="sheet-overlay" id="sheet-co-capitulo">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nuevo Capítulo</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 80px"><label>No.</label>
+        <input class="form-input" id="co-cap-num" placeholder="1"></div>
+      <div class="form-group" style="flex:1"><label>Nombre del capítulo</label>
+        <input class="form-input" id="co-cap-nom" placeholder="Ej: Cimentación"></div>
+    </div>
+    <button class="btn-primary" onclick="saveCapitulo()">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('co-capitulo')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+  <!-- BS: Nuevo Concepto -->
+  <div class="sheet-overlay" id="sheet-co-concepto">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="bs-co-conc-title">Nuevo Concepto</div>
+    <input type="hidden" id="co-conc-cap-id">
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 90px"><label>Clave</label>
+        <input class="form-input" id="co-conc-clave" placeholder="1.1"></div>
+      <div class="form-group" style="flex:1"><label>Unidad</label>
+        <input class="form-input" id="co-conc-unidad" placeholder="m², ml, pza..."></div>
+    </div>
+    <div class="form-group"><label>Descripción del concepto</label>
+      <input class="form-input" id="co-conc-desc" placeholder="Ej: Concreto f'c=250 kg/cm²"></div>
+    <div class="form-group"><label>Cantidad</label>
+      <input class="form-input" id="co-conc-cant" type="number" step="0.01" placeholder="0.00"></div>
+    <button class="btn-primary" onclick="saveConcepto()">Guardar</button>
+    <button class="btn-secondary" onclick="closeSheet('co-concepto')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+  <!-- BS: Nuevo Insumo APU -->
+  <div class="sheet-overlay" id="sheet-co-insumo">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="bs-insumo-title">Agregar Insumo</div>
+    <input type="hidden" id="co-ins-tipo">
+    <input type="hidden" id="co-ins-edit-id">
+    <!-- Búsqueda en catálogo -->
+    <div class="form-group">
+      <label>Buscar en catálogo</label>
+      <input class="form-input" id="co-ins-buscar" placeholder="Escribe descripción..." oninput="buscarInsumosCat(this.value)">
+      <div id="co-ins-resultados" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;margin-top:4px;display:none"></div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--dim);margin:-4px 0 8px">— o ingresa manualmente —</div>
+    <div class="form-group"><label>Descripción</label>
+      <input class="form-input" id="co-ins-desc" placeholder="Descripción del insumo"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidad</label>
+        <input class="form-input" id="co-ins-unidad" placeholder="kg, m³, hr..."></div>
+      <div class="form-group"><label>Cantidad</label>
+        <input class="form-input" id="co-ins-cant" type="number" step="0.001" oninput="previewInsumo()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Precio unitario ($)</label>
+        <input class="form-input" id="co-ins-pu" type="number" step="0.01" oninput="previewInsumo()"></div>
+      <div class="form-group" id="co-ins-desp-wrap"><label>Factor desperdicio</label>
+        <input class="form-input" id="co-ins-desp" type="number" step="0.01" value="1.00" oninput="previewInsumo()"></div>
+    </div>
+    <div id="co-ins-preview" style="text-align:right;font-size:12px;color:var(--accent);margin-bottom:8px"></div>
+    <button class="btn-primary" onclick="saveInsumoAPU()">Agregar</button>
+    <button class="btn-secondary" onclick="closeSheet('co-insumo')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+  <!-- BS: Catálogo de Insumos -->
+<div class="sheet-overlay" id="sheet-co-catalogo">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="sheet-title" style="margin:0">Catálogo de Insumos</div>
+      <button class="chip" onclick="abrirNuevoInsumocat()" style="background:var(--accent);color:#fff;border-color:var(--accent)">+ Nuevo</button>
+    </div>
+    <input class="form-input" id="cat-buscar" placeholder="🔍 Buscar..." oninput="renderCatalogo(this.value)" style="margin-bottom:8px">
+    <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
+      <button class="chip active" id="catf-todos" onclick="setCatFiltro('')">Todos</button>
+      <button class="chip" id="catf-mat" onclick="setCatFiltro('material')">Materiales</button>
+      <button class="chip" id="catf-mo" onclick="setCatFiltro('mano_obra')">Mano de obra</button>
+      <button class="chip" id="catf-eq" onclick="setCatFiltro('equipo')">Equipo</button>
+      <button class="chip" id="catf-sub" onclick="setCatFiltro('subcontrato')">Subcontratos</button>
+    </div>
+    <div id="cat-lista" style="max-height:55vh;overflow-y:auto"></div>
+    <!-- Form nuevo insumo -->
+    <div id="cat-form" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+      <div style="font-weight:700;margin-bottom:10px" id="cat-form-title">Nuevo Insumo</div>
+      <input type="hidden" id="cat-ins-id">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 100px"><label>Clave</label>
+          <input class="form-input" id="cat-ins-clave" placeholder="MAT-001"></div>
+        <div class="form-group" style="flex:1"><label>Tipo</label>
+          <select id="cat-ins-tipo" class="form-input">
+            <option value="material">Material</option>
+            <option value="mano_obra">Mano de obra</option>
+            <option value="equipo">Equipo</option>
+            <option value="subcontrato">Subcontrato</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Descripción</label>
+        <input class="form-input" id="cat-ins-desc" placeholder="Descripción del insumo"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Unidad</label>
+          <input class="form-input" id="cat-ins-unidad" placeholder="kg, m³..."></div>
+        <div class="form-group"><label>Precio base ($)</label>
+          <input class="form-input" id="cat-ins-precio" type="number" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" style="flex:1" onclick="saveInsumocat()">Guardar</button>
+        <button class="btn-secondary" style="flex:0 0 auto" onclick="cancelarFormCat()">Cancelar</button>
+      </div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
   <!-- TAB BAR -->
   <div class="tabbar">
     <button class="tab active" data-tab="dashboard"><span class="tab-icon">⬡</span><span class="tab-label">Inicio</span></button>
@@ -299,6 +568,7 @@
     <button class="tab" data-tab="materiales"><span class="tab-icon">📦</span><span class="tab-label">Stock</span></button>
     <button class="tab" data-tab="reportes"><span class="tab-icon">📊</span><span class="tab-label">Reportes</span></button>
     <button class="tab" data-tab="nominas"><span class="tab-icon">👷</span><span class="tab-label">Nóminas</span></button>
+    <button class="tab" data-tab="costeo"><span class="tab-icon">📐</span><span class="tab-label">Costeo</span></button>
   </div>
   <!-- REFRESH BTN -->
   <button id="refresh-btn" onclick="doRefresh()" title="Actualizar datos" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:50;background:none;border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:14px;color:var(--dim);cursor:pointer;transition:color .2s,border-color .2s;display:none" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--dim)';this.style.borderColor='var(--border)'">↻</button>
@@ -366,6 +636,7 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-materiales" style="width:18px;height:18px;accent-color:var(--accent)"> 📦 Stock</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-reportes" style="width:18px;height:18px;accent-color:var(--accent)"> 📊 Reportes</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-nominas" style="width:18px;height:18px;accent-color:var(--accent)"> 👷 Nóminas</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-costeo" style="width:18px;height:18px;accent-color:var(--accent)"> 📐 Costeo</label>
       
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="perm-tareas" style="width:18px;height:18px;accent-color:var(--accent)"> ✅ Tareas</label>
     </div>
@@ -5085,6 +5356,7 @@ function showTab(tabId) {
   if(tabId==='reportes') loadReportes();
   if(tabId==='admin') loadAdminUsers();
   if(tabId==='nominas') loadNominas();
+  if(tabId==='costeo') loadCosteo();
 }
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>showTab(tab.dataset.tab));
@@ -5545,6 +5817,760 @@ if('serviceWorker' in navigator){
     }).catch(function(){});
   });
 }
+
+// ╔═════════════════════════════════════════════════════════════════╗
+// ║               MÓDULO COSTEO — APU PROFESIONAL                  ║
+// ╚═════════════════════════════════════════════════════════════════╝
+
+function _esc(s){ var d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
+
+var _coView        = 'list';      // 'list' | 'presupuesto' | 'apu'
+var _coPresData    = [];          // lista de presupuestos
+var _coPresActivo  = null;        // presupuesto activo (objeto completo)
+var _coCapitulos   = [];          // capítulos del presupuesto activo
+var _coConceptos   = {};          // { capId: [conceptos] }
+var _coConceptoAct = null;        // concepto activo en APU
+var _coInsumoAPU   = [];          // insumos del APU activo
+var _coCatalogo    = [];          // catálogo de insumos
+var _coCapEdit     = null;        // id capítulo en edición
+var _coConcEdit    = null;        // id concepto en edición
+var _coCatFiltro   = '';
+var _coTabActivo   = 'pres';
+
+// ── Helpers de formato ────────────────────────────────────────────
+function _mxn(v){ return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _pct(v){ return Number(v||0).toFixed(2)+'%'; }
+function _n(id){ return parseFloat(document.getElementById(id)&&document.getElementById(id).value||0)||0; }
+
+// ── Navegación de sub-vistas ──────────────────────────────────────
+function setCosteoView(v){
+  _coView = v;
+  document.getElementById('co-list-v').style.display       = v==='list'        ? '' : 'none';
+  document.getElementById('co-pres-detail').style.display  = v==='presupuesto'  ? '' : 'none';
+  document.getElementById('co-apu-v').style.display        = v==='apu'          ? '' : 'none';
+}
+function backToCoList(){ setCosteoView('list'); renderCosteoList(); }
+function backToPresDet(){ setCosteoView('presupuesto'); renderPresupuesto(); }
+
+function setCotab(t){
+  _coTabActivo = t;
+  ['pres','cat'].forEach(x=>{
+    document.getElementById('cotab-'+x).classList.toggle('active', x===t);
+    document.getElementById('co-'+(x==='pres'?'pres-v':'cat-v')).style.display = x===t?'':'none';
+  });
+  if(t==='cat') { loadCatalogo(); }
+}
+
+// ── CARGA PRINCIPAL ───────────────────────────────────────────────
+async function loadCosteo(){
+  setCosteoView('list');
+  try {
+    _coPresData = await db('GET','presupuestos?order=created_at.desc')||[];
+  } catch(e){ _coPresData=[]; }
+  renderCosteoList();
+  // Precargar catálogo en background
+  loadCatalogo().catch(()=>{});
+}
+
+function renderCosteoList(){
+  var el = document.getElementById('co-pres-v');
+  if(!_coPresData.length){
+    el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim)">'+
+      '<div style="font-size:36px;margin-bottom:12px">📐</div>'+
+      '<div style="font-weight:600;margin-bottom:6px">Sin presupuestos</div>'+
+      '<div style="font-size:12px">Crea tu primer presupuesto APU</div></div>';
+    return;
+  }
+
+  var estadoColor = { borrador:'var(--dim)', 'revisión':'#f59e0b', aprobado:'#22c55e', cerrado:'#6366f1' };
+  var html = '';
+  _coPresData.forEach(function(p){
+    var obraNom = (obrasData||[]).find(function(o){return o.id===p.obra_id;})||{};
+    var color = estadoColor[p.estado]||'var(--dim)';
+    html += '<div class="card clickable" onclick="abrirPresupuesto(''+p.id+'')" style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div>'+
+          '<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+_esc(p.nombre)+'</div>'+
+          '<div style="font-size:11px;color:var(--dim)">'+_esc(obraNom.nombre||'Sin obra')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
+          '<span style="font-size:10px;font-weight:700;color:'+color+';background:'+color+'22;padding:2px 8px;border-radius:20px;text-transform:uppercase">'+p.estado+'</span>'+
+          '<span style="font-size:10px;color:var(--dim)">'+p.version+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:16px;margin-top:10px">'+
+        '<div style="font-size:11px;color:var(--dim)">FSR: <b style="color:var(--text)">'+p.fsr+'</b></div>'+
+        '<div style="font-size:11px;color:var(--dim)">Indir: <b style="color:var(--text)">'+p.indirectos_pct+'%</b></div>'+
+        '<div style="font-size:11px;color:var(--dim)">Util: <b style="color:var(--text)">'+p.utilidad_pct+'%</b></div>'+
+        '<div style="font-size:11px;color:var(--dim)">IVA: <b style="color:var(--text)">'+p.iva_pct+'%</b></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">'+
+        '<button class="chip" onclick="event.stopPropagation();editarPresupuesto(''+p.id+'')" style="font-size:11px">✏️ Editar</button>'+
+        '<button class="chip" onclick="event.stopPropagation();eliminarPresupuesto(''+p.id+'')" style="font-size:11px;color:#ef4444;border-color:#ef444433">🗑 Eliminar</button>'+
+      '</div>'+
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Abrir presupuesto: cargar capítulos y conceptos ───────────────
+async function abrirPresupuesto(id){
+  _coPresActivo = _coPresData.find(function(p){return p.id===id;});
+  if(!_coPresActivo) return;
+  setCosteoView('presupuesto');
+
+  document.getElementById('co-pres-title').textContent = _coPresActivo.nombre;
+  var obraNom = (obrasData||[]).find(function(o){return o.id===_coPresActivo.obra_id;})||{};
+  document.getElementById('co-pres-sub').textContent = (obraNom.nombre||'Sin obra') + ' · ' + _coPresActivo.version;
+
+  try {
+    _coCapitulos = await db('GET','presupuesto_capitulos?presupuesto_id=eq.'+id+'&order=orden')||[];
+  } catch(e){ _coCapitulos=[]; }
+
+  // Cargar todos los conceptos del presupuesto en paralelo
+  _coConceptos = {};
+  await Promise.all(_coCapitulos.map(async function(cap){
+    try {
+      _coConceptos[cap.id] = await db('GET','presupuesto_conceptos?capitulo_id=eq.'+cap.id+'&order=orden')||[];
+    } catch(e){ _coConceptos[cap.id]=[]; }
+  }));
+
+  renderPresupuesto();
+}
+
+function renderPresupuesto(){
+  var el = document.getElementById('co-capitulos-v');
+  if(!_coCapitulos.length){
+    el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim)">'+
+      '<div style="font-size:36px;margin-bottom:12px">📂</div>'+
+      '<div style="font-weight:600;margin-bottom:6px">Sin capítulos</div>'+
+      '<div style="font-size:12px">Agrega el primer capítulo del presupuesto</div></div>';
+    renderTotalesPresupuesto();
+    return;
+  }
+
+  var html = '';
+  var grandTotal = 0;
+  _coCapitulos.forEach(function(cap){
+    var conceptos = _coConceptos[cap.id]||[];
+    var capTotal = conceptos.reduce(function(s,c){return s+(c.total||0);},0);
+    grandTotal += capTotal;
+    html += '<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--surface-2,var(--surface));border-bottom:1px solid var(--border)">'+
+        '<span style="font-weight:700;font-size:12px;color:var(--accent);flex:0 0 auto">'+_esc(cap.numero||'')+'</span>'+
+        '<span style="font-weight:700;font-size:13px;flex:1">'+_esc(cap.nombre)+'</span>'+
+        '<span style="font-weight:700;font-size:13px;color:var(--accent)">'+_mxn(capTotal)+'</span>'+
+        '<button onclick="abrirNuevoConcepto(''+cap.id+'')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:18px;padding:0;line-height:1">+</button>'+
+        '<button onclick="eliminarCapitulo(''+cap.id+'')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:0">🗑</button>'+
+      '</div>'+
+      '<div style="padding:8px 10px">';
+    if(!conceptos.length){
+      html += '<div style="text-align:center;padding:12px;color:var(--dim);font-size:12px">Sin conceptos. Toca + para agregar.</div>';
+    } else {
+      conceptos.forEach(function(conc){
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="abrirAPU(''+conc.id+'')">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:12px;color:var(--dim);margin-bottom:1px">'+_esc(conc.clave||'')+' '+_esc(conc.unidad)+'</div>'+
+            '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(conc.descripcion)+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;flex:0 0 auto">'+
+            '<div style="font-size:11px;color:var(--dim)">'+Number(conc.cantidad||0).toLocaleString('es-MX',{maximumFractionDigits:3})+' × '+_mxn(conc.precio_unitario)+'</div>'+
+            '<div style="font-weight:700;font-size:13px;color:var(--accent)">'+_mxn(conc.total)+'</div>'+
+          '</div>'+
+          '<span style="color:var(--dim);font-size:14px">›</span>'+
+        '</div>';
+      });
+    }
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+  renderTotalesPresupuesto(grandTotal);
+}
+
+function renderTotalesPresupuesto(grandTotal){
+  var el = document.getElementById('co-pres-totales');
+  grandTotal = grandTotal||0;
+  var p = _coPresActivo||{};
+  var indir = grandTotal * (p.indirectos_pct||15)/100;
+  var fin   = (grandTotal+indir)*(p.financiamiento_pct||2)/100;
+  var util  = (grandTotal+indir+fin)*(p.utilidad_pct||10)/100;
+  var sinIva = grandTotal+indir+fin+util;
+  var iva   = sinIva*(p.iva_pct||16)/100;
+  el.innerHTML =
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Costo Directo</div><div style="font-weight:700;font-size:14px;color:var(--accent)">'+_mxn(grandTotal)+'</div></div>'+
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Sin IVA</div><div style="font-weight:700;font-size:14px">'+_mxn(sinIva)+'</div></div>'+
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">IVA ('+_pct(p.iva_pct||16)+')</div><div style="font-weight:700;font-size:14px">'+_mxn(iva)+'</div></div>'+
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Indirectos</div><div style="font-size:13px">'+_mxn(indir)+'</div></div>'+
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Financiamiento</div><div style="font-size:13px">'+_mxn(fin)+'</div></div>'+
+    '<div><div style="font-size:10px;color:var(--dim);margin-bottom:2px">Utilidad</div><div style="font-size:13px">'+_mxn(util)+'</div></div>';
+}
+
+// ── APU EDITOR ───────────────────────────────────────────────────
+async function abrirAPU(concId){
+  // Buscar concepto en los datos locales
+  var conc = null;
+  Object.values(_coConceptos).forEach(function(arr){
+    var f = arr.find(function(c){return c.id===concId;});
+    if(f) conc = f;
+  });
+  if(!conc) return;
+  _coConceptoAct = conc;
+  setCosteoView('apu');
+
+  document.getElementById('co-apu-sub').textContent = (conc.clave?conc.clave+' · ':'')+conc.descripcion+' ('+conc.unidad+')';
+
+  // Poblar parámetros
+  var p = _coPresActivo||{};
+  ['fsr','herr','indir','fin','util','iva'].forEach(function(k){
+    var map = {fsr:'fsr',herr:'herramienta_pct',indir:'indirectos_pct',fin:'financiamiento_pct',util:'utilidad_pct',iva:'iva_pct'};
+    document.getElementById('apu-'+k).value = p[map[k]]||{fsr:1.45,herr:3,indir:15,fin:2,util:10,iva:16}[k];
+  });
+  document.getElementById('co-fsr-badge').textContent = '× FSR '+(_coPresActivo&&_coPresActivo.fsr||1.45);
+
+  try {
+    _coInsumoAPU = await db('GET','apu_insumos?concepto_id=eq.'+concId+'&order=tipo,created_at')||[];
+  } catch(e){ _coInsumoAPU=[]; }
+
+  renderAPU();
+}
+
+function renderAPU(){
+  var tipos = ['material','mano_obra','equipo','subcontrato'];
+  var secIds = {material:'co-apu-mat',mano_obra:'co-apu-mo',equipo:'co-apu-eq',subcontrato:'co-apu-sub2'};
+  var fsr = parseFloat(document.getElementById('apu-fsr')&&document.getElementById('apu-fsr').value||1.45)||1.45;
+
+  tipos.forEach(function(tipo){
+    var rows = _coInsumoAPU.filter(function(i){return i.tipo===tipo;});
+    var total = 0;
+    var rowsHtml = '';
+    rows.forEach(function(ins){
+      var baseImporte = (ins.cantidad||0)*(ins.precio_unitario||0)*(ins.factor_desperdicio||1);
+      var importe = tipo==='mano_obra' ? baseImporte*fsr : baseImporte;
+      total += importe;
+      rowsHtml += '<div style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border)">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(ins.descripcion||'')+'</div>'+
+          '<div style="font-size:11px;color:var(--dim)">'+Number(ins.cantidad||0).toLocaleString('es-MX',{maximumFractionDigits:4})+' '+_esc(ins.unidad||'')+' × '+_mxn(ins.precio_unitario)+(ins.factor_desperdicio&&ins.factor_desperdicio!==1?' × '+ins.factor_desperdicio:'')+(tipo==='mano_obra'?' × FSR '+fsr.toFixed(2):'')+' = <b>'+_mxn(importe)+'</b></div>'+
+        '</div>'+
+        '<button onclick="editarInsumoAPU(''+ins.id+'')" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:14px;padding:2px">✏️</button>'+
+        '<button onclick="eliminarInsumoAPU(''+ins.id+'')" style="background:none;border:none;cursor:pointer;color:#ef444488;font-size:14px;padding:2px">✕</button>'+
+      '</div>';
+    });
+    document.getElementById(secIds[tipo]+'-rows').innerHTML = rowsHtml||'<div style="font-size:11px;color:var(--dim);padding:6px 0">Sin insumos</div>';
+    document.getElementById(secIds[tipo]+'-total').textContent = 'Subtotal: '+_mxn(total);
+  });
+
+  recalcAPU();
+}
+
+function recalcAPU(){
+  var fsr     = parseFloat(document.getElementById('apu-fsr')&&document.getElementById('apu-fsr').value||1.45)||1.45;
+  var herrPct = parseFloat(document.getElementById('apu-herr')&&document.getElementById('apu-herr').value||3)||3;
+  var indPct  = parseFloat(document.getElementById('apu-indir')&&document.getElementById('apu-indir').value||15)||15;
+  var finPct  = parseFloat(document.getElementById('apu-fin')&&document.getElementById('apu-fin').value||2)||2;
+  var utlPct  = parseFloat(document.getElementById('apu-util')&&document.getElementById('apu-util').value||10)||10;
+  var ivaPct  = parseFloat(document.getElementById('apu-iva')&&document.getElementById('apu-iva').value||16)||16;
+
+  if(!document.getElementById('co-fsr-badge')) return;
+  document.getElementById('co-fsr-badge').textContent = '× FSR '+fsr.toFixed(2);
+
+  // Cálculo APU
+  var cdMat  = _coInsumoAPU.filter(function(i){return i.tipo==='material';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdMoBase = _coInsumoAPU.filter(function(i){return i.tipo==='mano_obra';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdMo   = cdMoBase * fsr;
+  var cdHerrPct  = cdMo * herrPct/100;
+  var cdEq   = _coInsumoAPU.filter(function(i){return i.tipo==='equipo';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdSub  = _coInsumoAPU.filter(function(i){return i.tipo==='subcontrato';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0);},0);
+
+  var CD   = cdMat + cdMo + cdHerrPct + cdEq + cdSub;
+  var CI   = CD * indPct/100;
+  var F    = (CD+CI) * finPct/100;
+  var U    = (CD+CI+F) * utlPct/100;
+  var PU   = CD+CI+F+U;
+  var IVA  = PU * ivaPct/100;
+  var PUfin= PU + IVA;
+
+  var el = document.getElementById('co-apu-resumen');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12px">'+
+    '<span style="color:var(--dim)">Materiales</span><span style="text-align:right">'+_mxn(cdMat)+'</span>'+
+    '<span style="color:var(--dim)">Mano de obra (×'+fsr.toFixed(2)+')</span><span style="text-align:right">'+_mxn(cdMo)+'</span>'+
+    '<span style="color:var(--dim)">Herramienta ('+herrPct+'%)</span><span style="text-align:right">'+_mxn(cdHerrPct)+'</span>'+
+    '<span style="color:var(--dim)">Equipo</span><span style="text-align:right">'+_mxn(cdEq)+'</span>'+
+    '<span style="color:var(--dim)">Subcontratos</span><span style="text-align:right">'+_mxn(cdSub)+'</span>'+
+    '<div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0"></div>'+
+    '<span style="font-weight:700">Costo Directo</span><span style="text-align:right;font-weight:700">'+_mxn(CD)+'</span>'+
+    '<span style="color:var(--dim)">Indirectos ('+indPct+'%)</span><span style="text-align:right">'+_mxn(CI)+'</span>'+
+    '<span style="color:var(--dim)">Financiamiento ('+finPct+'%)</span><span style="text-align:right">'+_mxn(F)+'</span>'+
+    '<span style="color:var(--dim)">Utilidad ('+utlPct+'%)</span><span style="text-align:right">'+_mxn(U)+'</span>'+
+    '<div style="grid-column:1/-1;border-top:2px solid var(--accent);margin:4px 0"></div>'+
+    '<span style="font-weight:700;font-size:14px;color:var(--accent)">P.U. sin IVA</span>'+
+    '<span style="text-align:right;font-weight:700;font-size:14px;color:var(--accent)">'+_mxn(PU)+'</span>'+
+    '<span style="color:var(--dim)">IVA ('+ivaPct+'%)</span><span style="text-align:right">'+_mxn(IVA)+'</span>'+
+    '<span style="font-weight:700;font-size:15px">P.U. TOTAL</span>'+
+    '<span style="text-align:right;font-weight:700;font-size:15px">'+_mxn(PUfin)+'</span>'+
+    '</div>';
+
+  return { PU, IVA, PUfin, CD };
+}
+
+async function guardarParamsPresupuesto(){
+  if(!_coPresActivo) return;
+  var params = {
+    fsr: _n('apu-fsr'), herramienta_pct: _n('apu-herr'),
+    indirectos_pct: _n('apu-indir'), financiamiento_pct: _n('apu-fin'),
+    utilidad_pct: _n('apu-util'), iva_pct: _n('apu-iva')
+  };
+  try {
+    await db('PATCH','presupuestos?id=eq.'+_coPresActivo.id, params);
+    Object.assign(_coPresActivo, params);
+    // Actualizar en lista
+    var idx = _coPresData.findIndex(function(p){return p.id===_coPresActivo.id;});
+    if(idx>=0) Object.assign(_coPresData[idx], params);
+    // Recalcular PU de todos los conceptos del presupuesto (regenerar cache)
+    await recalcYGuardarPU();
+    showToast('Parámetros guardados');
+    recalcAPU();
+  } catch(e){ showToast('Error al guardar parámetros',true); }
+}
+
+async function recalcYGuardarPU(){
+  // Recalcula el precio unitario del concepto activo y actualiza en DB
+  if(!_coConceptoAct) return;
+  var calc = recalcAPU();
+  if(!calc) return;
+  var PU = calc.PU;
+  var cant = _coConceptoAct.cantidad||1;
+  var total = PU * cant;
+  try {
+    await db('PATCH','presupuesto_conceptos?id=eq.'+_coConceptoAct.id,{precio_unitario:PU, total:total});
+    _coConceptoAct.precio_unitario = PU;
+    _coConceptoAct.total = total;
+    // Actualizar en cache local
+    Object.values(_coConceptos).forEach(function(arr){
+      var c = arr.find(function(x){return x.id===_coConceptoAct.id;});
+      if(c){ c.precio_unitario=PU; c.total=total; }
+    });
+  } catch(e){}
+}
+
+// ── CRUD PRESUPUESTOS ─────────────────────────────────────────────
+function abrirNuevoPresupuesto(){
+  _coConcEdit = null;
+  document.getElementById('bs-co-pres-title').textContent='Nuevo Presupuesto';
+  ['co-pres-nombre','co-pres-ver'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value=id==='co-pres-ver'?'v1':'';
+  });
+  document.getElementById('co-pres-estado').value='borrador';
+  document.getElementById('co-p-fsr').value='1.45';
+  document.getElementById('co-p-herr').value='3';
+  document.getElementById('co-p-indir').value='15';
+  document.getElementById('co-p-fin').value='2';
+  document.getElementById('co-p-util').value='10';
+  document.getElementById('co-p-iva').value='16';
+  // Poblar obras
+  var sel = document.getElementById('co-pres-obra');
+  sel.innerHTML='<option value="">-- Sin obra asignada --</option>';
+  (obrasData||[]).forEach(function(o){
+    sel.innerHTML+='<option value="'+o.id+'">'+_esc(o.nombre)+'</option>';
+  });
+  openSheet('co-presupuesto');
+}
+
+function editarPresupuesto(id){
+  var p = _coPresData.find(function(x){return x.id===id;});
+  if(!p) return;
+  _coConcEdit = id;
+  document.getElementById('bs-co-pres-title').textContent='Editar Presupuesto';
+  document.getElementById('co-pres-nombre').value = p.nombre||'';
+  document.getElementById('co-pres-ver').value    = p.version||'v1';
+  document.getElementById('co-pres-estado').value = p.estado||'borrador';
+  document.getElementById('co-p-fsr').value        = p.fsr||1.45;
+  document.getElementById('co-p-herr').value       = p.herramienta_pct||3;
+  document.getElementById('co-p-indir').value      = p.indirectos_pct||15;
+  document.getElementById('co-p-fin').value        = p.financiamiento_pct||2;
+  document.getElementById('co-p-util').value       = p.utilidad_pct||10;
+  document.getElementById('co-p-iva').value        = p.iva_pct||16;
+  var sel = document.getElementById('co-pres-obra');
+  sel.innerHTML='<option value="">-- Sin obra asignada --</option>';
+  (obrasData||[]).forEach(function(o){
+    sel.innerHTML+='<option value="'+o.id+'"'+(o.id===p.obra_id?' selected':'')+'>'+_esc(o.nombre)+'</option>';
+  });
+  openSheet('co-presupuesto');
+}
+
+async function savePresupuesto(){
+  var nombre = (document.getElementById('co-pres-nombre').value||'').trim();
+  if(!nombre){ showToast('Escribe un nombre',true); return; }
+  var payload = {
+    nombre: nombre,
+    version: document.getElementById('co-pres-ver').value||'v1',
+    estado:  document.getElementById('co-pres-estado').value||'borrador',
+    obra_id: document.getElementById('co-pres-obra').value||null,
+    fsr:              parseFloat(document.getElementById('co-p-fsr').value)||1.45,
+    herramienta_pct:  parseFloat(document.getElementById('co-p-herr').value)||3,
+    indirectos_pct:   parseFloat(document.getElementById('co-p-indir').value)||15,
+    financiamiento_pct: parseFloat(document.getElementById('co-p-fin').value)||2,
+    utilidad_pct:     parseFloat(document.getElementById('co-p-util').value)||10,
+    iva_pct:          parseFloat(document.getElementById('co-p-iva').value)||16
+  };
+  try {
+    if(_coConcEdit){
+      await db('PATCH','presupuestos?id=eq.'+_coConcEdit, payload);
+      var idx = _coPresData.findIndex(function(p){return p.id===_coConcEdit;});
+      if(idx>=0) Object.assign(_coPresData[idx], payload);
+    } else {
+      var res = await db('POST','presupuestos', payload);
+      if(res) _coPresData.unshift(Array.isArray(res)?res[0]:res);
+    }
+    closeSheet('co-presupuesto');
+    renderCosteoList();
+    showToast(_coConcEdit?'Presupuesto actualizado':'Presupuesto creado');
+  } catch(e){ showToast('Error al guardar presupuesto',true); }
+}
+
+async function eliminarPresupuesto(id){
+  if(!confirm('¿Eliminar este presupuesto y todos sus datos?')) return;
+  try {
+    await db('DELETE','presupuestos?id=eq.'+id);
+    _coPresData = _coPresData.filter(function(p){return p.id!==id;});
+    renderCosteoList();
+    showToast('Presupuesto eliminado');
+  } catch(e){ showToast('Error al eliminar',true); }
+}
+
+// ── CRUD CAPÍTULOS ────────────────────────────────────────────────
+function abrirNuevoCapitulo(){
+  _coCapEdit = null;
+  document.getElementById('co-cap-num').value='';
+  document.getElementById('co-cap-nom').value='';
+  openSheet('co-capitulo');
+}
+
+async function saveCapitulo(){
+  var nom = (document.getElementById('co-cap-nom').value||'').trim();
+  if(!nom){ showToast('Escribe un nombre',true); return; }
+  var payload = {
+    presupuesto_id: _coPresActivo.id,
+    numero: document.getElementById('co-cap-num').value||'',
+    nombre: nom,
+    orden: _coCapitulos.length
+  };
+  try {
+    var res = await db('POST','presupuesto_capitulos', payload);
+    var cap = Array.isArray(res)?res[0]:res;
+    if(cap){ _coCapitulos.push(cap); _coConceptos[cap.id]=[]; }
+    closeSheet('co-capitulo');
+    renderPresupuesto();
+    showToast('Capítulo agregado');
+  } catch(e){ showToast('Error al guardar capítulo',true); }
+}
+
+async function eliminarCapitulo(id){
+  if(!confirm('¿Eliminar este capítulo y sus conceptos?')) return;
+  try {
+    await db('DELETE','presupuesto_capitulos?id=eq.'+id);
+    _coCapitulos = _coCapitulos.filter(function(c){return c.id!==id;});
+    delete _coConceptos[id];
+    renderPresupuesto();
+    showToast('Capítulo eliminado');
+  } catch(e){ showToast('Error al eliminar',true); }
+}
+
+// ── CRUD CONCEPTOS ────────────────────────────────────────────────
+function abrirNuevoConcepto(capId){
+  _coCapEdit = capId;
+  _coConcEdit = null;
+  document.getElementById('bs-co-conc-title').textContent='Nuevo Concepto';
+  document.getElementById('co-conc-cap-id').value = capId;
+  document.getElementById('co-conc-clave').value='';
+  document.getElementById('co-conc-desc').value='';
+  document.getElementById('co-conc-unidad').value='';
+  document.getElementById('co-conc-cant').value='1';
+  openSheet('co-concepto');
+}
+
+async function saveConcepto(){
+  var desc = (document.getElementById('co-conc-desc').value||'').trim();
+  var unid = (document.getElementById('co-conc-unidad').value||'').trim();
+  if(!desc||!unid){ showToast('Completa descripción y unidad',true); return; }
+  var capId = document.getElementById('co-conc-cap-id').value;
+  var capArr = _coConceptos[capId]||[];
+  var payload = {
+    capitulo_id: capId,
+    clave: document.getElementById('co-conc-clave').value||'',
+    descripcion: desc,
+    unidad: unid,
+    cantidad: parseFloat(document.getElementById('co-conc-cant').value)||1,
+    precio_unitario: 0,
+    total: 0,
+    orden: capArr.length
+  };
+  try {
+    var res = await db('POST','presupuesto_conceptos', payload);
+    var conc = Array.isArray(res)?res[0]:res;
+    if(conc){ if(!_coConceptos[capId]) _coConceptos[capId]=[]; _coConceptos[capId].push(conc); }
+    closeSheet('co-concepto');
+    renderPresupuesto();
+    showToast('Concepto agregado');
+  } catch(e){ showToast('Error al guardar concepto',true); }
+}
+
+// ── CRUD INSUMOS APU ──────────────────────────────────────────────
+function abrirNuevoInsumoAPU(tipo){
+  document.getElementById('co-ins-tipo').value = tipo;
+  document.getElementById('co-ins-edit-id').value = '';
+  var titulos = {material:'Agregar Material',mano_obra:'Agregar Mano de Obra',equipo:'Agregar Equipo',subcontrato:'Agregar Subcontrato'};
+  document.getElementById('bs-insumo-title').textContent = titulos[tipo]||'Agregar Insumo';
+  document.getElementById('co-ins-buscar').value='';
+  document.getElementById('co-ins-resultados').style.display='none';
+  document.getElementById('co-ins-resultados').innerHTML='';
+  document.getElementById('co-ins-desc').value='';
+  document.getElementById('co-ins-unidad').value='';
+  document.getElementById('co-ins-cant').value='';
+  document.getElementById('co-ins-pu').value='';
+  document.getElementById('co-ins-desp').value='1.00';
+  document.getElementById('co-ins-preview').textContent='';
+  // Ocultar desperdicio para mano de obra (FSR lo maneja)
+  document.getElementById('co-ins-desp-wrap').style.display = tipo==='mano_obra'?'none':'';
+  openSheet('co-insumo');
+}
+
+function editarInsumoAPU(id){
+  var ins = _coInsumoAPU.find(function(i){return i.id===id;});
+  if(!ins) return;
+  abrirNuevoInsumoAPU(ins.tipo);
+  document.getElementById('co-ins-edit-id').value = id;
+  document.getElementById('co-ins-desc').value   = ins.descripcion||'';
+  document.getElementById('co-ins-unidad').value = ins.unidad||'';
+  document.getElementById('co-ins-cant').value   = ins.cantidad||'';
+  document.getElementById('co-ins-pu').value     = ins.precio_unitario||'';
+  document.getElementById('co-ins-desp').value   = ins.factor_desperdicio||1;
+  document.getElementById('bs-insumo-title').textContent = 'Editar Insumo';
+}
+
+function buscarInsumosCat(q){
+  q = (q||'').toLowerCase().trim();
+  var tipo = document.getElementById('co-ins-tipo').value;
+  var el = document.getElementById('co-ins-resultados');
+  if(!q){ el.style.display='none'; el.innerHTML=''; return; }
+  var res = _coCatalogo.filter(function(i){
+    return i.activo && i.tipo===tipo && (i.descripcion.toLowerCase().includes(q)||(i.clave||'').toLowerCase().includes(q));
+  }).slice(0,8);
+  if(!res.length){ el.style.display='none'; return; }
+  el.innerHTML = res.map(function(i){
+    return '<div onclick="seleccionarInsumocat(''+i.id+'')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:12px;font-weight:600">'+_esc(i.descripcion)+'</div>'+
+      '<div style="font-size:10px;color:var(--dim)">'+_esc(i.clave||'')+'  ·  '+_esc(i.unidad)+'</div></div>'+
+      '<div style="font-size:12px;color:var(--accent)">'+_mxn(i.precio_unitario)+'</div>'+
+    '</div>';
+  }).join('');
+  el.style.display='block';
+}
+
+function seleccionarInsumocat(id){
+  var ins = _coCatalogo.find(function(i){return i.id===id;});
+  if(!ins) return;
+  document.getElementById('co-ins-desc').value   = ins.descripcion;
+  document.getElementById('co-ins-unidad').value = ins.unidad;
+  document.getElementById('co-ins-pu').value     = ins.precio_unitario||'';
+  document.getElementById('co-ins-resultados').style.display='none';
+  document.getElementById('co-ins-buscar').value = ins.descripcion;
+  previewInsumo();
+}
+
+function previewInsumo(){
+  var cant = parseFloat(document.getElementById('co-ins-cant').value)||0;
+  var pu   = parseFloat(document.getElementById('co-ins-pu').value)||0;
+  var desp = parseFloat(document.getElementById('co-ins-desp').value)||1;
+  var tipo = document.getElementById('co-ins-tipo').value;
+  var fsr  = _coPresActivo&&_coPresActivo.fsr||1.45;
+  var base = cant*pu*desp;
+  var total = tipo==='mano_obra' ? base*fsr : base;
+  document.getElementById('co-ins-preview').textContent = total>0 ? 'Importe: '+_mxn(total) : '';
+}
+
+async function saveInsumoAPU(){
+  var tipo = document.getElementById('co-ins-tipo').value;
+  var desc = (document.getElementById('co-ins-desc').value||'').trim();
+  var unid = (document.getElementById('co-ins-unidad').value||'').trim();
+  var cant = parseFloat(document.getElementById('co-ins-cant').value)||0;
+  var pu   = parseFloat(document.getElementById('co-ins-pu').value)||0;
+  var desp = parseFloat(document.getElementById('co-ins-desp').value)||1;
+  if(!desc||!cant){ showToast('Completa descripción y cantidad',true); return; }
+  var editId = document.getElementById('co-ins-edit-id').value;
+  var payload = {
+    concepto_id: _coConceptoAct.id, tipo, descripcion: desc, unidad: unid,
+    cantidad: cant, precio_unitario: pu, factor_desperdicio: desp
+  };
+  try {
+    if(editId){
+      await db('PATCH','apu_insumos?id=eq.'+editId, payload);
+      var idx = _coInsumoAPU.findIndex(function(i){return i.id===editId;});
+      if(idx>=0) Object.assign(_coInsumoAPU[idx], payload);
+    } else {
+      var res = await db('POST','apu_insumos', payload);
+      var ins = Array.isArray(res)?res[0]:res;
+      if(ins) _coInsumoAPU.push(ins);
+    }
+    closeSheet('co-insumo');
+    renderAPU();
+    await recalcYGuardarPU();
+    showToast('Insumo guardado');
+  } catch(e){ showToast('Error al guardar insumo',true); }
+}
+
+async function eliminarInsumoAPU(id){
+  if(!confirm('¿Eliminar este insumo?')) return;
+  try {
+    await db('DELETE','apu_insumos?id=eq.'+id);
+    _coInsumoAPU = _coInsumoAPU.filter(function(i){return i.id!==id;});
+    renderAPU();
+    await recalcYGuardarPU();
+    showToast('Insumo eliminado');
+  } catch(e){ showToast('Error',true); }
+}
+
+// ── CATÁLOGO DE INSUMOS ───────────────────────────────────────────
+async function loadCatalogo(){
+  try {
+    _coCatalogo = await db('GET','cat_insumos?activo=eq.true&order=tipo,descripcion')||[];
+  } catch(e){ _coCatalogo=[]; }
+  renderCatalogo();
+}
+
+function setCatFiltro(f){
+  _coCatFiltro = f;
+  ['todos','mat','mo','eq','sub'].forEach(function(k){
+    var map={todos:'',mat:'material',mo:'mano_obra',eq:'equipo',sub:'subcontrato'};
+    document.getElementById('catf-'+k).classList.toggle('active', map[k]===f);
+  });
+  renderCatalogo();
+}
+
+function renderCatalogo(busq){
+  var el = document.getElementById('co-cat-v');
+  if(!el) return;
+  busq = (busq||document.getElementById('cat-buscar')&&document.getElementById('cat-buscar').value||'').toLowerCase();
+  var tipNom = {material:'🧱 Material',mano_obra:'👷 M.O.',equipo:'🚜 Equipo',subcontrato:'🔧 Sub.'};
+  var tipColor = {material:'#3b82f6',mano_obra:'#f59e0b',equipo:'#8b5cf6',subcontrato:'#10b981'};
+  var datos = _coCatalogo.filter(function(i){
+    return (!_coCatFiltro||i.tipo===_coCatFiltro) &&
+           (!busq||(i.descripcion||'').toLowerCase().includes(busq)||(i.clave||'').toLowerCase().includes(busq));
+  });
+
+  // Render in list view (co-cat-v)
+  var html = datos.length ? datos.map(function(i){
+    return '<div class="card" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:10px">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(i.descripcion)+'</div>'+
+        '<div style="font-size:10px;color:var(--dim);margin-top:1px">'+_esc(i.clave||'—')+'  ·  '+_esc(i.unidad)+
+          '  <span style="color:'+tipColor[i.tipo]+'">'+tipNom[i.tipo]+'</span></div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-weight:700;font-size:13px;color:var(--accent)">'+_mxn(i.precio_unitario)+'</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px">'+
+          '<button onclick="editarInsumoCat(''+i.id+'')" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:13px">✏️</button>'+
+          '<button onclick="toggleActivoCat(''+i.id+'','+!i.activo+')" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:11px">'+(i.activo?'✓':'✕')+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('') : '<div style="text-align:center;padding:24px;color:var(--dim);font-size:13px">Sin insumos en catálogo</div>';
+  el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+    '<div style="font-size:13px;font-weight:600">'+datos.length+' insumos</div>'+
+    '<button class="chip" onclick="openSheet('co-catalogo')" style="font-size:11px">📚 Gestionar</button>'+
+  '</div>'+html;
+
+  // Also render inside BS if open
+  var bsEl = document.getElementById('cat-lista');
+  if(bsEl) bsEl.innerHTML = datos.length ? datos.map(function(i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;font-weight:700">'+_esc(i.descripcion)+'</div>'+
+        '<div style="font-size:10px;color:var(--dim)">'+_esc(i.clave||'—')+'  ·  '+_esc(i.unidad)+
+          '  <span style="color:'+tipColor[i.tipo]+'">'+tipNom[i.tipo]+'</span>  ·  '+_mxn(i.precio_unitario)+'</div>'+
+      '</div>'+
+      '<button onclick="editarInsumoCat(''+i.id+'')" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:13px">✏️</button>'+
+    '</div>';
+  }).join('') : '<div style="text-align:center;padding:16px;color:var(--dim)">Sin insumos</div>';
+}
+
+function openSheet('co-catalogo'){
+  renderCatalogo();
+  openSheet('co-catalogo');
+}
+
+function abrirNuevoInsumocat(){
+  document.getElementById('cat-ins-id').value='';
+  document.getElementById('cat-form-title').textContent='Nuevo Insumo';
+  document.getElementById('cat-ins-clave').value='';
+  document.getElementById('cat-ins-tipo').value='material';
+  document.getElementById('cat-ins-desc').value='';
+  document.getElementById('cat-ins-unidad').value='';
+  document.getElementById('cat-ins-precio').value='';
+  document.getElementById('cat-form').style.display='';
+}
+
+function editarInsumoCat(id){
+  var ins = _coCatalogo.find(function(i){return i.id===id;});
+  if(!ins) return;
+  document.getElementById('cat-ins-id').value    = id;
+  document.getElementById('cat-form-title').textContent='Editar Insumo';
+  document.getElementById('cat-ins-clave').value = ins.clave||'';
+  document.getElementById('cat-ins-tipo').value  = ins.tipo||'material';
+  document.getElementById('cat-ins-desc').value  = ins.descripcion||'';
+  document.getElementById('cat-ins-unidad').value= ins.unidad||'';
+  document.getElementById('cat-ins-precio').value= ins.precio_unitario||'';
+  document.getElementById('cat-form').style.display='';
+  document.getElementById('cat-ins-desc').focus();
+}
+
+async function saveInsumocat(){
+  var desc = (document.getElementById('cat-ins-desc').value||'').trim();
+  var unid = (document.getElementById('cat-ins-unidad').value||'').trim();
+  if(!desc||!unid){ showToast('Completa descripción y unidad',true); return; }
+  var editId = document.getElementById('cat-ins-id').value;
+  var payload = {
+    clave: document.getElementById('cat-ins-clave').value||null,
+    tipo:  document.getElementById('cat-ins-tipo').value,
+    descripcion: desc, unidad: unid,
+    precio_unitario: parseFloat(document.getElementById('cat-ins-precio').value)||0,
+    activo: true
+  };
+  try {
+    if(editId){
+      await db('PATCH','cat_insumos?id=eq.'+editId, payload);
+      var idx = _coCatalogo.findIndex(function(i){return i.id===editId;});
+      if(idx>=0) Object.assign(_coCatalogo[idx], payload);
+    } else {
+      var res = await db('POST','cat_insumos', payload);
+      var ins = Array.isArray(res)?res[0]:res;
+      if(ins) _coCatalogo.push(ins);
+    }
+    cancelarFormCat();
+    renderCatalogo();
+    showToast('Insumo guardado');
+  } catch(e){ showToast('Error al guardar',true); }
+}
+
+function cancelarFormCat(){
+  document.getElementById('cat-form').style.display='none';
+}
+
+async function toggleActivoCat(id, activo){
+  try {
+    await db('PATCH','cat_insumos?id=eq.'+id,{activo:activo});
+    var ins = _coCatalogo.find(function(i){return i.id===id;});
+    if(ins) ins.activo = activo;
+    renderCatalogo();
+  } catch(e){ showToast('Error',true); }
+}
+
 </script>
 </body>
 </html>
