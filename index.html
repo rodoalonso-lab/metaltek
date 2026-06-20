@@ -401,10 +401,14 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="bs-co-pres-title">Nuevo Presupuesto</div>
     <div class="form-group">
-      <label>Obra</label>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label style="margin:0">Obra</label>
+        <button type="button" onclick="crearObraDesdePresupuesto()" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit">+ Nueva obra</button>
+      </div>
       <select id="co-pres-obra" class="form-input">
         <option value="">-- Sin obra asignada --</option>
       </select>
+      <div style="font-size:10px;color:var(--dim);margin-top:4px">También puedes dejarlo sin obra y asignarla después.</div>
     </div>
     <div class="form-group"><label>Nombre del presupuesto</label>
       <input class="form-input" id="co-pres-nombre" placeholder="Ej: Presupuesto Etapa 1"></div>
@@ -6160,6 +6164,39 @@ async function recalcYGuardarPU(){
 }
 
 // ── CRUD PRESUPUESTOS ─────────────────────────────────────────────
+function crearObraDesdePresupuesto(){
+  // Cierra el sheet de presupuesto temporalmente, abre obra, regresa
+  closeSheet('co-presupuesto');
+  // Usar la función existente de nueva obra
+  if(typeof openSheet === 'function') {
+    populateClienteSelect && populateClienteSelect();
+    document.getElementById && (document.getElementById('f-cliente-nuevo-wrap').style.display='none');
+    document.getElementById && (document.getElementById('f-tipo-nuevo-wrap').style.display='none');
+    openSheet('obra');
+    // Cuando el usuario guarde la obra, actualizamos el dropdown
+    var origSaveObra = window._origSaveObra || saveObra;
+    if(!window._origSaveObra) {
+      window._origSaveObra = saveObra;
+      window.saveObra = async function(){
+        await origSaveObra.apply(this, arguments);
+        // Después de guardar, refrescar select y reabrir presupuesto
+        var sel = document.getElementById('co-pres-obra');
+        if(sel && obrasData) {
+          var lastVal = sel.value;
+          sel.innerHTML='<option value="">-- Sin obra asignada --</option>';
+          obrasData.forEach(function(o){ sel.innerHTML+='<option value="'+o.id+'">'+o.nombre+'</option>'; });
+          // Seleccionar la obra recién creada (la última)
+          if(obrasData.length) sel.value = obrasData[obrasData.length-1].id;
+        }
+        closeSheet('obra');
+        openSheet('co-presupuesto');
+        window.saveObra = window._origSaveObra;
+        window._origSaveObra = null;
+      };
+    }
+  }
+}
+
 function abrirNuevoPresupuesto(){
   _coConcEdit = null;
   document.getElementById('bs-co-pres-title').textContent='Nuevo Presupuesto';
