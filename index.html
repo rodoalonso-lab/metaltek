@@ -5377,10 +5377,7 @@ async function initApp() {
   try{ await loadReportes(); }catch(e){}
   try{ await loadTareas(); }catch(e){}
   try{ await loadNominas(); }catch(e){}
-  var lastTab = 'dashboard';
-  try { lastTab = sessionStorage.getItem('currentTab') || 'dashboard'; } catch(e){}
-  if(!puedeVer(lastTab) && lastTab !== 'dashboard') lastTab = 'dashboard';
-  showTab(lastTab);
+  showTab('dashboard');
   // Mostrar botón de refresh
   var rb = document.getElementById('refresh-btn');
   if(rb) rb.style.display = '';
