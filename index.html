@@ -507,31 +507,45 @@
     <input type="hidden" id="fp-detalle-id">
     <input type="hidden" id="fp-semana-id">
     <input type="hidden" id="fp-trab-id">
-    <div id="fp-sueldo-base-info" style="font-size:13px;color:var(--dim);margin-bottom:16px"></div>
+    <!-- Info tarifa hora extra del trabajador -->
+    <div id="fp-sueldo-base-info" style="font-size:12px;color:var(--dim);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-radius:8px"></div>
+    <!-- Sueldo semanal -->
+    <div class="form-group"><label class="form-label" for="fp-dias">💰 Sueldo semanal ($)</label>
+      <input class="form-input" id="fp-dias" type="number" placeholder="0" min="0" oninput="calcPagoTotal()"></div>
+    <!-- Horas extra -->
     <div class="form-row">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-dias">Días trabajados</label>
-      <input class="form-input" id="fp-dias" type="number" placeholder="0" min="0" max="7" oninput="calcPagoTotal()"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-horas-extra">Horas extra</label>
-      <input class="form-input" id="fp-horas-extra" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-horas-extra">⏱ Horas extra</label>
+        <input class="form-input" id="fp-horas-extra" type="number" placeholder="0" step="0.5" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-tarifa-extra">Tarifa/hr ($)</label>
+        <input class="form-input" id="fp-tarifa-extra" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
     </div>
-    <div class="form-row" style="margin-top:14px">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-viaticos">Viáticos ($)</label>
-      <input class="form-input" id="fp-viaticos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-bonos">Bonos ($)</label>
-      <input class="form-input" id="fp-bonos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+    <!-- Resumen horas extra -->
+    <div id="fp-horas-resumen" style="font-size:11px;color:var(--dim);margin:4px 0 12px;text-align:right"></div>
+    <!-- Viáticos y Adeudos -->
+    <div class="form-row">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-viaticos">✈️ Viáticos ($)</label>
+        <input class="form-input" id="fp-viaticos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="fp-bonos">📋 Adeudos/Extras ($)</label>
+        <input class="form-input" id="fp-bonos" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
     </div>
-    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fp-deducciones">Deducciones ($)</label>
+    <!-- Pagado con tarjeta -->
+    <div class="form-group" style="margin-top:14px"><label class="form-label" for="fp-deducciones">💳 Pagado con tarjeta ($)</label>
       <input class="form-input" id="fp-deducciones" type="number" placeholder="0" oninput="calcPagoTotal()"></div>
-    <div class="form-group"><label class="form-label" for="fp-forma">Forma de pago</label>
+    <!-- Resumen fórmula -->
+    <div id="fp-formula-resumen" style="font-size:11px;color:var(--dim);background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:14px;line-height:1.8"></div>
+    <!-- Forma de pago -->
+    <div class="form-group"><label class="form-label" for="fp-forma">Forma de pago restante</label>
       <select class="form-input" id="fp-forma">
         <option value="efectivo">💵 Efectivo</option>
-        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="tarjeta">💳 Tarjeta adicional</option>
+        <option value="cuadrilla">👷 Paga el cabo</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label" for="fp-notas">Notas</label>
       <input class="form-input" id="fp-notas" type="text" placeholder="Observaciones..."></div>
+    <!-- Total -->
     <div class="card" style="margin-bottom:16px;text-align:center">
-      <div class="card-label">TOTAL A PAGAR</div>
+      <div class="card-label">NETO A PAGAR</div>
       <div id="fp-total-display" style="font-size:32px;font-weight:800;color:var(--accent)">$0</div>
     </div>
     <button class="btn-primary" id="pago-save-btn" onclick="savePago()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
@@ -4324,25 +4338,52 @@ function showSemana(semanaId){
     ${s.estado==='cerrada'?`<button class="btn-primary" onclick="pagarSemana('${s.id}')" style="margin-bottom:16px">✅ Marcar como pagada</button>`:''}
     <div class="section-title">Trabajadores</div>`;
 
+  // Agrupar trabajadores por cuadrilla (campo cuadrilla o 'Personal de base')
+  const grupos = {};
   det.forEach(d=>{
     const t=trabajadoresData.find(x=>x.id===d.trabajador_id);
     if(!t) return;
-    h+=`<div class="card" style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div>
-          <div style="font-size:14px;font-weight:700">${t.nombre}</div>
-          <div class="item-sub">${t.puesto||'—'} · ${d.forma_pago==='tarjeta'?'💳':'💵'} ${d.forma_pago}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:800;color:${d.pagado?'#5BC4C0':'var(--accent)'}">${fmt(d.total)}</div>
-          ${d.pagado?'<div style="font-size:10px;color:#5BC4C0;font-weight:700">✓ PAGADO</div>':''}
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:8px">
-        ${d.dias_trabajados}d · Extra: ${fmt(d.horas_extra*((t.sueldo_diario||0)/8)*1.5)} · Viáticos: ${fmt(d.viaticos)} · Bonos: ${fmt(d.bonos)}
-      </div>
-      ${s.estado==='abierta'?`<button class="edit-btn" onclick="abrirPago('${d.id}','${semanaId}','${t.id}')">✏️ Editar</button>`:''}
+    const grupo = t.cuadrilla || t.proyecto || 'Personal de base';
+    if(!grupos[grupo]) grupos[grupo]=[];
+    grupos[grupo].push({d,t});
+  });
+
+  Object.entries(grupos).forEach(([grupo, rows])=>{
+    const totalGrupo = rows.reduce((s,r)=>s+(r.d.total||0),0);
+    const totalTarjetaGrupo = rows.reduce((s,r)=>s+(r.d.deducciones||0),0);
+    const totalEfectivoGrupo = rows.reduce((s,r)=>s+(r.d.forma_pago==='cuadrilla'||r.d.forma_pago==='efectivo'?r.d.total||0:0),0);
+
+    h+=`<div style="margin-bottom:6px;margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.04em">📋 ${grupo}</div>
+      <div style="font-size:11px;color:var(--dim)">Total: <b style="color:var(--accent)">${fmt(totalGrupo)}</b></div>
     </div>`;
+
+    rows.forEach(({d,t})=>{
+      const sueldoSem   = d.dias_trabajados||0;
+      const tarifaHr    = d.tarifa_hora_extra!=null ? d.tarifa_hora_extra : (t.sueldo_diario||0);
+      const totalExtras = (d.horas_extra||0)*tarifaHr;
+      const formaIcon   = d.forma_pago==='tarjeta'?'💳':d.forma_pago==='cuadrilla'?'👷':'💵';
+      h+=`<div class="card" style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div>
+            <div style="font-size:14px;font-weight:700">${t.nombre}</div>
+            <div class="item-sub">${t.puesto||'—'} · ${formaIcon} ${d.forma_pago}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:800;color:${d.pagado?'#5BC4C0':'var(--accent)'}">${fmt(d.total)}</div>
+            ${d.pagado?'<div style="font-size:10px;color:#5BC4C0;font-weight:700">✓ PAGADO</div>':''}
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:6px;line-height:1.7">
+          Sueldo: ${fmt(sueldoSem)}
+          ${totalExtras?` · +${d.horas_extra}h×$${tarifaHr}=${fmt(totalExtras)}`:''}
+          ${d.viaticos?` · Viáticos: ${fmt(d.viaticos)}`:''}
+          ${d.bonos?` · Adeudos: ${fmt(d.bonos)}`:''}
+          ${d.deducciones?` · <span style="color:#3B9EBF">Tarjeta: −${fmt(d.deducciones)}</span>`:''}
+        </div>
+        ${s.estado==='abierta'?`<button class="edit-btn" onclick="abrirPago('${d.id}','${semanaId}','${t.id}')">✏️ Editar</button>`:''}
+      </div>`;
+    });
   });
 
   document.getElementById('nom-main-view').style.display='none';
@@ -4382,14 +4423,22 @@ function abrirPago(detalleId, semanaId, trabId){
   document.getElementById('fp-detalle-id').value=detalleId;
   document.getElementById('fp-semana-id').value=semanaId;
   document.getElementById('fp-trab-id').value=trabId;
-  document.getElementById('fp-sueldo-base-info').textContent='Sueldo base: $'+t.sueldo_diario+'/día';
-  document.getElementById('fp-dias').value=d.dias_trabajados||0;
-  document.getElementById('fp-horas-extra').value=d.horas_extra||0;
-  document.getElementById('fp-viaticos').value=d.viaticos||0;
-  document.getElementById('fp-bonos').value=d.bonos||0;
-  document.getElementById('fp-deducciones').value=d.deducciones||0;
-  document.getElementById('fp-forma').value=d.forma_pago||t.forma_pago||'efectivo';
-  document.getElementById('fp-notas').value=d.notas||'';
+  // Info del trabajador — tarifa hora extra guardada en sueldo_diario
+  var tarifaHr = _safeNum(t.sueldo_diario);
+  document.getElementById('fp-sueldo-base-info').innerHTML =
+    '👷 <b>'+t.nombre+'</b>' +
+    (t.puesto ? ' · '+t.puesto : '') +
+    (tarifaHr > 0 ? ' · Tarifa hora extra: <b>$'+tarifaHr+'/hr</b>' : '');
+  // Sueldo semanal: si ya fue editado antes, usa el guardado; si no, usa sueldo_semanal del trabajador
+  var sueldoSemanal = d.dias_trabajados > 0 ? d.dias_trabajados : (_safeNum(t.sueldo_semanal) || _safeNum(t.sueldo_diario)*7);
+  document.getElementById('fp-dias').value        = sueldoSemanal;
+  document.getElementById('fp-horas-extra').value = d.horas_extra||0;
+  document.getElementById('fp-tarifa-extra').value= d.tarifa_hora_extra != null ? d.tarifa_hora_extra : tarifaHr;
+  document.getElementById('fp-viaticos').value    = d.viaticos||0;
+  document.getElementById('fp-bonos').value       = d.bonos||0;
+  document.getElementById('fp-deducciones').value = d.deducciones||0;
+  document.getElementById('fp-forma').value       = d.forma_pago||t.forma_pago||'efectivo';
+  document.getElementById('fp-notas').value       = d.notas||'';
   calcPagoTotal();
   openSheet('pago');
 }
@@ -4400,20 +4449,38 @@ function _safeNum(val, fallback) {
   return (isFinite(n) && !isNaN(n)) ? n : (fallback || 0);
 }
 function calcPagoTotal(){
-  var trabId = document.getElementById('fp-trab-id') ? document.getElementById('fp-trab-id').value : '';
-  var t = trabajadoresData.find(function(x){ return x.id === trabId; });
-  var sd = t ? _safeNum(t.sueldo_diario) : 0;
-  var dias   = _safeNum(document.getElementById('fp-dias')         ? document.getElementById('fp-dias').value         : 0);
-  var hExtra = _safeNum(document.getElementById('fp-horas-extra')  ? document.getElementById('fp-horas-extra').value  : 0);
-  var viat   = _safeNum(document.getElementById('fp-viaticos')     ? document.getElementById('fp-viaticos').value     : 0);
-  var bonos  = _safeNum(document.getElementById('fp-bonos')        ? document.getElementById('fp-bonos').value        : 0);
-  var ded    = _safeNum(document.getElementById('fp-deducciones')  ? document.getElementById('fp-deducciones').value  : 0);
-  // Evitar división por cero si sueldo_diario y jornada son 0
-  var valorHora = sd > 0 ? (sd / 8) * 1.5 : 0;
-  var bruto = (dias * sd) + (hExtra * valorHora) + viat + bonos - ded;
-  var total = Math.max(0, isFinite(bruto) ? bruto : 0);
+  // ── Fórmula: SUELDO_SEMANAL + (HORAS × TARIFA) + VIATICOS + ADEUDOS - TARJETA ──
+  var sueldoSem = _safeNum(document.getElementById('fp-dias')         ? document.getElementById('fp-dias').value         : 0);
+  var hExtra    = _safeNum(document.getElementById('fp-horas-extra')  ? document.getElementById('fp-horas-extra').value  : 0);
+  var tarifaHr  = _safeNum(document.getElementById('fp-tarifa-extra') ? document.getElementById('fp-tarifa-extra').value : 0);
+  var viat      = _safeNum(document.getElementById('fp-viaticos')     ? document.getElementById('fp-viaticos').value     : 0);
+  var adeudos   = _safeNum(document.getElementById('fp-bonos')        ? document.getElementById('fp-bonos').value        : 0);
+  var tarjeta   = _safeNum(document.getElementById('fp-deducciones')  ? document.getElementById('fp-deducciones').value  : 0);
+
+  var totalExtras = hExtra * tarifaHr;
+  var bruto  = sueldoSem + totalExtras + viat + adeudos - tarjeta;
+  var total  = Math.max(0, isFinite(bruto) ? bruto : 0);
+
+  // Mostrar total
   var el = document.getElementById('fp-total-display');
   if(el) el.textContent = fmt(total);
+
+  // Mostrar resumen de horas extra
+  var resHr = document.getElementById('fp-horas-resumen');
+  if(resHr) resHr.textContent = hExtra > 0 ? hExtra+'h × $'+tarifaHr+'/hr = '+fmt(totalExtras) : '';
+
+  // Mostrar desglose de la fórmula
+  var resF = document.getElementById('fp-formula-resumen');
+  if(resF){
+    var partes = [];
+    partes.push('Sueldo: '+fmt(sueldoSem));
+    if(totalExtras) partes.push('Extras: +'+fmt(totalExtras));
+    if(viat)        partes.push('Viáticos: +'+fmt(viat));
+    if(adeudos)     partes.push('Adeudos: '+(adeudos>=0?'+':'')+fmt(adeudos));
+    if(tarjeta)     partes.push('Tarjeta: −'+fmt(tarjeta));
+    resF.innerHTML = partes.join('<br>') + '<br><b>Neto: '+fmt(total)+'</b>';
+  }
+
   return total;
 }
 
@@ -4425,20 +4492,21 @@ async function savePago(){
   btn.textContent='Guardando...';btn.disabled=true;
   try{
     await db('PATCH','nomina_detalle?id=eq.'+id,{
-      dias_trabajados:parseFloat(document.getElementById('fp-dias').value)||0,
-      horas_extra:parseFloat(document.getElementById('fp-horas-extra').value)||0,
-      viaticos:parseFloat(document.getElementById('fp-viaticos').value)||0,
-      bonos:parseFloat(document.getElementById('fp-bonos').value)||0,
-      deducciones:parseFloat(document.getElementById('fp-deducciones').value)||0,
-      forma_pago:document.getElementById('fp-forma').value,
-      notas:document.getElementById('fp-notas').value.trim(),
+      dias_trabajados : parseFloat(document.getElementById('fp-dias').value)||0,         // sueldo semanal
+      horas_extra     : parseFloat(document.getElementById('fp-horas-extra').value)||0,
+      tarifa_hora_extra: parseFloat(document.getElementById('fp-tarifa-extra').value)||0,
+      viaticos        : parseFloat(document.getElementById('fp-viaticos').value)||0,
+      bonos           : parseFloat(document.getElementById('fp-bonos').value)||0,         // adeudos/extras
+      deducciones     : parseFloat(document.getElementById('fp-deducciones').value)||0,   // pagado tarjeta
+      forma_pago      : document.getElementById('fp-forma').value,
+      notas           : document.getElementById('fp-notas').value.trim(),
       total
     });
     showToast('✅ Pago actualizado');
     closeSheet('pago');
     await loadNominas();
     showSemana(semanaId);
-  }catch(e){showToast('Error',true);}
+  }catch(e){showToast('Error: '+e.message,true);}
   btn.textContent='Guardar';btn.disabled=false;
 }
 
