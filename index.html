@@ -426,8 +426,8 @@
         </select>
       </div>
     </div>
-    <details style="margin-bottom:12px">
-      <summary style="font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:8px">⚙️ Parámetros avanzados</summary>
+    <details open style="margin-bottom:12px">
+      <summary style="font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:8px">⚙️ Parámetros del presupuesto</summary>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
         <div class="form-group"><label style="font-size:11px">FSR</label><input class="form-input" id="co-p-fsr" type="number" step="0.01" value="1.45"></div>
         <div class="form-group"><label style="font-size:11px">Herramienta %</label><input class="form-input" id="co-p-herr" type="number" step="0.1" value="3"></div>
@@ -5906,7 +5906,12 @@ var _coTabActivo   = 'pres';
 // ── Helpers de formato ────────────────────────────────────────────
 function _mxn(v){ return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _pct(v){ return Number(v||0).toFixed(2)+'%'; }
-function _n(id){ return parseFloat(document.getElementById(id)&&document.getElementById(id).value||0)||0; }
+function _n(id){
+  var el = document.getElementById(id);
+  if(!el) return 0;
+  var v = parseFloat(el.value);
+  return isNaN(v) ? 0 : v;
+}
 
 // ── Navegación de sub-vistas ──────────────────────────────────────
 function setCosteoView(v){
@@ -6087,9 +6092,12 @@ async function abrirAPU(concId){
 
   // Poblar parámetros
   var p = _coPresActivo||{};
+  var _defaults = {fsr:1.45,herr:3,indir:15,fin:2,util:10,iva:16};
+  var _map = {fsr:'fsr',herr:'herramienta_pct',indir:'indirectos_pct',fin:'financiamiento_pct',util:'utilidad_pct',iva:'iva_pct'};
   ['fsr','herr','indir','fin','util','iva'].forEach(function(k){
-    var map = {fsr:'fsr',herr:'herramienta_pct',indir:'indirectos_pct',fin:'financiamiento_pct',util:'utilidad_pct',iva:'iva_pct'};
-    document.getElementById('apu-'+k).value = p[map[k]]||{fsr:1.45,herr:3,indir:15,fin:2,util:10,iva:16}[k];
+    var raw = p[_map[k]];
+    var val = (raw !== null && raw !== undefined && raw !== '') ? parseFloat(raw) : _defaults[k];
+    document.getElementById('apu-'+k).value = isNaN(val) ? _defaults[k] : val;
   });
   document.getElementById('co-fsr-badge').textContent = '× FSR '+(_coPresActivo&&_coPresActivo.fsr||1.45);
 
@@ -6198,11 +6206,19 @@ async function guardarParamsPresupuesto(){
     // Actualizar en lista
     var idx = _coPresData.findIndex(function(p){return p.id===_coPresActivo.id;});
     if(idx>=0) Object.assign(_coPresData[idx], params);
-    // Recalcular PU de todos los conceptos del presupuesto (regenerar cache)
+    // Re-poblar campos con los valores guardados (confirmar visualmente)
+    document.getElementById('apu-fsr').value  = params.fsr;
+    document.getElementById('apu-herr').value = params.herramienta_pct;
+    document.getElementById('apu-indir').value= params.indirectos_pct;
+    document.getElementById('apu-fin').value  = params.financiamiento_pct;
+    document.getElementById('apu-util').value = params.utilidad_pct;
+    document.getElementById('apu-iva').value  = params.iva_pct;
+    document.getElementById('co-fsr-badge').textContent = '× FSR '+params.fsr.toFixed(2);
+    // Recalcular PU
     await recalcYGuardarPU();
-    showToast('Parámetros guardados');
+    showToast('Parámetros guardados ✓ FSR:'+params.fsr+' Indir:'+params.indirectos_pct+'% Util:'+params.utilidad_pct+'%');
     recalcAPU();
-  } catch(e){ showToast('Error al guardar parámetros',true); }
+  } catch(e){ console.error('guardarParams error:',e); showToast('Error al guardar: '+e.message,true); }
 }
 
 async function recalcYGuardarPU(){
