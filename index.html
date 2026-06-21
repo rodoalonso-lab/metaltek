@@ -300,7 +300,10 @@
     <div id="co-list-v">
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;margin-bottom:4px;padding-right:96px">
         <div class="page-title" style="padding:0">Costeo</div>
-        <button class="add-btn" onclick="abrirNuevoPresupuesto()">+ Presupuesto</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="chip" onclick="abrirConfigEmpresa()" title="Datos de empresa para documentos" style="border:1px solid #ccc">🏢</button>
+          <button class="add-btn" onclick="abrirNuevoPresupuesto()">+ Presupuesto</button>
+        </div>
       </div>
       <div class="page-sub">Presupuestos y análisis de precios unitarios</div>
       <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
@@ -6834,40 +6837,105 @@ function aplicarIndirectos(){
 }
 
 // ── IMPRESIÓN ─────────────────────────────────────────────────────────────────
-function _printStyles(){
-  return `
-    <style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:20px 28px}
-      h1{font-size:17px;font-weight:800;color:#0a1628;margin-bottom:2px}
-      h2{font-size:13px;font-weight:700;color:#0a1628;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px}
-      h3{font-size:11px;font-weight:700;color:#5BC4C0;margin:10px 0 4px;text-transform:uppercase}
-      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #5BC4C0;padding-bottom:10px;margin-bottom:14px}
-      .header-right{text-align:right;color:#555;font-size:10px;line-height:1.6}
-      .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-      table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
-      th{background:#0a1628;color:#fff;padding:5px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase}
-      th.r,td.r{text-align:right}
-      td{padding:4px 6px;border-bottom:1px solid #e5e7eb;vertical-align:top}
-      .cap-row td{background:#f0fafa;font-weight:700;color:#0a1628;font-size:10px}
-      .total-row td{background:#0a1628;color:#fff;font-weight:700;font-size:11px}
-      .subtotal-row td{background:#e0f7f6;font-weight:600;color:#0a1628}
-      .resumen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;border-top:2px solid #5BC4C0;padding-top:10px}
-      .resumen-box{border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px}
-      .resumen-box .label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:2px}
-      .resumen-box .val{font-size:14px;font-weight:800;color:#0a1628}
-      .resumen-box.accent{border-color:#5BC4C0;background:#f0fafa}
-      .resumen-box.accent .val{color:#5BC4C0}
-      .params{font-size:9px;color:#888;margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
-      .params span{white-space:nowrap}
-      .apu-section{margin-bottom:12px}
-      .calc-chain{margin-top:14px;border:1px solid #e5e7eb;border-radius:6px;padding:10px;background:#fafafa}
-      .calc-chain .row{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;border-bottom:1px solid #f0f0f0}
-      .calc-chain .row:last-child{border:none;font-weight:700;font-size:12px;color:#5BC4C0}
-      .calc-chain .row.sep{border-top:2px solid #0a1628;margin-top:4px;padding-top:6px}
-      .footer{margin-top:20px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#aaa;display:flex;justify-content:space-between}
-      @media print{body{padding:10px 16px}@page{margin:1cm;size:letter}}
-    </style>`;
+// ── Configuración de empresa (localStorage) ───────────────────────────────
+function _getEmpresa(){
+  try { return JSON.parse(localStorage.getItem('procepal_empresa')||'{}'); } catch(e){ return {}; }
+}
+function _setEmpresa(obj){
+  try { localStorage.setItem('procepal_empresa', JSON.stringify(obj)); } catch(e){}
+}
+
+function abrirConfigEmpresa(){
+  var e = _getEmpresa();
+  document.getElementById('emp-nombre').value   = e.nombre   || '';
+  document.getElementById('emp-rfc').value      = e.rfc      || '';
+  document.getElementById('emp-dir').value      = e.dir      || '';
+  document.getElementById('emp-tel').value      = e.tel      || '';
+  document.getElementById('emp-email').value    = e.email    || '';
+  document.getElementById('emp-rep').value      = e.rep      || '';
+  document.getElementById('emp-logo').value     = e.logo     || '';
+  document.getElementById('emp-color').value    = e.color    || '#1a3a5c';
+  openSheet('co-empresa');
+}
+function guardarConfigEmpresa(){
+  _setEmpresa({
+    nombre: document.getElementById('emp-nombre').value.trim(),
+    rfc:    document.getElementById('emp-rfc').value.trim(),
+    dir:    document.getElementById('emp-dir').value.trim(),
+    tel:    document.getElementById('emp-tel').value.trim(),
+    email:  document.getElementById('emp-email').value.trim(),
+    rep:    document.getElementById('emp-rep').value.trim(),
+    logo:   document.getElementById('emp-logo').value.trim(),
+    color:  document.getElementById('emp-color').value || '#1a3a5c'
+  });
+  closeSheet('co-empresa');
+  showToast('Datos de empresa guardados');
+}
+
+function _printStyles(accentColor){
+  var c = accentColor || '#1a3a5c';
+  var cLight = c+'18';
+  return '<style>' +
+    '*{margin:0;padding:0;box-sizing:border-box}' +
+    'body{font-family:"Segoe UI",Arial,sans-serif;font-size:10.5px;color:#1a1a1a;background:#fff;padding:0}' +
+    '.page{padding:22px 28px}' +
+    /* Header banner */
+    '.hdr-band{background:'+c+';color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center}' +
+    '.hdr-logo{max-height:60px;max-width:180px;object-fit:contain}' +
+    '.hdr-logo-text{font-size:22px;font-weight:900;letter-spacing:1px;color:#fff}' +
+    '.hdr-right{text-align:right;font-size:10px;line-height:1.7;opacity:.9}' +
+    /* Doc info strip */
+    '.doc-strip{background:'+cLight+';border-bottom:3px solid '+c+';padding:10px 28px;display:flex;gap:28px;align-items:center}' +
+    '.doc-strip .ds-item{font-size:10px;color:#333}' +
+    '.doc-strip .ds-item b{display:block;font-size:9px;text-transform:uppercase;color:'+c+';letter-spacing:.4px;margin-bottom:1px}' +
+    /* Project info */
+    '.proj-box{margin:16px 0;border:1px solid #d1d5db;border-radius:6px;overflow:hidden}' +
+    '.proj-box .pb-title{background:'+c+';color:#fff;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px}' +
+    '.proj-box .pb-body{display:grid;grid-template-columns:1fr 1fr;gap:0}' +
+    '.proj-box .pb-cell{padding:7px 10px;border-bottom:1px solid #f0f0f0;border-right:1px solid #f0f0f0;font-size:10px}' +
+    '.proj-box .pb-cell:nth-child(even){border-right:none}' +
+    '.proj-box .pb-cell b{display:block;font-size:8.5px;text-transform:uppercase;color:'+c+';letter-spacing:.4px;margin-bottom:2px}' +
+    /* Table */
+    'table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:0}' +
+    'thead tr{background:'+c+';color:#fff}' +
+    'th{padding:6px 7px;text-align:left;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-right:1px solid rgba(255,255,255,.15)}' +
+    'th:last-child{border-right:none}' +
+    'th.r,td.r{text-align:right}' +
+    'td{padding:5px 7px;border-bottom:1px solid #e9ecef;vertical-align:top}' +
+    'tr:nth-child(even) td{background:#f8f9fa}' +
+    '.cap-row td{background:'+cLight+';font-weight:700;color:'+c+';font-size:10px;border-top:2px solid '+c+';border-bottom:1px solid '+c+'44}' +
+    '.cap-row td.r{font-size:10px}' +
+    '.subtot-row td{background:#f0f4f8;font-weight:600;text-align:right;font-size:9.5px;color:#555;border-top:1px solid #d1d5db}' +
+    '.grand-row td{background:'+c+';color:#fff;font-weight:800;font-size:11px;padding:8px 7px}' +
+    /* Resumen financiero */
+    '.fin-section{display:grid;grid-template-columns:1fr 280px;gap:18px;margin-top:18px}' +
+    '.desglose table{font-size:9.5px}' +
+    '.desglose td{padding:4px 6px;border-bottom:1px solid #f0f0f0;background:#fff}' +
+    '.desglose .drow-total td{font-weight:700;color:'+c+';border-top:2px solid '+c+';background:'+cLight+'}' +
+    '.resumen-total{border:2px solid '+c+';border-radius:8px;overflow:hidden}' +
+    '.rt-header{background:'+c+';color:#fff;text-align:center;padding:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}' +
+    '.rt-body{padding:14px}' +
+    '.rt-line{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #f0f0f0}' +
+    '.rt-grand{display:flex;justify-content:space-between;font-size:16px;font-weight:900;color:'+c+';margin-top:10px;padding-top:10px;border-top:2px solid '+c+'}' +
+    '.rt-note{font-size:8.5px;color:#888;margin-top:8px;text-align:center}' +
+    /* Firmas */
+    '.firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:28px}' +
+    '.firma-box{text-align:center}' +
+    '.firma-line{border-top:1px solid #333;margin-bottom:6px;margin-top:50px}' +
+    '.firma-name{font-size:10px;font-weight:700}' +
+    '.firma-title{font-size:9px;color:#666}' +
+    /* Footer */
+    '.doc-footer{background:'+c+';color:rgba(255,255,255,.7);font-size:8.5px;padding:8px 28px;display:flex;justify-content:space-between;margin-top:24px}' +
+    /* Condiciones */
+    '.condiciones{margin-top:14px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;font-size:8.5px;color:#777;line-height:1.5}' +
+    '.condiciones b{color:#333}' +
+    /* Print */
+    '@media print{' +
+      'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      '@page{margin:.8cm;size:letter portrait}' +
+      '.no-break{page-break-inside:avoid}' +
+    '}' +
+  '</style>';
 }
 
 function _mxnP(v){return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -6877,105 +6945,185 @@ function imprimirPresupuesto(){
   if(!_coPresActivo){ showToast('Abre un presupuesto primero',true); return; }
   var p    = _coPresActivo;
   var obra = (obrasData||[]).find(function(o){return o.id===p.obra_id;})||{};
-  var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  var e    = _getEmpresa();
+  var hoy  = new Date();
+  var fecha = hoy.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  var folio = 'PRES-'+hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  var accentColor = e.color || '#1a3a5c';
 
-  var estadoColor = {borrador:'#6b7280','revisión':'#f59e0b',aprobado:'#22c55e',cerrado:'#6366f1'};
-  var color = estadoColor[p.estado]||'#6b7280';
-
-  // Cálculos totales
+  // Totales
   var grandCD = 0;
   _coCapitulos.forEach(function(cap){
     (_coConceptos[cap.id]||[]).forEach(function(c){ grandCD += (c.total||0); });
   });
-  var CI  = grandCD * (p.indirectos_pct||15)/100;
-  var F   = (grandCD+CI)*(p.financiamiento_pct||2)/100;
-  var U   = (grandCD+CI+F)*(p.utilidad_pct||10)/100;
-  var PU  = grandCD+CI+F+U;
-  var IVA = PU*(p.iva_pct||16)/100;
+  var CI   = grandCD*(p.indirectos_pct||15)/100;
+  var F    = (grandCD+CI)*(p.financiamiento_pct||2)/100;
+  var U    = (grandCD+CI+F)*(p.utilidad_pct||10)/100;
+  var sinIva = grandCD+CI+F+U;
+  var IVA  = sinIva*(p.iva_pct||16)/100;
+  var total = sinIva+IVA;
 
-  // Build table rows
+  // Letras del total
+  function _numToLetras(n){
+    // Simplified: just show the number prominently
+    return _mxnP(n)+' M.N.';
+  }
+
+  // Logo HTML
+  var logoHtml = e.logo
+    ? '<img src="'+_escP(e.logo)+'" class="hdr-logo" alt="Logo" onerror="this.style.display=\'none\'">'
+    : '<div class="hdr-logo-text">'+(e.nombre||'EMPRESA').split(' ').map(function(w){return w[0];}).join('').substr(0,4)+'</div>';
+
+  // Table rows
   var rows = '';
   var capNum = 0;
   _coCapitulos.forEach(function(cap){
     capNum++;
     var conceptos = _coConceptos[cap.id]||[];
     var capTotal  = conceptos.reduce(function(s,c){return s+(c.total||0);},0);
-    rows += '<tr class="cap-row"><td colspan="5">'+(cap.numero||capNum)+'. '+_escP(cap.nombre)+'</td><td class="r">'+_mxnP(capTotal)+'</td></tr>';
+    rows += '<tr class="cap-row">'+
+      '<td colspan="5" style="padding-left:10px">'+(cap.numero||capNum)+'. '+_escP(cap.nombre).toUpperCase()+'</td>'+
+      '<td class="r">'+_mxnP(capTotal)+'</td>'+
+    '</tr>';
     conceptos.forEach(function(c,i){
       rows += '<tr>'+
-        '<td style="color:#888;white-space:nowrap">'+(c.clave||capNum+'.'+(i+1))+'</td>'+
-        '<td>'+_escP(c.descripcion)+'</td>'+
-        '<td class="r">'+_escP(c.unidad)+'</td>'+
-        '<td class="r">'+_numP(c.cantidad,3)+'</td>'+
+        '<td style="color:#888;white-space:nowrap;font-size:9px">'+(c.clave||capNum+'.'+(i+1))+'</td>'+
+        '<td style="line-height:1.4">'+_escP(c.descripcion)+'</td>'+
+        '<td class="r" style="white-space:nowrap">'+_escP(c.unidad)+'</td>'+
+        '<td class="r">'+_numP(c.cantidad,2)+'</td>'+
         '<td class="r">'+_mxnP(c.precio_unitario)+'</td>'+
         '<td class="r" style="font-weight:600">'+_mxnP(c.total)+'</td>'+
       '</tr>';
     });
+    rows += '<tr class="subtot-row"><td colspan="5">Subtotal '+_escP(cap.nombre)+'</td><td class="r">'+_mxnP(capTotal)+'</td></tr>';
   });
-  rows += '<tr class="total-row"><td colspan="5">TOTAL COSTO DIRECTO</td><td class="r">'+_mxnP(grandCD)+'</td></tr>';
+  rows += '<tr class="grand-row"><td colspan="5">TOTAL COSTO DIRECTO</td><td class="r">'+_mxnP(grandCD)+'</td></tr>';
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Presupuesto '+_escP(p.nombre)+'</title>'+_printStyles()+'</head><body>'+
-    '<div class="header">'+
+  var d = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Presupuesto — '+_escP(p.nombre)+'</title>'+
+    _printStyles(accentColor)+
+  '</head><body>'+
+
+  // ── HEADER BAND ──────────────────────────────────────────────────────────────
+  '<div class="hdr-band">'+
+    '<div style="display:flex;align-items:center;gap:16px">'+
+      logoHtml+
       '<div>'+
-        '<h1>'+_escP(p.nombre)+'</h1>'+
-        '<div style="font-size:11px;color:#555;margin-top:3px">'+_escP(obra.nombre||'Sin obra asignada')+'</div>'+
-        '<span class="badge" style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;margin-top:6px;display:inline-block">'+p.estado.toUpperCase()+'</span>'+
-        ' <span style="font-size:10px;color:#888">'+p.version+'</span>'+
-      '</div>'+
-      '<div class="header-right">'+
-        '<strong>PROCEPAL</strong><br>Presupuesto de Obra<br>'+fecha+
+        '<div style="font-size:15px;font-weight:800;letter-spacing:.5px">'+(e.nombre||'NOMBRE DE EMPRESA')+'</div>'+
+        (e.rfc ? '<div style="font-size:9px;opacity:.8;margin-top:2px">RFC: '+_escP(e.rfc)+'</div>' : '')+
       '</div>'+
     '</div>'+
+    '<div class="hdr-right">'+
+      (e.dir   ? _escP(e.dir)+'<br>'   : '')+
+      (e.tel   ? 'Tel: '+_escP(e.tel)+'<br>' : '')+
+      (e.email ? _escP(e.email)        : '')+
+    '</div>'+
+  '</div>'+
 
-    '<table>'+
-      '<thead><tr>'+
-        '<th style="width:60px">Clave</th>'+
-        '<th>Descripción</th>'+
-        '<th class="r" style="width:50px">Unidad</th>'+
-        '<th class="r" style="width:70px">Cantidad</th>'+
-        '<th class="r" style="width:90px">P.U.</th>'+
-        '<th class="r" style="width:100px">Importe</th>'+
-      '</tr></thead>'+
-      '<tbody>'+rows+'</tbody>'+
-    '</table>'+
+  // ── DOCUMENT STRIP ────────────────────────────────────────────────────────────
+  '<div class="doc-strip">'+
+    '<div class="ds-item"><b>Documento</b>PRESUPUESTO DE OBRA</div>'+
+    '<div class="ds-item"><b>Folio</b>'+folio+'</div>'+
+    '<div class="ds-item"><b>Fecha</b>'+fecha+'</div>'+
+    '<div class="ds-item"><b>Versión</b>'+_escP(p.version)+'</div>'+
+    '<div class="ds-item"><b>Estado</b>'+p.estado.toUpperCase()+'</div>'+
+    '<div class="ds-item"><b>Moneda</b>'+(p.moneda||'MXN')+'</div>'+
+  '</div>'+
 
-    '<div class="resumen">'+
-      '<div>'+
-        '<div class="resumen-box"><div class="label">Costo Directo</div><div class="val">'+_mxnP(grandCD)+'</div></div>'+
-        '<div style="margin-top:8px;font-size:10px;color:#555">'+
-          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
-            '<span>Indirectos ('+p.indirectos_pct+'%)</span><span>'+_mxnP(CI)+'</span></div>'+
-          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
-            '<span>Financiamiento ('+p.financiamiento_pct+'%)</span><span>'+_mxnP(F)+'</span></div>'+
-          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
-            '<span>Utilidad ('+p.utilidad_pct+'%)</span><span>'+_mxnP(U)+'</span></div>'+
-          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700">'+
-            '<span>IVA ('+p.iva_pct+'%)</span><span>'+_mxnP(IVA)+'</span></div>'+
-        '</div>'+
-      '</div>'+
-      '<div>'+
-        '<div class="resumen-box"><div class="label">Total sin IVA</div><div class="val">'+_mxnP(PU)+'</div></div>'+
-        '<div class="resumen-box accent" style="margin-top:8px"><div class="label">TOTAL CON IVA</div><div class="val" style="font-size:18px">'+_mxnP(PU+IVA)+'</div></div>'+
+  '<div class="page">'+
+
+  // ── PROJECT INFO ──────────────────────────────────────────────────────────────
+  '<div class="proj-box">'+
+    '<div class="pb-title">Información del Proyecto</div>'+
+    '<div class="pb-body">'+
+      '<div class="pb-cell"><b>Nombre del presupuesto</b>'+_escP(p.nombre)+'</div>'+
+      '<div class="pb-cell"><b>Obra</b>'+_escP(obra.nombre||'—')+'</div>'+
+      '<div class="pb-cell"><b>Elaboró</b>'+(e.rep||'—')+'</div>'+
+      '<div class="pb-cell"><b>Empresa contratista</b>'+_escP(e.nombre||'—')+'</div>'+
+    '</div>'+
+  '</div>'+
+
+  // ── BUDGET TABLE ──────────────────────────────────────────────────────────────
+  '<div class="no-break">'+
+  '<table>'+
+    '<thead><tr>'+
+      '<th style="width:58px">No.</th>'+
+      '<th>Descripción del concepto</th>'+
+      '<th class="r" style="width:45px">Unidad</th>'+
+      '<th class="r" style="width:68px">Cantidad</th>'+
+      '<th class="r" style="width:88px">P.U. s/IVA</th>'+
+      '<th class="r" style="width:96px">Importe</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody>'+
+  '</table>'+
+  '</div>'+
+
+  // ── FINANCIAL SUMMARY ─────────────────────────────────────────────────────────
+  '<div class="fin-section">'+
+    '<div class="desglose">'+
+      '<table>'+
+        '<tr><td style="font-weight:700;background:#f8f9fa;color:#333;padding:6px 8px" colspan="2">Integración del precio</td></tr>'+
+        '<tr><td>Costo Directo</td><td class="r">'+_mxnP(grandCD)+'</td></tr>'+
+        '<tr><td>+ Indirectos ('+p.indirectos_pct+'%)</td><td class="r">'+_mxnP(CI)+'</td></tr>'+
+        '<tr><td>+ Financiamiento ('+p.financiamiento_pct+'%)</td><td class="r">'+_mxnP(F)+'</td></tr>'+
+        '<tr><td>+ Utilidad ('+p.utilidad_pct+'%)</td><td class="r">'+_mxnP(U)+'</td></tr>'+
+        '<tr class="drow-total"><td>= Subtotal sin IVA</td><td class="r">'+_mxnP(sinIva)+'</td></tr>'+
+        '<tr><td>+ IVA ('+p.iva_pct+'%)</td><td class="r">'+_mxnP(IVA)+'</td></tr>'+
+      '</table>'+
+      '<div style="margin-top:10px;font-size:8.5px;color:#888;font-style:italic">'+
+        'Son: '+_numToLetras(total)+
       '</div>'+
     '</div>'+
-
-    '<div class="params">'+
-      '<span>FSR: '+p.fsr+'</span>'+
-      '<span>Herramienta: '+p.herramienta_pct+'%</span>'+
-      '<span>Indirectos: '+p.indirectos_pct+'%</span>'+
-      '<span>Financiamiento: '+p.financiamiento_pct+'%</span>'+
-      '<span>Utilidad: '+p.utilidad_pct+'%</span>'+
-      '<span>IVA: '+p.iva_pct+'%</span>'+
+    '<div class="resumen-total">'+
+      '<div class="rt-header">Total del Presupuesto</div>'+
+      '<div class="rt-body">'+
+        '<div class="rt-line"><span>Subtotal</span><span>'+_mxnP(sinIva)+'</span></div>'+
+        '<div class="rt-line"><span>IVA ('+p.iva_pct+'%)</span><span>'+_mxnP(IVA)+'</span></div>'+
+        '<div class="rt-grand"><span>TOTAL</span><span>'+_mxnP(total)+'</span></div>'+
+        '<div class="rt-note">Precios en Pesos Mexicanos (MXN)</div>'+
+      '</div>'+
     '</div>'+
+  '</div>'+
 
-    '<div class="footer"><span>Generado por Sistema Procepal</span><span>'+fecha+'</span></div>'+
+  // ── CONDITIONS ────────────────────────────────────────────────────────────────
+  '<div class="condiciones">'+
+    '<b>Condiciones generales:</b> '+
+    '1. Los precios unitarios incluyen: mano de obra con FSR '+p.fsr+', materiales puestos en obra, herramienta menor y equipo necesario. &nbsp;'+
+    '2. Precios sujetos a cambio sin previo aviso por variación en el costo de materiales. &nbsp;'+
+    '3. Vigencia de la propuesta: 30 días a partir de la fecha de emisión. &nbsp;'+
+    '4. Cualquier trabajo no contemplado en este presupuesto será cotizado por separado. &nbsp;'+
+    '5. Forma de pago a convenir entre las partes.'+
+  '</div>'+
+
+  // ── FIRMA SECTION ─────────────────────────────────────────────────────────────
+  '<div class="firmas">'+
+    '<div class="firma-box"><div class="firma-line"></div>'+
+      '<div class="firma-name">Elaboró</div>'+
+      '<div class="firma-title">'+(e.rep||'Responsable de Costos')+'</div>'+
+    '</div>'+
+    '<div class="firma-box"><div class="firma-line"></div>'+
+      '<div class="firma-name">Revisó</div>'+
+      '<div class="firma-title">Dirección General</div>'+
+    '</div>'+
+    '<div class="firma-box"><div class="firma-line"></div>'+
+      '<div class="firma-name">Autorizó / Cliente</div>'+
+      '<div class="firma-title">Firma y sello</div>'+
+    '</div>'+
+  '</div>'+
+
+  '</div>'+ // /page
+
+  // ── FOOTER BAND ───────────────────────────────────────────────────────────────
+  '<div class="doc-footer">'+
+    '<span>'+(e.nombre||'EMPRESA')+' — '+(e.rfc?'RFC: '+e.rfc:'')+'</span>'+
+    '<span>'+folio+' · Generado el '+fecha+'</span>'+
+  '</div>'+
   '</body></html>';
 
-  var w = window.open('','_blank','width=900,height=700');
-  w.document.write(html);
+  var w = window.open('','_blank','width=940,height=780');
+  w.document.write(d);
   w.document.close();
   w.focus();
-  setTimeout(function(){ w.print(); }, 400);
+  setTimeout(function(){ w.print(); }, 500);
 }
 
 function _escP(s){ var d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
@@ -7104,5 +7252,56 @@ function imprimirAPU(){
 }
 
 </script>
+
+  <!-- ── Configuración de empresa (para impresión) ──────────── -->
+  <div class="sheet-overlay" id="sheet-co-empresa">
+    <div class="sheet" style="max-height:90vh;overflow-y:auto">
+      <div class="sheet-header">
+        <h3>🏢 Datos de Empresa</h3>
+        <button class="icon-btn" onclick="closeSheet('co-empresa')">✕</button>
+      </div>
+      <div class="sheet-body" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <p style="font-size:13px;color:#666;margin-bottom:4px">Esta información aparece en todos los documentos impresos (presupuestos y APU).</p>
+        <div class="field-group">
+          <label>Nombre de la empresa *</label>
+          <input id="emp-nombre" type="text" placeholder="Ej. PROCEPAL S.A. de C.V.">
+        </div>
+        <div class="field-group">
+          <label>RFC</label>
+          <input id="emp-rfc" type="text" placeholder="Ej. PRO012345ABC">
+        </div>
+        <div class="field-group">
+          <label>Dirección</label>
+          <input id="emp-dir" type="text" placeholder="Calle, colonia, ciudad">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field-group">
+            <label>Teléfono</label>
+            <input id="emp-tel" type="text" placeholder="614-000-0000">
+          </div>
+          <div class="field-group">
+            <label>Correo</label>
+            <input id="emp-email" type="email" placeholder="contacto@empresa.com">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Representante / Elaboró</label>
+          <input id="emp-rep" type="text" placeholder="Nombre del responsable">
+        </div>
+        <div class="field-group">
+          <label>URL del logotipo <span style="font-size:11px;color:#aaa">(imagen pública, https://...)</span></label>
+          <input id="emp-logo" type="url" placeholder="https://...">
+        </div>
+        <div class="field-group">
+          <label>Color de acento (documentos)</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input id="emp-color" type="color" value="#1a3a5c" style="height:36px;width:60px;padding:2px;border-radius:4px;border:1px solid #ddd">
+            <span style="font-size:12px;color:#888">Color principal del encabezado y tablas</span>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="guardarConfigEmpresa()" style="margin-top:8px">💾 Guardar datos</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
