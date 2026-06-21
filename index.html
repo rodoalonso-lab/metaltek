@@ -320,6 +320,7 @@
           <div class="page-sub" id="co-pres-sub" style="margin:0"></div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="chip" onclick="imprimirPresupuesto()" style="font-size:11px">🖨️ Imprimir</button>
           <button class="chip" onclick="abrirNuevoCapitulo()" style="background:var(--accent);color:#fff;border-color:var(--accent)">+ Capítulo</button>
         </div>
       </div>
@@ -337,6 +338,7 @@
           <div class="page-title" style="padding:0">APU</div>
           <div class="page-sub" id="co-apu-sub" style="margin:0"></div>
         </div>
+        <button class="chip" onclick="imprimirAPU()" style="margin-left:auto;font-size:11px">🖨️ Imprimir</button>
       </div>
       <!-- Cuadro resumen APU -->
       <div id="co-apu-resumen" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px"></div>
@@ -6813,6 +6815,276 @@ function aplicarIndirectos(){
   }
   closeSheet('co-indirectos');
   showToast('Indirectos: '+pct.toFixed(2)+'% aplicado');
+}
+
+// ── IMPRESIÓN ─────────────────────────────────────────────────────────────────
+function _printStyles(){
+  return `
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:20px 28px}
+      h1{font-size:17px;font-weight:800;color:#0a1628;margin-bottom:2px}
+      h2{font-size:13px;font-weight:700;color:#0a1628;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+      h3{font-size:11px;font-weight:700;color:#5BC4C0;margin:10px 0 4px;text-transform:uppercase}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #5BC4C0;padding-bottom:10px;margin-bottom:14px}
+      .header-right{text-align:right;color:#555;font-size:10px;line-height:1.6}
+      .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+      table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
+      th{background:#0a1628;color:#fff;padding:5px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase}
+      th.r,td.r{text-align:right}
+      td{padding:4px 6px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+      .cap-row td{background:#f0fafa;font-weight:700;color:#0a1628;font-size:10px}
+      .total-row td{background:#0a1628;color:#fff;font-weight:700;font-size:11px}
+      .subtotal-row td{background:#e0f7f6;font-weight:600;color:#0a1628}
+      .resumen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;border-top:2px solid #5BC4C0;padding-top:10px}
+      .resumen-box{border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px}
+      .resumen-box .label{font-size:9px;color:#666;text-transform:uppercase;margin-bottom:2px}
+      .resumen-box .val{font-size:14px;font-weight:800;color:#0a1628}
+      .resumen-box.accent{border-color:#5BC4C0;background:#f0fafa}
+      .resumen-box.accent .val{color:#5BC4C0}
+      .params{font-size:9px;color:#888;margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
+      .params span{white-space:nowrap}
+      .apu-section{margin-bottom:12px}
+      .calc-chain{margin-top:14px;border:1px solid #e5e7eb;border-radius:6px;padding:10px;background:#fafafa}
+      .calc-chain .row{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;border-bottom:1px solid #f0f0f0}
+      .calc-chain .row:last-child{border:none;font-weight:700;font-size:12px;color:#5BC4C0}
+      .calc-chain .row.sep{border-top:2px solid #0a1628;margin-top:4px;padding-top:6px}
+      .footer{margin-top:20px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#aaa;display:flex;justify-content:space-between}
+      @media print{body{padding:10px 16px}@page{margin:1cm;size:letter}}
+    </style>`;
+}
+
+function _mxnP(v){return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function _numP(v,d){return Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:d||3,maximumFractionDigits:d||3});}
+
+function imprimirPresupuesto(){
+  if(!_coPresActivo){ showToast('Abre un presupuesto primero',true); return; }
+  var p    = _coPresActivo;
+  var obra = (obrasData||[]).find(function(o){return o.id===p.obra_id;})||{};
+  var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+  var estadoColor = {borrador:'#6b7280','revisión':'#f59e0b',aprobado:'#22c55e',cerrado:'#6366f1'};
+  var color = estadoColor[p.estado]||'#6b7280';
+
+  // Cálculos totales
+  var grandCD = 0;
+  _coCapitulos.forEach(function(cap){
+    (_coConceptos[cap.id]||[]).forEach(function(c){ grandCD += (c.total||0); });
+  });
+  var CI  = grandCD * (p.indirectos_pct||15)/100;
+  var F   = (grandCD+CI)*(p.financiamiento_pct||2)/100;
+  var U   = (grandCD+CI+F)*(p.utilidad_pct||10)/100;
+  var PU  = grandCD+CI+F+U;
+  var IVA = PU*(p.iva_pct||16)/100;
+
+  // Build table rows
+  var rows = '';
+  var capNum = 0;
+  _coCapitulos.forEach(function(cap){
+    capNum++;
+    var conceptos = _coConceptos[cap.id]||[];
+    var capTotal  = conceptos.reduce(function(s,c){return s+(c.total||0);},0);
+    rows += '<tr class="cap-row"><td colspan="5">'+(cap.numero||capNum)+'. '+_escP(cap.nombre)+'</td><td class="r">'+_mxnP(capTotal)+'</td></tr>';
+    conceptos.forEach(function(c,i){
+      rows += '<tr>'+
+        '<td style="color:#888;white-space:nowrap">'+(c.clave||capNum+'.'+(i+1))+'</td>'+
+        '<td>'+_escP(c.descripcion)+'</td>'+
+        '<td class="r">'+_escP(c.unidad)+'</td>'+
+        '<td class="r">'+_numP(c.cantidad,3)+'</td>'+
+        '<td class="r">'+_mxnP(c.precio_unitario)+'</td>'+
+        '<td class="r" style="font-weight:600">'+_mxnP(c.total)+'</td>'+
+      '</tr>';
+    });
+  });
+  rows += '<tr class="total-row"><td colspan="5">TOTAL COSTO DIRECTO</td><td class="r">'+_mxnP(grandCD)+'</td></tr>';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Presupuesto '+_escP(p.nombre)+'</title>'+_printStyles()+'</head><body>'+
+    '<div class="header">'+
+      '<div>'+
+        '<h1>'+_escP(p.nombre)+'</h1>'+
+        '<div style="font-size:11px;color:#555;margin-top:3px">'+_escP(obra.nombre||'Sin obra asignada')+'</div>'+
+        '<span class="badge" style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44;margin-top:6px;display:inline-block">'+p.estado.toUpperCase()+'</span>'+
+        ' <span style="font-size:10px;color:#888">'+p.version+'</span>'+
+      '</div>'+
+      '<div class="header-right">'+
+        '<strong>PROCEPAL</strong><br>Presupuesto de Obra<br>'+fecha+
+      '</div>'+
+    '</div>'+
+
+    '<table>'+
+      '<thead><tr>'+
+        '<th style="width:60px">Clave</th>'+
+        '<th>Descripción</th>'+
+        '<th class="r" style="width:50px">Unidad</th>'+
+        '<th class="r" style="width:70px">Cantidad</th>'+
+        '<th class="r" style="width:90px">P.U.</th>'+
+        '<th class="r" style="width:100px">Importe</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table>'+
+
+    '<div class="resumen">'+
+      '<div>'+
+        '<div class="resumen-box"><div class="label">Costo Directo</div><div class="val">'+_mxnP(grandCD)+'</div></div>'+
+        '<div style="margin-top:8px;font-size:10px;color:#555">'+
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
+            '<span>Indirectos ('+p.indirectos_pct+'%)</span><span>'+_mxnP(CI)+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
+            '<span>Financiamiento ('+p.financiamiento_pct+'%)</span><span>'+_mxnP(F)+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee">'+
+            '<span>Utilidad ('+p.utilidad_pct+'%)</span><span>'+_mxnP(U)+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700">'+
+            '<span>IVA ('+p.iva_pct+'%)</span><span>'+_mxnP(IVA)+'</span></div>'+
+        '</div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="resumen-box"><div class="label">Total sin IVA</div><div class="val">'+_mxnP(PU)+'</div></div>'+
+        '<div class="resumen-box accent" style="margin-top:8px"><div class="label">TOTAL CON IVA</div><div class="val" style="font-size:18px">'+_mxnP(PU+IVA)+'</div></div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="params">'+
+      '<span>FSR: '+p.fsr+'</span>'+
+      '<span>Herramienta: '+p.herramienta_pct+'%</span>'+
+      '<span>Indirectos: '+p.indirectos_pct+'%</span>'+
+      '<span>Financiamiento: '+p.financiamiento_pct+'%</span>'+
+      '<span>Utilidad: '+p.utilidad_pct+'%</span>'+
+      '<span>IVA: '+p.iva_pct+'%</span>'+
+    '</div>'+
+
+    '<div class="footer"><span>Generado por Sistema Procepal</span><span>'+fecha+'</span></div>'+
+  '</body></html>';
+
+  var w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 400);
+}
+
+function _escP(s){ var d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
+
+function imprimirAPU(){
+  if(!_coConceptoAct || !_coPresActivo){ showToast('Abre un APU primero',true); return; }
+  var p    = _coPresActivo;
+  var conc = _coConceptoAct;
+  var obra = (obrasData||[]).find(function(o){return o.id===p.obra_id;})||{};
+  var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+  var fsr     = p.fsr||1.45;
+  var herrPct = p.herramienta_pct||3;
+  var indPct  = p.indirectos_pct||15;
+  var finPct  = p.financiamiento_pct||2;
+  var utlPct  = p.utilidad_pct||10;
+  var ivaPct  = p.iva_pct||16;
+
+  function buildSection(tipo, label, applyFsr){
+    var ins = _coInsumoAPU.filter(function(i){return i.tipo===tipo;});
+    if(!ins.length) return '';
+    var secTotal = 0;
+    var rows = ins.map(function(i){
+      var base = (i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);
+      var imp  = applyFsr ? base*fsr : base;
+      secTotal += imp;
+      return '<tr>'+
+        '<td>'+_escP(i.descripcion||'')+'</td>'+
+        '<td class="r">'+_escP(i.unidad||'')+'</td>'+
+        '<td class="r">'+_numP(i.cantidad,4)+'</td>'+
+        '<td class="r">'+_mxnP(i.precio_unitario)+'</td>'+
+        (i.tipo==='material' ? '<td class="r">'+(i.factor_desperdicio||1).toFixed(3)+'</td>' : '<td class="r">—</td>')+
+        (applyFsr ? '<td class="r">'+fsr.toFixed(2)+'</td>' : '<td class="r">—</td>')+
+        '<td class="r" style="font-weight:600">'+_mxnP(imp)+'</td>'+
+      '</tr>';
+    }).join('');
+    rows += '<tr class="subtotal-row">'+
+      '<td colspan="6" style="text-align:right">Subtotal '+label+'</td>'+
+      '<td class="r">'+_mxnP(secTotal)+'</td>'+
+    '</tr>';
+    return '<h3>'+label+'</h3>'+
+      '<table>'+
+        '<thead><tr>'+
+          '<th>Descripción</th>'+
+          '<th class="r">Unidad</th>'+
+          '<th class="r">Cantidad</th>'+
+          '<th class="r">P.U.</th>'+
+          '<th class="r">Desp.</th>'+
+          '<th class="r">FSR</th>'+
+          '<th class="r">Importe</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>';
+  }
+
+  var cdMat = _coInsumoAPU.filter(function(i){return i.tipo==='material';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdMoBase = _coInsumoAPU.filter(function(i){return i.tipo==='mano_obra';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdMo  = cdMoBase*fsr;
+  var cdHerr= cdMo*herrPct/100;
+  var cdEq  = _coInsumoAPU.filter(function(i){return i.tipo==='equipo';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0)*(i.factor_desperdicio||1);},0);
+  var cdSub = _coInsumoAPU.filter(function(i){return i.tipo==='subcontrato';})
+    .reduce(function(s,i){return s+(i.cantidad||0)*(i.precio_unitario||0);},0);
+  var CD  = cdMat+cdMo+cdHerr+cdEq+cdSub;
+  var CI  = CD*indPct/100;
+  var F   = (CD+CI)*finPct/100;
+  var U   = (CD+CI+F)*utlPct/100;
+  var PU  = CD+CI+F+U;
+  var IVA = PU*ivaPct/100;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>APU — '+_escP(conc.descripcion)+'</title>'+_printStyles()+'</head><body>'+
+    '<div class="header">'+
+      '<div>'+
+        '<div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Análisis de Precio Unitario</div>'+
+        '<h1>'+(conc.clave ? conc.clave+' — ':'')+_escP(conc.descripcion)+'</h1>'+
+        '<div style="font-size:11px;color:#555;margin-top:3px">'+_escP(obra.nombre||'Sin obra')+' · '+_escP(p.nombre)+'</div>'+
+        '<div style="font-size:11px;color:#555;margin-top:2px">Unidad: <strong>'+_escP(conc.unidad)+'</strong> &nbsp;|&nbsp; Cantidad: <strong>'+_numP(conc.cantidad,3)+'</strong></div>'+
+      '</div>'+
+      '<div class="header-right"><strong>PROCEPAL</strong><br>'+fecha+'</div>'+
+    '</div>'+
+
+    buildSection('material',   '🧱 MATERIALES',     false)+
+    buildSection('mano_obra',  '👷 MANO DE OBRA',   true)+
+    (cdHerr > 0 ?
+      '<h3>🔧 HERRAMIENTA ('+herrPct+'% sobre M.O.)</h3>'+
+      '<table><tbody><tr>'+
+        '<td>Herramienta menor ('+herrPct+'% × M.O. '+_mxnP(cdMo)+')</td>'+
+        '<td colspan="5"></td><td class="r" style="font-weight:600">'+_mxnP(cdHerr)+'</td>'+
+      '</tr></tbody></table>' : '')+
+    buildSection('equipo',     '🚜 EQUIPO',          false)+
+    buildSection('subcontrato','📋 SUBCONTRATOS',    false)+
+
+    '<div class="calc-chain">'+
+      '<div style="font-weight:700;font-size:11px;color:#0a1628;margin-bottom:8px;text-transform:uppercase">Integración del Precio Unitario</div>'+
+      '<div class="row"><span>Materiales</span><span>'+_mxnP(cdMat)+'</span></div>'+
+      '<div class="row"><span>Mano de obra (×FSR '+fsr.toFixed(2)+')</span><span>'+_mxnP(cdMo)+'</span></div>'+
+      '<div class="row"><span>Herramienta ('+herrPct+'%)</span><span>'+_mxnP(cdHerr)+'</span></div>'+
+      '<div class="row"><span>Equipo</span><span>'+_mxnP(cdEq)+'</span></div>'+
+      '<div class="row"><span>Subcontratos</span><span>'+_mxnP(cdSub)+'</span></div>'+
+      '<div class="row sep"><span><strong>COSTO DIRECTO</strong></span><span><strong>'+_mxnP(CD)+'</strong></span></div>'+
+      '<div class="row"><span>Indirectos ('+indPct+'%)</span><span>'+_mxnP(CI)+'</span></div>'+
+      '<div class="row"><span>Financiamiento ('+finPct+'%)</span><span>'+_mxnP(F)+'</span></div>'+
+      '<div class="row"><span>Utilidad ('+utlPct+'%)</span><span>'+_mxnP(U)+'</span></div>'+
+      '<div class="row sep"><span>P.U. sin IVA</span><span>'+_mxnP(PU)+'</span></div>'+
+      '<div class="row"><span>IVA ('+ivaPct+'%)</span><span>'+_mxnP(IVA)+'</span></div>'+
+      '<div class="row sep"><span>PRECIO UNITARIO TOTAL</span><span>'+_mxnP(PU+IVA)+'</span></div>'+
+    '</div>'+
+
+    '<div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
+      '<div class="resumen-box"><div class="label">P.U. sin IVA</div><div class="val">'+_mxnP(PU)+'</div></div>'+
+      '<div class="resumen-box accent"><div class="label">P.U. con IVA</div><div class="val">'+_mxnP(PU+IVA)+'</div></div>'+
+      '<div class="resumen-box"><div class="label">Cantidad</div><div class="val">'+_numP(conc.cantidad,3)+' '+_escP(conc.unidad)+'</div></div>'+
+      '<div class="resumen-box accent"><div class="label">Total partida</div><div class="val">'+_mxnP(PU*conc.cantidad)+'</div></div>'+
+    '</div>'+
+
+    '<div class="footer"><span>Generado por Sistema Procepal</span><span>'+fecha+'</span></div>'+
+  '</body></html>';
+
+  var w = window.open('','_blank','width=900,height=750');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 400);
 }
 
 </script>
