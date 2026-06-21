@@ -429,7 +429,7 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
         <div class="form-group"><label style="font-size:11px">FSR</label><input class="form-input" id="co-p-fsr" type="number" step="0.01" value="1.45"></div>
         <div class="form-group"><label style="font-size:11px">Herramienta %</label><input class="form-input" id="co-p-herr" type="number" step="0.1" value="3"></div>
-        <div class="form-group"><label style="font-size:11px">Indirectos %</label><input class="form-input" id="co-p-indir" type="number" step="0.1" value="15"></div>
+        <div class="form-group"><label style="font-size:11px;display:flex;justify-content:space-between">Indirectos % <button type="button" onclick="abrirCalcIndirectos('pres')" style="background:none;border:none;color:var(--accent);font-size:10px;font-weight:700;cursor:pointer;padding:0;font-family:inherit">🧮 Calcular</button></label><input class="form-input" id="co-p-indir" type="number" step="0.1" value="15"></div>
         <div class="form-group"><label style="font-size:11px">Financiamiento %</label><input class="form-input" id="co-p-fin" type="number" step="0.1" value="2"></div>
         <div class="form-group"><label style="font-size:11px">Utilidad %</label><input class="form-input" id="co-p-util" type="number" step="0.1" value="10"></div>
         <div class="form-group"><label style="font-size:11px">IVA %</label><input class="form-input" id="co-p-iva" type="number" step="0.1" value="16"></div>
@@ -564,6 +564,69 @@
     <div style="height:20px"></div>
   </div>
 </div>
+
+
+  <!-- SHEET: Calculadora de Indirectos -->
+  <div class="sheet-overlay" id="sheet-co-indirectos">
+  <div class="sheet" style="max-height:92vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="sheet-title" style="margin:0">🧮 Calculadora de Indirectos</div>
+      <div id="calc-indir-pct-badge" style="font-size:18px;font-weight:800;color:var(--accent)">0.0%</div>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:14px">
+      Ingresa los gastos reales para calcular el % exacto a aplicar en el APU.
+      No uses porcentajes históricos — costes los gastos uno por uno.
+    </div>
+
+    <!-- Costo Directo base -->
+    <div class="card" style="margin-bottom:12px;padding:10px 12px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--dim);margin-bottom:2px">Costo Directo total de la obra ($)</div>
+          <input type="number" id="calc-cd-total" class="form-input" placeholder="0.00" oninput="recalcIndirectos()" style="margin:0">
+        </div>
+        <div style="flex:0 0 auto;text-align:right">
+          <div style="font-size:10px;color:var(--dim)">Duración obra</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="calc-duracion" class="form-input" value="6" style="width:50px;margin:0;padding:6px;text-align:center" oninput="recalcIndirectos()">
+            <span style="font-size:11px;color:var(--dim)">meses</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: Indirectos de Campo -->
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">🏗 Indirectos de Campo</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:10px">Gastos que viven físicamente en la obra durante su ejecución</div>
+    <div id="calc-campo-rows"></div>
+    <button onclick="agregarFilaIndirectos('campo')" style="background:none;border:1px dashed var(--border);border-radius:8px;width:100%;padding:8px;color:var(--dim);cursor:pointer;font-size:12px;margin-bottom:16px">+ Agregar gasto de campo</button>
+
+    <!-- SECCIÓN: Indirectos de Oficina -->
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">🏢 Indirectos de Oficina Central</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:10px">Gastos corporativos prorrateados a esta obra según duración y cartera de proyectos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="form-group">
+        <label style="font-size:10px;color:var(--dim)">Obras activas en paralelo</label>
+        <input type="number" id="calc-obras-activas" class="form-input" value="2" min="1" oninput="recalcIndirectos()" style="text-align:center">
+      </div>
+      <div class="form-group">
+        <label style="font-size:10px;color:var(--dim)">% de carga de esta obra</label>
+        <input type="number" id="calc-pct-carga" class="form-input" value="50" min="1" max="100" oninput="recalcIndirectos()" style="text-align:center">
+        <div style="font-size:9px;color:var(--dim);margin-top:2px">Si hay 2 obras iguales = 50%</div>
+      </div>
+    </div>
+    <div id="calc-oficina-rows"></div>
+    <button onclick="agregarFilaIndirectos('oficina')" style="background:none;border:1px dashed var(--border);border-radius:8px;width:100%;padding:8px;color:var(--dim);cursor:pointer;font-size:12px;margin-bottom:16px">+ Agregar gasto de oficina</button>
+
+    <!-- Resumen -->
+    <div id="calc-resumen" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px"></div>
+
+    <button class="btn-primary" onclick="aplicarIndirectos()">Aplicar este % al presupuesto</button>
+    <button class="btn-secondary" onclick="closeSheet('co-indirectos')">Cancelar</button>
+    <div style="height:20px"></div>
+  </div>
+  </div>
 
   <!-- TAB BAR -->
   <div class="tabbar">
@@ -6603,6 +6666,153 @@ async function toggleActivoCat(id, activo){
     if(ins) ins.activo = activo;
     renderCatalogo();
   } catch(e){ showToast('Error',true); }
+}
+
+// ── CALCULADORA DE INDIRECTOS ─────────────────────────────────────────────
+var _calcIndiTarget = 'pres'; // 'pres' | 'apu'
+var _calcFilaId     = 0;
+
+var _campoDefaults = [
+  { concepto: 'Superintendente / Residente de obra', monto: 18000, tipo: 'mensual' },
+  { concepto: 'Almacenista', monto: 8000, tipo: 'mensual' },
+  { concepto: 'Velador / seguridad nocturna', monto: 7000, tipo: 'mensual' },
+  { concepto: 'Oficina provisional (renta o construcción)', monto: 3000, tipo: 'mensual' },
+  { concepto: 'Luz, agua y teléfono de la obra', monto: 2000, tipo: 'mensual' },
+  { concepto: 'Combustible (vehículo residencia)', monto: 3000, tipo: 'mensual' },
+  { concepto: 'Herramienta menor y consumibles seguridad', monto: 5000, tipo: 'unico' },
+  { concepto: 'Pruebas de laboratorio (concreto, suelos)', monto: 8000, tipo: 'unico' },
+  { concepto: 'Permisos, licencias y fianzas', monto: 12000, tipo: 'unico' },
+  { concepto: 'Limpieza final de obra', monto: 4000, tipo: 'unico' },
+];
+
+var _oficinaDefaults = [
+  { concepto: 'Dirección general / Gerencia (proporción)', monto: 12000, tipo: 'mensual' },
+  { concepto: 'Contador / administración', monto: 6000, tipo: 'mensual' },
+  { concepto: 'Renta oficina central (proporción)', monto: 4000, tipo: 'mensual' },
+  { concepto: 'Telefonía, internet, software', monto: 2000, tipo: 'mensual' },
+  { concepto: 'Seguros corporativos (proporción)', monto: 3000, tipo: 'mensual' },
+  { concepto: 'Papelería y gastos menores', monto: 1000, tipo: 'mensual' },
+];
+
+function abrirCalcIndirectos(target){
+  _calcIndiTarget = target;
+  _calcFilaId = 0;
+
+  // Pre-fill CD total
+  var cd = 0;
+  if(target === 'apu' && _coPresActivo){
+    // Sum all concepto totals
+    Object.values(_coConceptos).forEach(function(arr){
+      arr.forEach(function(c){ cd += (c.total||0); });
+    });
+  }
+  var cdEl = document.getElementById('calc-cd-total');
+  if(cdEl) cdEl.value = cd > 0 ? cd.toFixed(2) : '';
+
+  // Render default rows
+  renderFilasIndirectos('campo',  _campoDefaults);
+  renderFilasIndirectos('oficina', _oficinaDefaults);
+  recalcIndirectos();
+  openSheet('co-indirectos');
+}
+
+function renderFilasIndirectos(seccion, defaults){
+  var el = document.getElementById('calc-'+seccion+'-rows');
+  var rows = defaults.map(function(d){
+    var id = ++_calcFilaId;
+    return '<div id="fila-indir-'+id+'" style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin-bottom:6px">'+
+      '<input class="form-input" style="margin:0;font-size:12px" placeholder="Concepto" value="'+_esc(d.concepto)+'" oninput="recalcIndirectos()">'+
+      '<input type="number" class="form-input" style="margin:0;width:90px;font-size:12px;text-align:right" placeholder="$" value="'+d.monto+'" oninput="recalcIndirectos()">'+
+      '<select class="form-input" style="margin:0;font-size:11px;padding:6px 4px;width:80px" onchange="recalcIndirectos()">'+
+        '<option value="mensual"'+(d.tipo==='mensual'?' selected':'')+'>×mes</option>'+
+        '<option value="unico"'+(d.tipo==='unico'?' selected':'')+'>único</option>'+
+      '</select>'+
+      '<button onclick="eliminarFilaIndir('+id+')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>'+
+    '</div>';
+  }).join('');
+  el.innerHTML = rows;
+}
+
+function agregarFilaIndirectos(seccion){
+  var el = document.getElementById('calc-'+seccion+'-rows');
+  var id = ++_calcFilaId;
+  var row = document.createElement('div');
+  row.id = 'fila-indir-'+id;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin-bottom:6px';
+  row.innerHTML =
+    '<input class="form-input" style="margin:0;font-size:12px" placeholder="Concepto" oninput="recalcIndirectos()">'+
+    '<input type="number" class="form-input" style="margin:0;width:90px;font-size:12px;text-align:right" placeholder="$" value="0" oninput="recalcIndirectos()">'+
+    '<select class="form-input" style="margin:0;font-size:11px;padding:6px 4px;width:80px" onchange="recalcIndirectos()">'+
+      '<option value="mensual">×mes</option>'+
+      '<option value="unico">único</option>'+
+    '</select>'+
+    '<button onclick="eliminarFilaIndir('+id+')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>';
+  el.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function eliminarFilaIndir(id){
+  var el = document.getElementById('fila-indir-'+id);
+  if(el){ el.remove(); recalcIndirectos(); }
+}
+
+function _sumarSeccion(seccionId){
+  var total = 0;
+  var dur = parseFloat(document.getElementById('calc-duracion').value)||6;
+  var carga = parseFloat(document.getElementById('calc-pct-carga').value)||50;
+  var esOficina = seccionId === 'oficina';
+  var factorCarga = esOficina ? carga/100 : 1;
+  document.querySelectorAll('#calc-'+seccionId+'-rows [id^="fila-indir-"]').forEach(function(row){
+    var inputs = row.querySelectorAll('input[type="number"]');
+    var tipo   = row.querySelector('select').value;
+    var monto  = parseFloat(inputs[0] && inputs[0].value)||0;
+    total += tipo === 'mensual' ? monto * dur * factorCarga : monto * factorCarga;
+  });
+  return total;
+}
+
+function recalcIndirectos(){
+  var cd     = parseFloat(document.getElementById('calc-cd-total').value)||0;
+  var campo  = _sumarSeccion('campo');
+  var ofic   = _sumarSeccion('oficina');
+  var total  = campo + ofic;
+  var pct    = cd > 0 ? (total/cd)*100 : 0;
+
+  // Badge
+  var badge = document.getElementById('calc-indir-pct-badge');
+  if(badge) badge.textContent = pct.toFixed(2)+'%';
+
+  // Resumen
+  var el = document.getElementById('calc-resumen');
+  if(!el) return;
+  var dur = parseFloat(document.getElementById('calc-duracion').value)||6;
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12px">'+
+    '<span style="color:var(--dim)">Indirectos de campo</span><span style="text-align:right;font-weight:600">$'+campo.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>'+
+    '<span style="color:var(--dim)">Indirectos de oficina</span><span style="text-align:right;font-weight:600">$'+ofic.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>'+
+    '<div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0"></div>'+
+    '<span style="font-weight:700">Total indirectos</span><span style="text-align:right;font-weight:700">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>'+
+    '<span style="color:var(--dim)">Costo Directo</span><span style="text-align:right">$'+(cd||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>'+
+    '<div style="grid-column:1/-1;border-top:2px solid var(--accent);margin:4px 0"></div>'+
+    '<span style="font-weight:800;font-size:15px;color:var(--accent)">% Indirectos</span>'+
+    '<span style="text-align:right;font-weight:800;font-size:15px;color:var(--accent)">'+pct.toFixed(2)+'%</span>'+
+    '</div>'+
+    (pct < 8 ? '<div style="margin-top:10px;padding:8px 10px;background:#f59e0b22;border:1px solid #f59e0b44;border-radius:8px;font-size:11px;color:#f59e0b">⚠️ Menos del 8% — revisa que no te falten gastos. Un número bajo puede provocar pérdidas.</div>' :
+     pct > 20 ? '<div style="margin-top:10px;padding:8px 10px;background:#ef444422;border:1px solid #ef444444;border-radius:8px;font-size:11px;color:#ef4444">🔴 Más del 20% — podría hacerte poco competitivo. Revisa si hay gastos duplicados.</div>' :
+     '<div style="margin-top:10px;padding:8px 10px;background:#22c55e22;border:1px solid #22c55e44;border-radius:8px;font-size:11px;color:#22c55e">✅ Rango normal para obra civil (8%–20%)</div>');
+}
+
+function aplicarIndirectos(){
+  var pct = parseFloat(document.getElementById('calc-indir-pct-badge').textContent)||0;
+  if(_calcIndiTarget === 'pres'){
+    var el = document.getElementById('co-p-indir');
+    if(el){ el.value = pct.toFixed(2); }
+  } else {
+    var el = document.getElementById('apu-indir');
+    if(el){ el.value = pct.toFixed(2); recalcAPU(); }
+  }
+  closeSheet('co-indirectos');
+  showToast('Indirectos: '+pct.toFixed(2)+'% aplicado');
 }
 
 </script>
