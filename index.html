@@ -342,6 +342,7 @@
           <div class="page-sub" id="co-apu-sub" style="margin:0"></div>
         </div>
         <button class="chip" onclick="imprimirAPU()" style="margin-left:auto;font-size:11px">🖨️ Imprimir</button>
+        <button class="chip" onclick="abrirGeneradorIA()" style="font-size:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-weight:700">✨ Generar con IA</button>
       </div>
       <!-- Cuadro resumen APU -->
       <div id="co-apu-resumen" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px"></div>
@@ -7251,6 +7252,230 @@ function imprimirAPU(){
   setTimeout(function(){ w.print(); }, 400);
 }
 
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║              GENERADOR DE APU CON IA                        ║
+// ╚══════════════════════════════════════════════════════════════╝
+var _iaInsumosGenerados = [];
+
+function abrirGeneradorIA(){
+  if(!_coConceptoAct){ showToast('Abre un concepto primero', true); return; }
+  var conc = _coConceptoAct;
+  document.getElementById('ia-concepto').value = conc.descripcion || '';
+  document.getElementById('ia-unidad').value   = conc.unidad     || '';
+  document.getElementById('ia-loading').style.display   = 'none';
+  document.getElementById('ia-error').style.display     = 'none';
+  document.getElementById('ia-resultado').style.display = 'none';
+  _iaInsumosGenerados = [];
+  openSheet('co-ia');
+}
+
+async function generarAPUconIA(){
+  var desc     = document.getElementById('ia-concepto').value.trim();
+  var unidad   = document.getElementById('ia-unidad').value.trim();
+  var tipoObra = document.getElementById('ia-tipo-obra').value;
+  var contexto = document.getElementById('ia-contexto').value.trim();
+
+  if(!desc){ showToast('Describe el concepto primero', true); return; }
+
+  document.getElementById('ia-loading').style.display   = '';
+  document.getElementById('ia-error').style.display     = 'none';
+  document.getElementById('ia-resultado').style.display = 'none';
+  document.getElementById('ia-generar-btn').disabled    = true;
+
+  var prompt = 'Eres un analista de precios unitarios experto en construcción industrial en México (Chihuahua, 2025).\n\n'+
+    'Genera el desglose completo de insumos para este concepto de obra:\n'+
+    'Concepto: '+desc+'\n'+
+    'Unidad de medida: '+(unidad||'m²')+'\n'+
+    'Tipo de trabajo: '+tipoObra+'\n'+
+    (contexto?'Contexto adicional: '+contexto+'\n':'')+
+    '\nReglas importantes:\n'+
+    '- Las cantidades son POR UNIDAD del concepto (no totales)\n'+
+    '- Para mano_obra: precio DIRECTO sin FSR (el sistema multiplica por FSR automáticamente)\n'+
+    '- Incluye factor_desperdicio realista (1.03-1.10 para materiales, 1.0 para MO y equipo)\n'+
+    '- Usa precios de mercado Chihuahua 2025\n'+
+    '\nPrecios de referencia Chihuahua 2025:\n'+
+    'MATERIALES: Acero A36 $38-42/kg, PTR cuadrado cal.14 $28-32/kg, Canal C $26-30/kg, '+
+    'Placa acero 1/4" $35/kg, Varilla 3/8" $26/kg, Varilla 1/2" $26/kg, '+
+    'Cemento saco 50kg $280, Arena m³ $350, Grava m³ $420, Block 15cm $8.50/pza, '+
+    'Tabique rojo $3.20/pza, Pintura vinílica $950/cubeta 20lt, '+
+    'Tubo PVC 4" $95/m, Cable THW 12AWG $22/m, Lámina galv. cal.26 $185/m²\n'+
+    'MANO DE OBRA (directo sin FSR): Peón $280/jornal, Oficial albañil $420/jornal, '+
+    'Maestro $650/jornal, Fierrero/soldador $480/jornal, Electricista $550/jornal, '+
+    'Plomero $520/jornal, Pintor $450/jornal, Operador maquinaria $750/jornal\n'+
+    'EQUIPO: Revolvedora $120/hr, Vibradora $80/hr, Retroexcavadora $1800/hr, '+
+    'Compactadora $250/hr, Camión volteo $650/viaje, Grúa $2500/hr, '+
+    'Planta soldadora $150/hr, Corte con plasma $200/hr\n'+
+    '\nResponde ÚNICAMENTE con JSON válido, sin texto adicional:\n'+
+    '{\n'+
+    '  "insumos": [\n'+
+    '    {"tipo":"material","descripcion":"...","unidad":"...","cantidad":0.0,"precio_unitario":0.0,"factor_desperdicio":1.05},\n'+
+    '    {"tipo":"mano_obra","descripcion":"...","unidad":"jornal","cantidad":0.0,"precio_unitario":0.0,"factor_desperdicio":1.0},\n'+
+    '    {"tipo":"equipo","descripcion":"...","unidad":"hr","cantidad":0.0,"precio_unitario":0.0,"factor_desperdicio":1.0}\n'+
+    '  ],\n'+
+    '  "notas": ""\n'+
+    '}';
+
+  try {
+    var CLAUDE_URL = 'https://pviiuaukqvrdyttwulcw.supabase.co/functions/v1/claude-proxy';
+    var tk = await getToken();
+    var res = await fetch(CLAUDE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '+(tk||SUPABASE_KEY)
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(!res.ok){
+      var err = await res.text();
+      throw new Error('Error '+res.status+': '+err.substring(0,200));
+    }
+
+    var data = await res.json();
+    var raw  = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
+
+    // Strip markdown code fences if present
+    raw = raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+
+    var parsed = JSON.parse(raw);
+    _iaInsumosGenerados = parsed.insumos || [];
+
+    // Show notas
+    var notasEl = document.getElementById('ia-notas');
+    if(parsed.notas){
+      notasEl.textContent = '💡 '+parsed.notas;
+      notasEl.style.display = '';
+    } else {
+      notasEl.style.display = 'none';
+    }
+
+    renderRevisionIA();
+    document.getElementById('ia-resultado').style.display = '';
+
+  } catch(e){
+    document.getElementById('ia-error').style.display = '';
+    document.getElementById('ia-error').textContent = '⚠️ '+e.message;
+  } finally {
+    document.getElementById('ia-loading').style.display   = 'none';
+    document.getElementById('ia-generar-btn').disabled    = false;
+  }
+}
+
+function renderRevisionIA(){
+  var tipos = [
+    { key:'material',    label:'Materiales',   icon:'🧱' },
+    { key:'mano_obra',   label:'Mano de Obra', icon:'👷' },
+    { key:'equipo',      label:'Equipo',       icon:'🔧' },
+    { key:'subcontrato', label:'Subcontrato',  icon:'📋' }
+  ];
+
+  var html = '';
+  tipos.forEach(function(t){
+    var rows = _iaInsumosGenerados.filter(function(i,idx){ i._idx=idx; return i.tipo===t.key; });
+    // re-tag indices for all items
+  });
+
+  // re-index
+  _iaInsumosGenerados.forEach(function(ins,idx){ ins._idx = idx; });
+
+  tipos.forEach(function(t){
+    var rows = _iaInsumosGenerados.filter(function(ins){ return ins.tipo===t.key; });
+    if(!rows.length) return;
+
+    html += '<div style="margin-bottom:12px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+t.icon+' '+t.label+'</div>'+
+      '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden">';
+
+    rows.forEach(function(ins){
+      var idx = ins._idx;
+      var importe = ins.cantidad * ins.precio_unitario * (ins.factor_desperdicio||1);
+      html += '<div style="display:grid;grid-template-columns:1fr 70px 80px 70px 24px;gap:4px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--border);font-size:12px" id="ia-row-'+idx+'">'+
+        '<div>'+
+          '<div style="font-weight:600;color:var(--text)">'+_esc(ins.descripcion)+'</div>'+
+          '<div style="font-size:10px;color:var(--dim)">'+_esc(ins.unidad)+(ins.factor_desperdicio&&ins.factor_desperdicio!==1?' · desp. '+ins.factor_desperdicio:'')+'</div>'+
+        '</div>'+
+        '<input type="number" value="'+ins.cantidad+'" step="0.001" min="0" '+
+          'onchange="_iaInsumosGenerados['+idx+'].cantidad=parseFloat(this.value)||0;_iaRecalcRow('+idx+')" '+
+          'style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;text-align:right">'+
+        '<input type="number" value="'+ins.precio_unitario+'" step="0.01" min="0" '+
+          'onchange="_iaInsumosGenerados['+idx+'].precio_unitario=parseFloat(this.value)||0;_iaRecalcRow('+idx+')" '+
+          'style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;text-align:right">'+
+        '<div id="ia-imp-'+idx+'" style="text-align:right;font-size:11px;color:var(--dim)">$'+importe.toFixed(0)+'</div>'+
+        '<button onclick="_iaEliminarRow('+idx+')" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px;padding:0;line-height:1">✕</button>'+
+      '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  // Total
+  var total = _iaInsumosGenerados.reduce(function(s,i){
+    return s + i.cantidad*i.precio_unitario*(i.factor_desperdicio||1);
+  }, 0);
+  html += '<div style="text-align:right;font-size:12px;font-weight:700;color:var(--accent);padding:4px 0">'+
+    'Costo directo por unidad: $'+total.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+
+  '</div>';
+
+  document.getElementById('ia-tabla').innerHTML = html;
+}
+
+function _iaRecalcRow(idx){
+  var ins = _iaInsumosGenerados[idx];
+  var imp = ins.cantidad * ins.precio_unitario * (ins.factor_desperdicio||1);
+  var el = document.getElementById('ia-imp-'+idx);
+  if(el) el.textContent = '$'+imp.toFixed(0);
+  // Recalc total
+  var total = _iaInsumosGenerados.reduce(function(s,i){
+    return s + i.cantidad*i.precio_unitario*(i.factor_desperdicio||1);
+  }, 0);
+  renderRevisionIA();
+}
+
+function _iaEliminarRow(idx){
+  _iaInsumosGenerados.splice(idx,1);
+  _iaInsumosGenerados.forEach(function(ins,i){ ins._idx=i; });
+  renderRevisionIA();
+}
+
+async function aplicarInsumosIA(){
+  if(!_coConceptoAct){ showToast('Sin concepto activo',true); return; }
+  if(!_iaInsumosGenerados.length){ showToast('No hay insumos para agregar',true); return; }
+
+  var concId = _coConceptoAct.id;
+  var errores = 0;
+
+  for(var i=0; i<_iaInsumosGenerados.length; i++){
+    var ins = _iaInsumosGenerados[i];
+    var body = {
+      concepto_id:       concId,
+      descripcion:       ins.descripcion,
+      unidad:            ins.unidad,
+      tipo:              ins.tipo,
+      cantidad:          ins.cantidad,
+      precio_unitario:   ins.precio_unitario,
+      factor_desperdicio: ins.factor_desperdicio || 1.0,
+      importe:           ins.cantidad * ins.precio_unitario * (ins.factor_desperdicio||1)
+    };
+    try {
+      await db('POST','apu_insumos', body);
+    } catch(e){ errores++; }
+  }
+
+  // Refresh
+  _coInsumoAPU = await db('GET','apu_insumos?concepto_id=eq.'+concId+'&order=tipo,created_at') || [];
+  renderAPU();
+  await recalcYGuardarPU();
+
+  closeSheet('co-ia');
+  showToast((_iaInsumosGenerados.length - errores)+' insumos agregados al APU'+(errores?' ('+errores+' errores)':''));
+  _iaInsumosGenerados = [];
+}
+
 </script>
 
   <!-- ── Configuración de empresa (para impresión) ──────────── -->
@@ -7300,6 +7525,73 @@ function imprimirAPU(){
           </div>
         </div>
         <button class="btn-primary" onclick="guardarConfigEmpresa()" style="margin-top:8px">💾 Guardar datos</button>
+      </div>
+    </div>
+  </div>
+  <!-- ── Generador de APU con IA ─────────────────────────────── -->
+  <div class="sheet-overlay" id="sheet-co-ia">
+    <div class="sheet" style="max-height:92vh;overflow-y:auto">
+      <div class="sheet-header">
+        <h3>✨ Generar desglose con IA</h3>
+        <button class="icon-btn" onclick="closeSheet('co-ia')">✕</button>
+      </div>
+      <div class="sheet-body" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+
+        <!-- Paso 1: Descripción -->
+        <div style="background:var(--surface);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">1. Describe el concepto</div>
+          <div class="field-group" style="margin-bottom:8px">
+            <label>Concepto de obra</label>
+            <textarea id="ia-concepto" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;resize:vertical" placeholder="Ej. Fabricación e instalación de estructura metálica con PTR 4x4 cal.14"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="field-group">
+              <label>Unidad</label>
+              <input id="ia-unidad" type="text" placeholder="m², kg, ml, pza..." style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px">
+            </div>
+            <div class="field-group">
+              <label>Tipo de trabajo</label>
+              <select id="ia-tipo-obra" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px">
+                <option value="estructura metalica">Estructura metálica</option>
+                <option value="concreto">Concreto / Cimentación</option>
+                <option value="mamposteria">Mampostería</option>
+                <option value="instalacion electrica">Instalación eléctrica</option>
+                <option value="instalacion hidraulica">Instalación hidráulica</option>
+                <option value="cubierta y acabados">Cubierta y acabados</option>
+                <option value="obra civil general">Obra civil general</option>
+                <option value="movimiento de tierras">Movimiento de tierras</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group" style="margin-top:8px">
+            <label>Contexto adicional <span style="font-weight:400;color:var(--dim)">(opcional)</span></label>
+            <input id="ia-contexto" type="text" placeholder="Ej. altura 8m, trabajo en intemperie, soldadura MIG" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px">
+          </div>
+        </div>
+
+        <button id="ia-generar-btn" class="btn-primary" onclick="generarAPUconIA()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);font-weight:700">✨ Generar desglose</button>
+
+        <!-- Loading -->
+        <div id="ia-loading" style="display:none;text-align:center;padding:20px;color:var(--dim)">
+          <div style="font-size:24px;animation:spin 1s linear infinite;display:inline-block">⚙️</div>
+          <div style="margin-top:8px;font-size:13px">Analizando concepto...</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px">La IA está calculando materiales, mano de obra y equipo</div>
+        </div>
+
+        <!-- Error -->
+        <div id="ia-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;color:#dc2626;font-size:13px"></div>
+
+        <!-- Resultado -->
+        <div id="ia-resultado" style="display:none">
+          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">2. Revisa y ajusta</div>
+          <div id="ia-notas" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px;font-size:12px;color:#166534;margin-bottom:8px"></div>
+          <div id="ia-tabla"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn-secondary" onclick="generarAPUconIA()" style="flex:1">↺ Regenerar</button>
+            <button class="btn-primary" onclick="aplicarInsumosIA()" style="flex:2;background:linear-gradient(135deg,#6366f1,#8b5cf6);font-weight:700">✓ Aplicar al APU</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
