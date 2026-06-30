@@ -4453,6 +4453,7 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-nueva-persona-wrap').style.display='none';
   document.getElementById('ft-nueva-razon-wrap').style.display='none';
   document.getElementById('ft-persona-info').style.display='none';
+  document.getElementById('ft-persona').parentElement.style.display='';
   populatePersonaSelect('__nueva__');   // Siempre mostrar campos de nombre para nuevo trabajador
   populateRazonSelect('');
   document.getElementById('ft-obra').innerHTML='<option value="">Sin asignar</option><option value="__todos__">🏢 Todos los proyectos (Oficina)</option>'+obrasData.map(o=>`<option value="${o.id}">${o.nombre}</option>`).join('');
@@ -4474,17 +4475,17 @@ function editTrabajador(id){
   document.getElementById('ft-ingreso').value=t.fecha_ingreso||'';
   document.getElementById('ft-rp-alta').value=t.registro_patronal||'';
   document.getElementById('ft-tarjeta-wrap').style.display=(t.forma_pago==='tarjeta'||t.forma_pago==='ambos')?'block':'none';
-  // Populate selects
-  populatePersonaSelect(t.persona_id||'');
+  // Para editar: mostrar campos de nombre con datos actuales, ocultar selector de persona
+  document.getElementById('ft-persona').parentElement.style.display='none';
+  document.getElementById('ft-persona-info').style.display='none';
+  document.getElementById('ft-nueva-persona-wrap').style.display='block';
+  document.getElementById('ft-nombre').value=t.nombre||'';
+  document.getElementById('ft-rfc-per').value=t.rfc||'';
+  document.getElementById('ft-nss').value=t.nss||'';
+  document.getElementById('ft-tel').value=t.telefono||'';
+  document.getElementById('ft-cont-emer').value=t.contacto_emergencia||'';
+  document.getElementById('ft-tel-emer').value=t.tel_emergencia||'';
   populateRazonSelect(t.razon_social_id||'');
-  // Show worker name in persona info if no catalog link
-  if(!t.persona_id){
-    document.getElementById('ft-nueva-persona-wrap').style.display='none';
-    document.getElementById('ft-persona-info').style.display='block';
-    document.getElementById('ft-persona-info-content').innerHTML=
-      '<div style="font-size:14px;font-weight:700;color:var(--accent)">'+t.nombre+'</div>'+
-      '<div class="item-sub">Sin vínculo al catálogo de personas</div>';
-  }
   // Obra
   const obraVal = t.todos_proyectos?'__todos__':(t.obra_id||'');
   document.getElementById('ft-obra').innerHTML=
