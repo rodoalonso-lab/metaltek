@@ -4451,6 +4451,7 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-tarjeta-wrap').style.display='none';
   document.getElementById('trab-delete-wrap').style.display='none';
   document.getElementById('ft-nueva-persona-wrap').style.display='none';
+  document.getElementById('ft-nueva-razon-wrap').style.display='none';
   document.getElementById('ft-persona-info').style.display='none';
   populatePersonaSelect('');
   populateRazonSelect('');
@@ -4545,9 +4546,14 @@ function onRazonChange(val){
 
 function populateRazonSelect(selectedId){
   const sel=document.getElementById('ft-razon');
+  // If no razones exist, go straight to "nueva" mode
+  const efectivoId = (!razonesData.length && !selectedId) ? '__nueva__' : selectedId;
   sel.innerHTML='<option value="">Sin especificar</option>'+
-    razonesData.map(r=>`<option value="${r.id}" ${r.id===selectedId?'selected':''}>${r.nombre}</option>`).join('')+
-    '<option value="__nueva__">➕ Nueva razón social</option>';
+    razonesData.map(r=>`<option value="${r.id}" ${r.id===efectivoId?'selected':''}>${r.nombre}</option>`).join('')+
+    `<option value="__nueva__" ${efectivoId==='__nueva__'?'selected':''}>➕ Nueva razón social</option>`;
+  sel.value = efectivoId || '';
+  // Sync the wrap visibility immediately
+  onRazonChange(sel.value);
 }
 
 function onFormaPagoChange(val){
