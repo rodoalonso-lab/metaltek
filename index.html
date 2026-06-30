@@ -4453,7 +4453,7 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-nueva-persona-wrap').style.display='none';
   document.getElementById('ft-nueva-razon-wrap').style.display='none';
   document.getElementById('ft-persona-info').style.display='none';
-  populatePersonaSelect('');
+  populatePersonaSelect('__nueva__');   // Siempre mostrar campos de nombre para nuevo trabajador
   populateRazonSelect('');
   document.getElementById('ft-obra').innerHTML='<option value="">Sin asignar</option><option value="__todos__">🏢 Todos los proyectos (Oficina)</option>'+obrasData.map(o=>`<option value="${o.id}">${o.nombre}</option>`).join('');
   openSheet('trabajador');
@@ -4529,7 +4529,8 @@ function populatePersonaSelect(selectedId){
   sel.innerHTML='<option value="">Seleccionar persona...</option>'+
     personasData.map(p=>`<option value="${p.id}" ${p.id===selectedId?'selected':''}>${p.nombre} ${p.rfc?'· '+p.rfc:''}</option>`).join('')+
     '<option value="__nueva__">➕ Nueva persona</option>';
-  if(selectedId) onPersonaChange(selectedId);
+  sel.value = selectedId || '';
+  onPersonaChange(sel.value);
 }
 
 function onRazonChange(val){
@@ -4566,7 +4567,7 @@ function _generarPIN(){
 }
 async function saveTrabajador(){
   const nom=document.getElementById('ft-nombre').value.trim();
-  if(!nom){showToast('Escribe al menos el nombre',true);return;}
+  if(!nom){showToast('Escribe el nombre completo del trabajador',true); document.getElementById('ft-nombre').focus(); return;}
   const btn=document.getElementById('trab-save-btn');
   btn.textContent='Guardando...';btn.disabled=true;
   const id=document.getElementById('ft-id').value;
