@@ -814,8 +814,16 @@
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label" for="ft-pin">PIN checador (4 dígitos)</label>
-      <input class="form-input" id="ft-pin" type="number" placeholder="1234" maxlength="4"></div>
+    <div class="form-group">
+      <label class="form-label" for="ft-pin" style="display:flex;justify-content:space-between;align-items:center">
+        PIN checador (4 dígitos) <span style="color:#ef4444;font-size:10px">* requerido para checador</span>
+      </label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" id="ft-pin" type="text" inputmode="numeric" pattern="[0-9]{4}" placeholder="1234" maxlength="4" style="letter-spacing:6px;font-size:18px;font-weight:700;width:110px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)">
+        <button type="button" onclick="_generarPIN()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--accent);white-space:nowrap">🎲 Sugerir PIN</button>
+      </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:4px">El trabajador usa este PIN para registrar su asistencia en el checador</div>
+    </div>
     <button class="btn-primary" id="trab-save-btn" onclick="saveTrabajador()" style="margin-bottom:10px" aria-label="Acción">Guardar</button>
     <button class="btn-secondary" onclick="closeSheet('trabajador')" aria-label="Acción">Cancelar</button>
     <div id="trab-delete-wrap" style="display:none;margin-top:10px"><button class="btn-danger" onclick="deleteTrabajador()">Dar de baja</button></div>
@@ -4456,7 +4464,7 @@ function editTrabajador(id){
   document.getElementById('ft-forma').value=t.forma_pago||'efectivo';
   document.getElementById('ft-banco').value=t.banco||'';
   document.getElementById('ft-tarjeta').value=t.numero_tarjeta||'';
-  document.getElementById('ft-pin').value=t.pin_checador||'';
+  document.getElementById('ft-pin').value=String(t.pin_checador||'');
   document.getElementById('ft-area').value=t.area||'campo';
   document.getElementById('ft-ingreso').value=t.fecha_ingreso||'';
   document.getElementById('ft-rp-alta').value=t.registro_patronal||'';
@@ -4530,6 +4538,10 @@ function onFormaPagoChange(val){
   document.getElementById('ft-tarjeta-wrap').style.display=(val==='tarjeta'||val==='ambos')?'block':'none';
 }
 
+function _generarPIN(){
+  var p = String(Math.floor(1000 + Math.random() * 9000));
+  document.getElementById('ft-pin').value = p;
+}
 async function saveTrabajador(){
   const nom=document.getElementById('ft-nombre').value.trim();
   if(!nom){showToast('Escribe al menos el nombre',true);return;}
@@ -4537,6 +4549,12 @@ async function saveTrabajador(){
   btn.textContent='Guardando...';btn.disabled=true;
   const id=document.getElementById('ft-id').value;
   const obraSelVal = document.getElementById('ft-obra').value;
+  const pinVal = document.getElementById('ft-pin').value.trim();
+  if(!pinVal || pinVal.length !== 4){
+    showToast('El PIN del checador debe ser exactamente 4 dígitos', true);
+    btn.textContent='Guardar'; btn.disabled=false;
+    return;
+  }
   const data={
     nombre:nom,
     puesto:document.getElementById('ft-puesto').value.trim()||null,
@@ -4549,7 +4567,7 @@ async function saveTrabajador(){
     numero_tarjeta:document.getElementById('ft-tarjeta').value.trim()||null,
     fecha_ingreso:document.getElementById('ft-ingreso').value||null,
     registro_patronal:document.getElementById('ft-rp-alta').value||null,
-    pin_checador:document.getElementById('ft-pin').value.trim()||null,
+    pin_checador: pinVal,
     area:document.getElementById('ft-area').value||'campo',
     activo:true
   };
