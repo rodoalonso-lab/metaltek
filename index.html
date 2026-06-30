@@ -3212,34 +3212,70 @@ async function autorizarReq(reqId) {
   document.getElementById('fap-tipo').value = 'contado';
   document.getElementById('fap-vencimiento-wrap').style.display = 'none';
   document.getElementById('fap-efecto').textContent = 'Contado: el monto se suma al ejercido inmediatamente.';
-  // Limpiar campo monto
   var montoInput = document.getElementById('fap-monto-cotizado');
+  var refWrap    = document.getElementById('fap-monto-ref');
+  var refVal     = document.getElementById('fap-monto-ref-val');
+  var refSinIva  = document.getElementById('fap-monto-ref-siniva');
+  var ivaWarn    = document.getElementById('fap-iva-warning');
   if(montoInput) { montoInput.value = ''; montoInput.setCustomValidity(''); }
-  // Mostrar referencia si hay cotizaciones
-  var refWrap   = document.getElementById('fap-monto-ref');
-  var refVal    = document.getElementById('fap-monto-ref-val');
-  var refSinIva = document.getElementById('fap-monto-ref-siniva');
-  var ivaWarn   = document.getElementById('fap-iva-warning');
-  if(ivaWarn) ivaWarn.style.display = 'none';
-  if(refWrap) {
-    var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
-    if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
-    // precio_unitario en comparativas = TOTAL CON IVA (así lo guarda calcCompTotal)
-    var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum ? _safeNum(c.precio_unitario) : (parseFloat(c.precio_unitario)||0)); }, 0);
-    if(montoRefConIva > 0) {
-      var ivaPct = parseFloat(document.getElementById('fap-iva-pct')?.value) || 16;
-      // Calcular subtotal real sin IVA
-      var montoRefSinIva = Math.round(montoRefConIva / (1 + ivaPct/100) * 100) / 100;
-      // Guardar el total con IVA en data-attr para validación posterior
-      if(montoInput) montoInput.dataset.refConIva = montoRefConIva.toFixed(2);
-      if(refVal)    refVal.textContent    = '$' + montoRefConIva.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
-      if(refSinIva) refSinIva.textContent = '$' + montoRefSinIva.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
-      refWrap.style.display = 'block';
-      // Pre-llenar con SUBTOTAL SIN IVA (no el total)
-      if(montoInput) { montoInput.value = montoRefSinIva.toFixed(2); calcTotalAutorizacion(); }
-    } else {
-      refWrap.style.display = 'none';
-      if(montoInput) delete montoInput.dataset.refConIva;
+  if(ivaWarn)  ivaWarn.style.display = 'none';
+  if(refWrap)  refWrap.style.display = 'none';
+
+  // Obtener cotización seleccionada (o la única disponible)
+  var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
+  if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
+
+  if(comps.length) {
+    try {
+      // Calcular desde items (misma lógica que el detalle de cotización)
+      var subtotalSinIva = 0, totalConIva = 0;
+      for(var i=0; i<comps.length; i++){
+        var items = await db('GET','comparativa_items?comparativa_id=eq.'+comps[i].id+'&order=created_at.asc') || [];
+        items.forEach(function(it){
+          var pu      = _safeNum(it.precio_unitario);
+          var cant    = _safeNum(it.cantidad,1)||1;
+          var descPct = Math.min(100,Math.max(0,_safeNum(it.descuento_pct)));
+          var ivaPct  = _safeNum(it.iva_pct,16);
+          var sub     = pu*cant*(1-descPct/100);
+          subtotalSinIva += isFinite(sub) ? sub : 0;
+          var tot = sub*(1+ivaPct/100);
+          totalConIva += isFinite(tot) ? tot : 0;
+        });
+      }
+      subtotalSinIva = Math.round(subtotalSinIva*100)/100;
+      totalConIva    = Math.round(totalConIva*100)/100;
+
+      if(subtotalSinIva > 0 || totalConIva > 0){
+        if(refSinIva) refSinIva.textContent = '$' + subtotalSinIva.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(refVal)    refVal.textContent    = '$' + totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(refWrap)   refWrap.style.display = 'block';
+        // Pre-llenar con SUBTOTAL SIN IVA exacto de los items
+        if(montoInput){
+          montoInput.value = subtotalSinIva.toFixed(2);
+          montoInput.dataset.refConIva = totalConIva.toFixed(2);
+          // Ajustar selector de IVA al porcentaje implícito
+          var ivaPctImplicito = subtotalSinIva>0 ? Math.round((totalConIva/subtotalSinIva-1)*100) : 16;
+          var ivaSelect = document.getElementById('fap-iva-pct');
+          if(ivaSelect){
+            // Seleccionar la opción más cercana
+            var opts = Array.from(ivaSelect.options).map(function(o){return parseFloat(o.value)||0;});
+            var best = opts.reduce(function(a,b){return Math.abs(b-ivaPctImplicito)<Math.abs(a-ivaPctImplicito)?b:a;});
+            ivaSelect.value = best;
+          }
+          calcTotalAutorizacion();
+        }
+      }
+    } catch(e){
+      // fallback: usar precio_unitario del header si falla la consulta de items
+      var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum?_safeNum(c.precio_unitario):(parseFloat(c.precio_unitario)||0)); },0);
+      if(montoRefConIva>0){
+        var ivaPct = parseFloat(document.getElementById('fap-iva-pct')?.value)||16;
+        var sinIva = Math.round(montoRefConIva/(1+ivaPct/100)*100)/100;
+        if(refSinIva) refSinIva.textContent='$'+sinIva.toLocaleString('es-MX',{minimumFractionDigits:2});
+        if(refVal)    refVal.textContent='$'+montoRefConIva.toLocaleString('es-MX',{minimumFractionDigits:2});
+        if(refWrap)   refWrap.style.display='block';
+        if(montoInput){ montoInput.value=sinIva.toFixed(2); montoInput.dataset.refConIva=montoRefConIva.toFixed(2); calcTotalAutorizacion(); }
+      }
     }
   }
   openSheet('autorizar-pago');
