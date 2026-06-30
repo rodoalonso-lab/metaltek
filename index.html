@@ -779,7 +779,7 @@
         </select>
       </div>
       <div class="form-group"><label class="form-label" for="ft-razon">Razón Social</label>
-      <select class="form-input" id="ft-razon">
+      <select class="form-input" id="ft-razon" onchange="onRazonChange(this.value)">
           <option value="">Sin especificar</option>
         </select>
       </div>
@@ -4527,6 +4527,18 @@ function populatePersonaSelect(selectedId){
   if(selectedId) onPersonaChange(selectedId);
 }
 
+function onRazonChange(val){
+  const wrap = document.getElementById('ft-nueva-razon-wrap');
+  if(val==='__nueva__'){
+    wrap.style.display='block';
+    document.getElementById('ft-nueva-razon-nombre').value='';
+    document.getElementById('ft-nueva-razon-rfc').value='';
+    setTimeout(function(){ document.getElementById('ft-nueva-razon-nombre').focus(); }, 100);
+  } else {
+    wrap.style.display='none';
+  }
+}
+
 function populateRazonSelect(selectedId){
   const sel=document.getElementById('ft-razon');
   sel.innerHTML='<option value="">Sin especificar</option>'+
@@ -4555,8 +4567,21 @@ async function saveTrabajador(){
     btn.textContent='Guardar'; btn.disabled=false;
     return;
   }
+  // ── Razón social: crear si es nueva ────────────────────────────
+  let razonId = document.getElementById('ft-razon').value;
+  if(razonId === '__nueva__'){
+    const rNom = document.getElementById('ft-nueva-razon-nombre').value.trim();
+    if(!rNom){ showToast('Escribe el nombre de la razón social', true); btn.textContent='Guardar'; btn.disabled=false; return; }
+    try{
+      const rfc = document.getElementById('ft-nueva-razon-rfc').value.trim().toUpperCase()||null;
+      const nuevaRazon = await db('POST','razones_sociales',{nombre:rNom, rfc:rfc});
+      razonId = nuevaRazon && nuevaRazon[0] ? nuevaRazon[0].id : null;
+      razonesData.push({id:razonId, nombre:rNom, rfc:rfc});
+    }catch(e){ showToast('Error al crear razón social: '+e.message,true); btn.textContent='Guardar'; btn.disabled=false; return; }
+  }
   const data={
     nombre:nom,
+    razon_social_id: (razonId && razonId!=='__nueva__') ? razonId : null,
     puesto:document.getElementById('ft-puesto').value.trim()||null,
     telefono:document.getElementById('ft-tel')?.value?.trim()||null,
     obra_id: (obraSelVal==='__todos__'||obraSelVal==='') ? null : obraSelVal,
