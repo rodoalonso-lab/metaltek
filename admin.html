@@ -205,6 +205,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Space 
 .empty-title{font-size:16px;font-weight:600;margin-bottom:6px;color:var(--text2)}
 .empty-sub{font-size:13px}
 .loading{text-align:center;padding:40px;color:var(--dim);font-size:14px}
+
+body.tema-claro {
+  --bg:         #F4F6FB;
+  --surface:    #FFFFFF;
+  --card:       #FFFFFF;
+  --card2:      #EEF2FA;
+  --border:     #DDE3EE;
+  --border2:    #C8D2E6;
+  --accent:     #008C6E;
+  --accent-dim: rgba(0,140,110,.1);
+  --accent2:    #1565C0;
+  --accent2-dim:rgba(21,101,192,.1);
+  --warn:       #D4820A;
+  --danger:     #C0392B;
+  --success:    #007A5E;
+  --purple:     #6B3FA0;
+  --text:       #1A2540;
+  --text2:      #4A5A78;
+  --dim:        #7A8BA8;
+  --dim2:       #B0BDD4;
+}
+/* ── TOGGLE DE TEMA ── */
+.theme-toggle{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;transition:background .2s,border-color .2s}
+.theme-toggle:hover{border-color:var(--accent)}
+.theme-track{width:30px;height:16px;border-radius:8px;background:var(--border2,var(--border));position:relative;transition:background .25s}
+body.tema-claro .theme-track{background:var(--accent)}
+.theme-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s}
+body.tema-claro .theme-thumb{left:16px}
+.theme-icon{font-size:14px;color:var(--dim);transition:color .2s}
+body.tema-claro .theme-icon-sol{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -241,6 +271,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Space 
     <div class="topbar-right">
       <span id="topbar-name" style="font-size:13px;color:var(--text2)"></span>
       <a href="https://rodoalonso-lab.github.io/metaltek/" style="display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:12px;font-family:'Space Grotesk',sans-serif;cursor:pointer;text-decoration:none;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">🔩 MetalTek</a>
+      <div class="theme-toggle" onclick="toggleTema()" title="Cambiar tema"><span class="theme-icon theme-icon-luna">🌙</span><div class="theme-track"><div class="theme-thumb"></div></div><span class="theme-icon theme-icon-sol">☀️</span></div>
       <button class="btn-logout" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -1555,6 +1586,10 @@ function closeSheetOnBg(e, sheetId) {
     await loadUsuarios();
   } catch(e) { localStorage.removeItem('adm-session'); }
 })();
+
+function toggleTema(){var c=document.body.classList.toggle('tema-claro');localStorage.setItem('proc_tema',c?'claro':'oscuro');}
+function aplicarTemaGuardado(){if(localStorage.getItem('proc_tema')==='claro')document.body.classList.add('tema-claro');}
+aplicarTemaGuardado();
 </script>
 </body>
 </html>
