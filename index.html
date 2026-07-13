@@ -2016,7 +2016,7 @@ let _recepFotosMtk = [];
 let currentMatTab = 'inventario';
 
 async function loadMateriales() {
-  _reqFiltros = { obra: '', solicitante: '', estado: '', tipo: '' };
+  // _reqFiltros se conserva entre recargas para no perder el filtro activo
   try {
     materialesData = await db('GET','materiales?order=categoria,nombre') || [];
   } catch(e) { materialesData=[]; showToast('Error cargando materiales: '+e.message,true); }
