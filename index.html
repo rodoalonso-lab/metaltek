@@ -2328,7 +2328,7 @@ function renderComparativas() {
         '</div>'+
         '<div style="display:flex;gap:8px">'+
           '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
-          (comps.some(c=>c.seleccionado) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
+          ((comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
         '</div>'+
       '</div>';
     });
@@ -2411,9 +2411,9 @@ async function showRequisicion(id) {
 
   if(_est==='pendiente'||_est==='en comparativa'||_est==='autorizada') {
     html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">`;
-    if((_est==='pendiente'||_est==='en comparativa')&&comps.some(c=>c.seleccionado))
+    if((_est==='pendiente'||_est==='en comparativa')&&comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director'))
       html+=`<button class="btn-success" onclick="autorizarReq('${id}')">✓ Autorizar compra</button>`;
-    if(_est==='pendiente'||_est==='en comparativa')
+    if((_est==='pendiente'||_est==='en comparativa')&&(currentUser.rol==='admin'||currentUser.rol==='director'))
       html+=`<button class="btn-danger" onclick="rechazarReq('${id}')">✗ Rechazar</button>`;
     html+=`</div>`;
   }
@@ -3238,6 +3238,9 @@ async function selectComparativa(compId,reqId) {
   } catch(e){showToast('Error',true);}
 }
 async function autorizarReq(reqId) {
+  if(currentUser.rol!=='admin' && currentUser.rol!=='director') {
+    showToast('Sin permiso para autorizar', true); return;
+  }
   window._autorizarReqId = reqId;
   document.getElementById('fap-tipo').value = 'contado';
   document.getElementById('fap-vencimiento-wrap').style.display = 'none';
@@ -3334,6 +3337,9 @@ function calcTotalAutorizacion() {
 }
 
 async function confirmarAutorizacion() {
+  if(currentUser.rol!=='admin' && currentUser.rol!=='director') {
+    showToast('Sin permiso para autorizar', true); return;
+  }
   var id = window._autorizarReqId;
   if(!id) return;
   var tipoPago   = document.getElementById('fap-tipo').value;
@@ -3386,6 +3392,9 @@ function toggleVencimiento(val) {
     : 'Contado: el monto se suma al ejercido inmediatamente.';
 }
 async function rechazarReq(reqId) {
+  if(currentUser.rol!=='admin' && currentUser.rol!=='director') {
+    showToast('Sin permiso para rechazar', true); return;
+  }
   if(!confirm('¿Rechazar esta requisición?'))return;
   try {
     await db('PATCH',`requisiciones?id=eq.${reqId}`,{estado:'rechazada'});
