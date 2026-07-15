@@ -2159,7 +2159,6 @@ function toggleInvObra(id) {
 var _reqFiltros = { obra: '', solicitante: '', estado: '', tipo: '' };
 
 function imprimirReqsMetaltek() {
-  // Apply same filters as renderRequisiciones
   let reqs = requisicionesData.filter(r=>{
     if(_reqFiltros.tipo && (r.tipo||'campo') !== _reqFiltros.tipo) return false;
     if(_reqFiltros.obra && r.obra_id !== _reqFiltros.obra) return false;
@@ -2167,68 +2166,57 @@ function imprimirReqsMetaltek() {
     if(_reqFiltros.solicitante && (r.solicitante||r.solicitante_nombre||'') !== _reqFiltros.solicitante) return false;
     return true;
   });
-
-  // Filtro description
   var filtros = [];
-  if(_reqFiltros.tipo)        filtros.push(_reqFiltros.tipo==='campo'?'🏗 Campo':'🔧 Taller');
+  if(_reqFiltros.tipo)        filtros.push(_reqFiltros.tipo==='campo'?'Campo':'Taller');
   if(_reqFiltros.obra)        { var o=obrasData.find(x=>x.id===_reqFiltros.obra); if(o) filtros.push('Obra: '+o.nombre); }
   if(_reqFiltros.estado)      filtros.push('Estado: '+_reqFiltros.estado.charAt(0).toUpperCase()+_reqFiltros.estado.slice(1));
   if(_reqFiltros.solicitante) filtros.push('Gestión: '+_reqFiltros.solicitante);
   var filtroStr = filtros.length ? filtros.join(' · ') : 'Todas las requisiciones';
-
+  var fmtM = function(n){ return n!=null&&n!=='' ? '$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2}) : '—'; };
+  var fmtD = function(d){ if(!d) return '—'; var p=(d+'').substring(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
   var estColor = {pendiente:'#F0A500','en comparativa':'#3B82F6',autorizada:'#10B981',comprada:'#8B5CF6',recibida:'#14B8A6',rechazada:'#EF4444'};
-  var fmtM = function(n){ return n!=null ? '$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2}) : '—'; };
-  var fmtD = function(d){ if(!d) return '—'; var p=d.substring?d.substring(0,10):d; var parts=p.split('-'); return parts[2]+'/'+parts[1]+'/'+parts[0]; };
-
   var rows = reqs.map(function(r){
-    var obra = (obrasData.find(function(o){ return o.id===r.obra_id; })||{}).nombre||'—';
+    var obra = (obrasData.find(function(o){return o.id===r.obra_id;})||{}).nombre||'—';
     var sol  = r.solicitante||r.solicitante_nombre||'—';
     var est  = (r.estado||'pendiente').toLowerCase();
     var col  = estColor[est]||'#888';
     var monto = fmtM(r.monto_cotizado||r.monto_estimado||null);
     var fecha = fmtD(r.fecha_requerida||r.created_at);
-    var folio = r.folio||('REQ-'+String(r.created_at||'').substring(0,4)+'-???');
-    return '<tr style="border-bottom:1px solid #e5e7eb">'
-      +'<td style="padding:7px 10px;font-weight:700;white-space:nowrap">'+folio+'</td>'
-      +'<td style="padding:7px 10px">'+obra+'</td>'
-      +'<td style="padding:7px 10px">'+sol+'</td>'
-      +'<td style="padding:7px 10px;text-transform:capitalize">'+est+'</td>'
-      +'<td style="padding:7px 10px"><span style="background:'+col+'22;color:'+col+';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">'+est.charAt(0).toUpperCase()+est.slice(1)+'</span></td>'
-      +'<td style="padding:7px 10px;text-align:right;font-weight:600">'+monto+'</td>'
-      +'<td style="padding:7px 10px;color:#888;font-size:11px">'+fecha+'</td>'
-      +'</tr>';
+    return '<tr><td>'+( r.folio||'—')+'</td><td>'+obra+'</td><td>'+sol+'</td>'
+      +'<td style="text-transform:capitalize">'+(r.tipo||'campo')+'</td>'
+      +'<td><span style="background:'+col+'22;color:'+col+';border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700">'+est.charAt(0).toUpperCase()+est.slice(1)+'</span></td>'
+      +'<td style="text-align:right">'+monto+'</td><td>'+fecha+'</td></tr>';
   }).join('');
-
-  var doc = '<div style="font-family:Barlow,sans-serif;color:#111">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">'
-    +'<div>'
-    +'<div style="font-size:22px;font-weight:900;color:#0A1628">PROCEPAL</div>'
-    +'<div style="font-size:15px;font-weight:700;margin-top:2px">Reporte de Requisiciones · Materiales</div>'
-    +'<div style="font-size:11px;color:#888;margin-top:4px">'+filtroStr+'</div>'
+  var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  var d = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Requisiciones</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Barlow,Arial,sans-serif;font-size:12px;color:#111;padding:28px 32px}'
+    +'h1{font-size:20px;font-weight:900;color:#0A1628}'
+    +'h2{font-size:13px;font-weight:600;margin-top:2px}'
+    +'.meta{font-size:10px;color:#888;margin-top:3px}'
+    +'table{width:100%;border-collapse:collapse;margin-top:18px}'
+    +'thead tr{background:#0A1628;color:#fff}'
+    +'th{padding:7px 10px;text-align:left;font-size:11px}'
+    +'td{padding:6px 10px;border-bottom:1px solid #e5e7eb}'
+    +'tr:nth-child(even) td{background:#f9fafb}'
+    +'thead{display:table-header-group}'
+    +'tr{page-break-inside:avoid}'
+    +'@page{margin:.8cm;size:letter landscape}'
+    +'@media print{body{padding:0}}'
+    +'</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+    +'<div><h1>PROCEPAL</h1><h2>Reporte de Requisiciones · Materiales</h2><p class="meta">'+filtroStr+'</p></div>'
+    +'<div style="text-align:right"><p class="meta">'+fecha+'</p><p style="font-weight:700;font-size:13px;margin-top:3px">'+reqs.length+' requisicion'+(reqs.length!==1?'es':'')+'</p></div>'
     +'</div>'
-    +'<div style="text-align:right;font-size:11px;color:#888">'
-    +'<div>Fecha: '+new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"short",year:"numeric"})+'</div>'
-    +'<div style="margin-top:4px;font-weight:700;font-size:13px">'+reqs.length+' requisicion'+(reqs.length!==1?'es':'')+'</div>'
-    +'</div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<thead><tr style="background:#0A1628;color:#fff">'
-    +'<th style="padding:8px 10px;text-align:left">Folio</th>'
-    +'<th style="padding:8px 10px;text-align:left">Obra</th>'
-    +'<th style="padding:8px 10px;text-align:left">Gestión</th>'
-    +'<th style="padding:8px 10px;text-align:left">Tipo</th>'
-    +'<th style="padding:8px 10px;text-align:left">Estado</th>'
-    +'<th style="padding:8px 10px;text-align:right">Monto</th>'
-    +'<th style="padding:8px 10px;text-align:left">Fecha</th>'
-    +'</tr></thead>'
-    +'<tbody>'+rows+'</tbody>'
-    +'</table>'
-    +(reqs.length===0?'<div style="text-align:center;padding:40px;color:#888">Sin requisiciones con los filtros seleccionados</div>':'')
-    +'</div>';
-
-  document.getElementById('pdf-doc').innerHTML = doc;
-  document.getElementById('pdf-preview-overlay').classList.add('open');
+    +'<table><thead><tr><th>Folio</th><th>Obra</th><th>Gestión</th><th>Tipo</th><th>Estado</th><th style="text-align:right">Monto</th><th>Fecha</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +(reqs.length===0?'<p style="text-align:center;padding:40px;color:#888">Sin requisiciones</p>':'')
+    +'</body></html>';
+  var w = window.open('','_blank','width=940,height=780');
+  w.document.write(d); w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 400);
 }
-
 function renderRequisiciones() {
   // Build filter options
   const obras = [...new Map(obrasData.map(o=>[o.id,o])).values()];
