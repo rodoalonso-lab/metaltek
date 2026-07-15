@@ -149,9 +149,12 @@
 
   @media print {
     body > * { display:none !important; }
-    #pdf-preview-overlay { display:block !important; position:static !important; background:none !important; padding:0 !important; overflow:visible !important; }
+    #pdf-preview-overlay { display:block !important; position:static !important; background:none !important; padding:0 !important; overflow:visible !important; height:auto !important; }
     .pdf-close-bar { display:none !important; }
-    #pdf-doc { box-shadow:none !important; border-radius:0 !important; max-width:100% !important; padding:20px 28px !important; }
+    #pdf-doc { box-shadow:none !important; border-radius:0 !important; max-width:100% !important; padding:20px 28px !important; overflow:visible !important; height:auto !important; }
+    #pdf-doc table { width:100%; border-collapse:collapse; page-break-inside:auto; }
+    #pdf-doc tr { page-break-inside:avoid; page-break-after:auto; }
+    #pdf-doc thead { display:table-header-group; }
   }
 
 body.tema-claro {
