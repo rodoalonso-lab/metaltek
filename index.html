@@ -234,7 +234,7 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
     <div id="obras-list-view">
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;margin-bottom:4px;padding-right:96px">
         <div class="page-title" style="padding:0">Obras</div>
-        <button class="add-btn" onclick="openSheet('obra')">+ Nueva</button>
+        <button class="add-btn" onclick="_OBRA_PARTIDAS.forEach(function(p){var el=document.getElementById('fp-'+p);if(el)el.value=''});var st=document.getElementById('partidas-suma-status');if(st)st.innerHTML='';document.getElementById('f-nombre').value='';document.getElementById('f-presupuesto').value='';document.getElementById('f-gastado').value='';document.getElementById('f-avance').value=0;document.getElementById('avance-label').textContent=0;document.getElementById('obra-edit-id').value='';document.getElementById('obra-sheet-title').textContent='Nueva Obra';document.getElementById('obra-delete-wrap').style.display='none';openSheet('obra')">+ Nueva</button>
       </div>
       <div class="page-sub" id="obras-count">Cargando...</div>
       <div id="obras-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
@@ -1254,10 +1254,45 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <input class="form-input" id="f-entrega" type="date"></div>
     </div>
     <div class="form-row" style="margin-top:14px">
-      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-presupuesto">Presupuesto ($)</label>
-      <input class="form-input" id="f-presupuesto" type="number" placeholder="0"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-presupuesto">Presupuesto total ($)</label>
+      <input class="form-input" id="f-presupuesto" type="number" placeholder="0" oninput="actualizarSumaPartidas()"></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label" for="f-gastado">Gastado ($)</label>
       <input class="form-input" id="f-gastado" type="number" placeholder="0"></div>
+    </div>
+    <div class="form-group" style="margin-top:14px">
+      <label class="form-label">Desglose por partida presupuestal</label>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Asigna el presupuesto a cada partida para controlar el gasto por rubro</div>
+      <div class="form-row" style="gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🧱 Materiales</div>
+          <input class="form-input" id="fp-MATERIAL" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">👷 Mano de Obra</div>
+          <input class="form-input" id="fp-MANO_DE_OBRA" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+      </div>
+      <div class="form-row" style="gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">⚙️ Equipo</div>
+          <input class="form-input" id="fp-EQUIPO" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🤝 Subcontrato</div>
+          <input class="form-input" id="fp-SUBCONTRATO" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+      </div>
+      <div class="form-row" style="gap:8px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📋 Indirectos</div>
+          <input class="form-input" id="fp-INDIRECTO" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📦 Otros</div>
+          <input class="form-input" id="fp-OTRO" type="number" placeholder="0" min="0" style="padding:7px 10px" oninput="actualizarSumaPartidas()">
+        </div>
+      </div>
+      <div id="partidas-suma-status" style="font-size:12px;margin-top:4px;min-height:18px"></div>
     </div>
     <div class="form-group" style="margin-top:14px"><label class="form-label" for="f-estado">Estado</label>
       <select class="form-input" id="f-estado">
@@ -1925,6 +1960,32 @@ async function asignarTDesdeObra(obraId) {
   showObra(obraId);
 }
 
+
+// ── PRESUPUESTO PARTIDAS ─────────────────────────────────────────────
+var _OBRA_PARTIDAS = ['MATERIAL','MANO_DE_OBRA','EQUIPO','SUBCONTRATO','INDIRECTO','OTRO'];
+function actualizarSumaPartidas() {
+  var suma = _OBRA_PARTIDAS.reduce(function(s,p){
+    return s + (parseFloat(document.getElementById('fp-'+p)?.value)||0);
+  }, 0);
+  var total = parseFloat(document.getElementById('f-presupuesto')?.value)||0;
+  var el = document.getElementById('partidas-suma-status');
+  if(!el) return;
+  var fmt = function(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0}); };
+  if(total===0 && suma===0){ el.innerHTML=''; return; }
+  if(total===0){ el.innerHTML='Total desglosado: '+fmt(suma); el.style.color='var(--text-muted)'; return; }
+  var diff = total - suma;
+  if(Math.abs(diff)<1){
+    el.innerHTML='✅ '+fmt(suma)+' — desglose completo';
+    el.style.color='var(--success,#10B981)';
+  } else if(diff>0){
+    el.innerHTML='⚠️ Falta asignar '+fmt(diff)+'  (desglosado: '+fmt(suma)+')';
+    el.style.color='var(--warning,#F59E0B)';
+  } else {
+    el.innerHTML='❌ Excede el presupuesto por '+fmt(-diff);
+    el.style.color='var(--danger)';
+  }
+}
+
 function editObra(id) {
   const o = obrasData.find(x=>x.id===id);
   if(!o) return;
@@ -1946,6 +2007,17 @@ function editObra(id) {
   document.getElementById('f-avance').value=o.avance||0;
   document.getElementById('avance-label').textContent=o.avance||0;
   document.getElementById('obra-delete-wrap').style.display='block';
+  // Limpiar y cargar desglose de partidas
+  var _PARTS = ['MATERIAL','MANO_DE_OBRA','EQUIPO','SUBCONTRATO','INDIRECTO','OTRO'];
+  _PARTS.forEach(function(p){ var el=document.getElementById('fp-'+p); if(el) el.value=''; });
+  document.getElementById('partidas-suma-status').textContent='';
+  db('GET','presupuesto_partidas?obra_id=eq.'+id+'&select=partida,monto').then(function(rows){
+    (rows||[]).forEach(function(r){
+      var el = document.getElementById('fp-'+r.partida);
+      if(el) el.value = r.monto||'';
+    });
+    actualizarSumaPartidas();
+  }).catch(function(){});
   openSheet('obra');
 }
 
@@ -1960,8 +2032,26 @@ async function saveObra() {
   const payload = { nombre, cliente:clienteNombre, tipo:tipoNombre, ubicacion:document.getElementById('f-ubicacion').value.trim(), inicio:document.getElementById('f-inicio').value||null, entrega:document.getElementById('f-entrega').value||null, presupuesto:parseFloat(document.getElementById('f-presupuesto').value)||0, gastado:parseFloat(document.getElementById('f-gastado').value)||0, estado:document.getElementById('f-estado').value, avance:parseInt(document.getElementById('f-avance').value)||0 };
   const editId=document.getElementById('obra-edit-id').value;
   try {
-    if(editId) { await db('PATCH',`obras?id=eq.${editId}`,payload); showToast('✅ Obra actualizada'); }
-    else { await db('POST','obras',payload); showToast('✅ Obra creada'); }
+    let obraId;
+    if(editId) {
+      await db('PATCH',`obras?id=eq.${editId}`,payload);
+      obraId = editId;
+      showToast('✅ Obra actualizada');
+    } else {
+      const [nueva] = await db('POST','obras',payload);
+      obraId = nueva.id;
+      showToast('✅ Obra creada');
+    }
+    // Guardar desglose de partidas
+    var _PARTS = ['MATERIAL','MANO_DE_OBRA','EQUIPO','SUBCONTRATO','INDIRECTO','OTRO'];
+    await db('DELETE','presupuesto_partidas?obra_id=eq.'+obraId);
+    var partRows = _PARTS.map(function(p){
+      var val = parseFloat(document.getElementById('fp-'+p)?.value)||0;
+      return val>0 ? {obra_id:obraId,partida:p,monto:val} : null;
+    }).filter(Boolean);
+    if(partRows.length) {
+      for(var row of partRows) await db('POST','presupuesto_partidas',row);
+    }
     closeSheet('obra'); document.getElementById('obra-edit-id').value=''; document.getElementById('obra-sheet-title').textContent='Nueva Obra'; document.getElementById('obra-delete-wrap').style.display='none';
     await loadObras(); hideObra();
   } catch(e) { showToast('Error al guardar',true); }
@@ -3430,6 +3520,32 @@ async function confirmarAutorizacion() {
   var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
   var ivaMonto = Math.round(subtotal * ivaPct / 100 * 100) / 100;
   var totalConIva = Math.round((subtotal + ivaMonto) * 100) / 100;
+  // ── Validación presupuestal ────────────────────────────────────
+  var req = (requisicionesData||[]).find(function(r){ return r.id===id; });
+  if(req && req.obra_id && req.partida && req.partida !== 'SIN_PARTIDA') {
+    try {
+      var ppRows = await db('GET','presupuesto_partidas?obra_id=eq.'+req.obra_id+'&partida=eq.'+req.partida+'&select=monto') || [];
+      var presupPartida = ppRows.length ? (parseFloat(ppRows[0].monto)||0) : 0;
+      if(presupPartida > 0) {
+        var cxpRows = await db('GET','cuentas_por_pagar?obra_id=eq.'+req.obra_id+'&partida=eq.'+req.partida+'&select=monto,pagado_parcial') || [];
+        var yaComprometido = cxpRows.reduce(function(s,c){ return s+(parseFloat(c.monto)||0); }, 0);
+        var nuevoTotal = yaComprometido + totalConIva;
+        if(nuevoTotal > presupPartida) {
+          var fmt = function(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0}); };
+          var sobrante = nuevoTotal - presupPartida;
+          var msg = '⚠️ ALERTA PRESUPUESTAL\n\n'
+            + 'Partida: '+req.partida.replace('_',' ')+'\n'
+            + 'Presupuesto: '+fmt(presupPartida)+'\n'
+            + 'Ya comprometido: '+fmt(yaComprometido)+'\n'
+            + 'Esta req: '+fmt(totalConIva)+'\n'
+            + 'Excede en: '+fmt(sobrante)+'\n\n'
+            + '¿Autorizar de todas formas?';
+          if(!confirm(msg)) return;
+        }
+      }
+    } catch(e){ console.warn('Budget check error:', e); }
+  }
+  // ── Fin validación ───────────────────────────────────────────
   var btn = document.getElementById('fap-save-btn');
   btn.textContent='Autorizando...'; btn.disabled=true;
   try {
