@@ -3447,11 +3447,13 @@ async function autorizarReq(reqId) {
   if(ivaWarn)  ivaWarn.style.display = 'none';
   if(refWrap)  refWrap.style.display = 'none';
 
-  // Obtener cotización seleccionada (o la única disponible)
-  var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
-  if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
+  // Obtener cotización seleccionada — siempre fetch fresco de BD
+  var freshComps = [];
+  try { freshComps = await db('GET','comparativas?requisicion_id=eq.'+reqId+'&order=created_at.asc') || []; } catch(e){}
+  var comps = freshComps.filter(function(c){ return c.seleccionado; });
+  if(!comps.length) comps = freshComps;
 
-  // Resolver proveedor: de comparativa seleccionada → primer comp → req directa
+  // Resolver proveedor: comparativa seleccionada → primer comp → campo directo del req
   var reqObj = (requisicionesData||[]).find(function(r){ return r.id===reqId; });
   var proveedorResuelto = (comps.length ? comps[0].proveedor : null) || (reqObj && reqObj.proveedor) || '';
   if(!proveedorResuelto || !proveedorResuelto.trim()) {
