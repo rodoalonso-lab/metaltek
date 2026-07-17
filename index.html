@@ -3703,6 +3703,20 @@ async function confirmarAutorizacion() {
     if(reqFull && !reqFull.cxp_id) {
       var obra = (obrasData||[]).find(function(o){ return o.id===(reqFull.obra_id); });
       var urgToPriv = {alta:'ALTA', media:'MEDIA', baja:'BAJA'};
+      // Normalizar gestion: buscar nombre canónico en user_profiles
+      var gestionRaw = reqFull.solicitante || reqFull.solicitante_nombre || '';
+      var gestionNorm = gestionRaw.toUpperCase().trim();
+      try {
+        var profiles = await db('GET','user_profiles?select=nombre') || [];
+        var match = profiles.find(function(p){
+          var pNorm = (p.nombre||'').toUpperCase().trim();
+          // Exacto
+          if(pNorm === gestionNorm) return true;
+          // Todos los tokens del perfil aparecen en el texto recibido
+          return pNorm.split(' ').filter(Boolean).every(function(w){ return gestionNorm.indexOf(w) !== -1; });
+        });
+        if(match) gestionNorm = match.nombre.toUpperCase().trim();
+      } catch(e){}
       var cxpPayload = {
         proveedor:         window._autorizarProveedor || '',
         obra_id:           reqFull.obra_id   || null,
@@ -3714,7 +3728,7 @@ async function confirmarAutorizacion() {
         estatus:           'PENDIENTE',
         prioridad:         urgToPriv[reqFull.urgencia] || 'MEDIA',
         fecha_vencimiento: tipoPago === 'credito' ? (vencimiento || null) : (reqFull.fecha_requerida || null),
-        gestion:           reqFull.solicitante || reqFull.solicitante_nombre || null,
+        gestion:           gestionNorm || null,
         created_by:        currentUser ? currentUser.nombre : null
       };
       var cxpRows = await db('POST','cuentas_por_pagar', cxpPayload);
