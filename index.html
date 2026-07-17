@@ -3605,15 +3605,17 @@ async function autorizarReq(reqId) {
         }
       }
     } catch(e){
-      // fallback por excepción: usar precio_unitario del header
+      // fallback por excepción: usar precio_unitario del header (tratado como total con IVA)
       var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum(c.precio_unitario)||0); },0);
       if(montoRefConIva>0){
-        var ivaPct = parseFloat(document.getElementById('fap-iva-pct')?.value)||16;
-        var sinIva = Math.round(montoRefConIva/(1+ivaPct/100)*100)/100;
-        if(refSinIva) refSinIva.textContent='$'+sinIva.toLocaleString('es-MX',{minimumFractionDigits:2});
-        if(refVal)    refVal.textContent='$'+montoRefConIva.toLocaleString('es-MX',{minimumFractionDigits:2});
+        var ivaPctCatch = reqObj ? (_safeNum(reqObj.iva_pct,16)||16) : 16;
+        var ivaSelectCatch = document.getElementById('fap-iva-pct');
+        if(ivaSelectCatch) ivaSelectCatch.value = String(ivaPctCatch);
+        var sinIvaCatch = Math.round(montoRefConIva/(1+ivaPctCatch/100)*100)/100;
+        if(refSinIva) refSinIva.textContent='$'+sinIvaCatch.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(refVal)    refVal.textContent='$'+montoRefConIva.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
         if(refWrap)   refWrap.style.display='block';
-        if(montoInput){ montoInput.value=sinIva.toFixed(2); montoInput.dataset.refConIva=montoRefConIva.toFixed(2); calcTotalAutorizacion(); }
+        if(montoInput){ montoInput.value=sinIvaCatch.toFixed(2); montoInput.dataset.refConIva=montoRefConIva.toFixed(2); calcTotalAutorizacion(); }
       }
     }
   } else if(reqObj && parseFloat(reqObj.monto_cotizado||0) > 0) {
