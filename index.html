@@ -3580,23 +3580,39 @@ async function autorizarReq(reqId) {
     }
   } else if(reqObj && parseFloat(reqObj.monto_cotizado||0) > 0) {
     // Req cotizada directamente desde requisiciones.html (sin comparativas en tabla)
-    var montoCot  = Math.round(parseFloat(reqObj.monto_cotizado||0)*100)/100;
-    var ivaPctReq = parseFloat(reqObj.iva_pct||0);
-    var ivaMontoReq = Math.round(parseFloat(reqObj.iva_cotizado||0)*100)/100;
-    var totalReq  = Math.round(parseFloat(reqObj.monto_total_con_iva||0)*100)/100;
+    var ivaCotizadoDB    = parseFloat(reqObj.iva_cotizado||0);
+    var totalConIvaPadDB = parseFloat(reqObj.monto_total_con_iva||0);
+
+    // ¿Los campos de IVA están calculados (flujo nuevo con saveCotizacion corregido)?
+    var ivaDesglosado = (ivaCotizadoDB > 0 || totalConIvaPadDB > 0);
+
+    var montoCot, totalRef, ivaPctReq;
+    if(ivaDesglosado) {
+      // Datos completos: monto_cotizado = subtotal sin IVA
+      montoCot  = Math.round(parseFloat(reqObj.monto_cotizado||0)*100)/100;
+      totalRef  = Math.round(totalConIvaPadDB*100)/100;
+      ivaPctReq = parseFloat(reqObj.iva_pct||0);
+    } else {
+      // Datos legacy: monto_cotizado = total (sin desglose guardado)
+      // Tratar como monto total a 0% IVA (el usuario lo ajustará si aplica)
+      montoCot  = Math.round(parseFloat(reqObj.monto_cotizado||0)*100)/100;
+      totalRef  = montoCot;
+      ivaPctReq = 0; // ← no confiar en iva_pct del DB (puede ser default 16)
+    }
+
     // Mostrar referencia
     if(refSinIva) refSinIva.textContent = '$' + montoCot.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
-    if(refVal)    refVal.textContent    = '$' + (totalReq||montoCot).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(refVal)    refVal.textContent    = '$' + totalRef.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
     if(refWrap)   refWrap.style.display = 'block';
     // Pre-llenar monto y seleccionar IVA
     if(montoInput){
       montoInput.value = montoCot.toFixed(2);
-      montoInput.dataset.refConIva = (totalReq||montoCot).toFixed(2);
+      montoInput.dataset.refConIva = totalRef.toFixed(2);
     }
     var ivaSelect = document.getElementById('fap-iva-pct');
-    if(ivaSelect && ivaPctReq >= 0){
+    if(ivaSelect){
       ivaSelect.value = ivaPctReq;
-      if(!ivaSelect.value) ivaSelect.value = 0; // fallback exento
+      if(ivaSelect.value === '' || ivaSelect.value === null) ivaSelect.value = 0;
     }
     calcTotalAutorizacion();
   }
