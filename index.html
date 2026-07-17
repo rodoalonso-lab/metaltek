@@ -2524,7 +2524,7 @@ function renderComparativas() {
         (((r.estado||'').toLowerCase()!=='autorizada'&&(r.estado||'').toLowerCase()!=='comprada'&&(r.estado||'').toLowerCase()!=='recibida') ?
         '<div style="display:flex;gap:8px">'+
           '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
-          ((comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
+          (((comps.some(c=>c.seleccionado)||(r.proveedor&&(r.estado||'').toLowerCase()==='cotizada'))&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
         '</div>' : '')+
       '</div>';
     });
@@ -2599,14 +2599,14 @@ async function showRequisicion(id) {
         }
         return btns ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${btns}</div>` : '';
       })||'<div class="item-sub">Sin cotizaciones aún</div>'}
-      ${(_est==='pendiente'||_est==='en comparativa')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
+      ${(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
     </div>`;
 
-  if(_est==='pendiente'||_est==='en comparativa'||_est==='autorizada') {
+  if(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada'||_est==='autorizada') {
     html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">`;
-    if((_est==='pendiente'||_est==='en comparativa')&&comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director'))
+    if((_est==='pendiente'||_est==='en comparativa'||_est==='cotizada')&&(comps.some(c=>c.seleccionado)||r.proveedor)&&(currentUser.rol==='admin'||currentUser.rol==='director'))
       html+=`<button class="btn-success" onclick="autorizarReq('${id}')">✓ Autorizar compra</button>`;
-    if((_est==='pendiente'||_est==='en comparativa')&&(currentUser.rol==='admin'||currentUser.rol==='director'))
+    if((_est==='pendiente'||_est==='en comparativa'||_est==='cotizada')&&(currentUser.rol==='admin'||currentUser.rol==='director'))
       html+=`<button class="btn-danger" onclick="rechazarReq('${id}')">✗ Rechazar</button>`;
     html+=`</div>`;
   }
