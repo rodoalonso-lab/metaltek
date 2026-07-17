@@ -2519,15 +2519,15 @@ function renderComparativas() {
     </select>
     <select style="${selStyle}${F.obra?selActivo:''}" onchange="window._compFiltros.obra=this.value;renderComparativas()">
       <option value="">Obra</option>
-      ${obras_opts.map(o=>`<option value="${escHtml(o)}"${F.obra===o?' selected':''}>${escHtml(o)}</option>`).join('')}
+      ${obras_opts.map(o=>`<option value="${_esc(o)}"${F.obra===o?' selected':''}>${_esc(o)}</option>`).join('')}
     </select>
     <select style="${selStyle}${F.solicitante?selActivo:''}" onchange="window._compFiltros.solicitante=this.value;renderComparativas()">
       <option value="">Solicitante</option>
-      ${solic_opts.map(s=>`<option value="${escHtml(s)}"${F.solicitante===s?' selected':''}>${escHtml(s)}</option>`).join('')}
+      ${solic_opts.map(s=>`<option value="${_esc(s)}"${F.solicitante===s?' selected':''}>${_esc(s)}</option>`).join('')}
     </select>
     <select style="${selStyle}${F.partida?selActivo:''}" onchange="window._compFiltros.partida=this.value;renderComparativas()">
       <option value="">Partida</option>
-      ${partida_opts.map(p=>`<option value="${escHtml(p)}"${F.partida===p?' selected':''}>${escHtml(p)}</option>`).join('')}
+      ${partida_opts.map(p=>`<option value="${_esc(p)}"${F.partida===p?' selected':''}>${_esc(p)}</option>`).join('')}
     </select>
     ${hayFiltros?`<button onclick="window._compFiltros={estado:'',obra:'',solicitante:'',partida:''};renderComparativas()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--dim);cursor:pointer;font-family:Barlow,sans-serif">✕ Limpiar</button>`:''}
     <span style="margin-left:auto;font-size:11px;color:var(--dim)">${pendientes.length} de ${todos.length} requisición${todos.length!==1?'es':''}</span>
