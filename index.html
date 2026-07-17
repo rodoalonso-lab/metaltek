@@ -1665,23 +1665,29 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 
 // ═══════════════════════════════════════════════════════════
 // FUNCIÓN COMPARTIDA — mantener idéntica en metalek.html Y requisiciones.html
-// Renderiza sección de cotización/comparativas (solo display, sin botones de acción)
+// Renderiza sección de cotización/comparativas.
+// actionFn(c) → string HTML opcional; se agrega dentro de cada tarjeta de comparativa.
 // ═══════════════════════════════════════════════════════════
-function renderCotizacionCard(r, comps) {
+function renderCotizacionCard(r, comps, actionFn) {
   var monto = parseFloat(r.monto_cotizado||0);
-  var _esc = function(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; };
+  var _esc = typeof escHtml==='function' ? escHtml : function(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; };
   if(comps.length > 0) {
     var html = '';
     comps.forEach(function(c) {
       var esGanador = c.seleccionado;
       var borde = esGanador ? '2px solid #10B981' : '1px solid var(--border)';
       var bg = esGanador ? 'rgba(16,185,129,.08)' : 'var(--surface)';
+      var accion = actionFn ? (actionFn(c)||'') : '';
       html += '<div style="border:'+borde+';background:'+bg+';border-radius:10px;padding:12px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+      html += '<div style="flex:1">';
       html += '<div style="font-size:13px;font-weight:700">'+(esGanador?'✅ ':'')+_esc(c.proveedor||'—')+'</div>';
       html += '<div style="font-size:20px;font-weight:800;color:var(--accent);margin:2px 0">$'+parseFloat(c.precio_unitario||0).toLocaleString('es-MX',{minimumFractionDigits:2})+'</div>';
       if(c.tiempo_entrega) html += '<div class="item-sub">⏱ '+_esc(c.tiempo_entrega)+'</div>';
       if(c.notas) html += '<div class="item-sub">'+_esc(c.notas)+'</div>';
       html += '</div>';
+      if(accion) html += accion;
+      html += '</div></div>';
     });
     return html;
   } else if(r.proveedor || monto > 0) {
