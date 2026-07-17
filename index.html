@@ -3600,6 +3600,7 @@ async function confirmarAutorizacion() {
   try {
     await db('PATCH','requisiciones?id=eq.'+id,{
       estado:              'autorizada',
+      proveedor:           window._autorizarProveedor || '',
       monto_cotizado:      subtotal,       // siempre sin IVA
       iva_pct:             ivaPct,
       iva_cotizado:        ivaMonto,
