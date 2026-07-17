@@ -3551,25 +3551,36 @@ async function autorizarReq(reqId) {
         if(refSinIva) refSinIva.textContent = '$' + subtotalSinIva.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
         if(refVal)    refVal.textContent    = '$' + totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
         if(refWrap)   refWrap.style.display = 'block';
-        // Pre-llenar con SUBTOTAL SIN IVA exacto de los items
         if(montoInput){
           montoInput.value = subtotalSinIva.toFixed(2);
           montoInput.dataset.refConIva = totalConIva.toFixed(2);
-          // Ajustar selector de IVA al porcentaje implícito
           var ivaPctImplicito = subtotalSinIva>0 ? Math.round((totalConIva/subtotalSinIva-1)*100) : 16;
           var ivaSelect = document.getElementById('fap-iva-pct');
           if(ivaSelect){
-            // Seleccionar la opción más cercana
             var opts = Array.from(ivaSelect.options).map(function(o){return parseFloat(o.value)||0;});
             var best = opts.reduce(function(a,b){return Math.abs(b-ivaPctImplicito)<Math.abs(a-ivaPctImplicito)?b:a;});
             ivaSelect.value = best;
           }
           calcTotalAutorizacion();
         }
+      } else {
+        // comparativa_items vacíos — usar precio_unitario del header de la comparativa
+        // (precio_unitario = total que el proveedor cotizó, puede incluir IVA)
+        var montoHeaderTotal = comps.reduce(function(s,c){ return s+(_safeNum(c.precio_unitario)||0); },0);
+        if(montoHeaderTotal > 0) {
+          // Asumir el IVA estándar actual del selector y derivar subtotal
+          var ivaSelEl = document.getElementById('fap-iva-pct');
+          var ivaPctHdr = parseFloat(ivaSelEl ? ivaSelEl.value : 16)||16;
+          var sinIvaHdr = Math.round(montoHeaderTotal/(1+ivaPctHdr/100)*100)/100;
+          if(refSinIva) refSinIva.textContent='$'+sinIvaHdr.toLocaleString('es-MX',{minimumFractionDigits:2});
+          if(refVal)    refVal.textContent='$'+montoHeaderTotal.toLocaleString('es-MX',{minimumFractionDigits:2});
+          if(refWrap)   refWrap.style.display='block';
+          if(montoInput){ montoInput.value=sinIvaHdr.toFixed(2); montoInput.dataset.refConIva=montoHeaderTotal.toFixed(2); calcTotalAutorizacion(); }
+        }
       }
     } catch(e){
-      // fallback: usar precio_unitario del header si falla la consulta de items
-      var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum?_safeNum(c.precio_unitario):(parseFloat(c.precio_unitario)||0)); },0);
+      // fallback por excepción: usar precio_unitario del header
+      var montoRefConIva = comps.reduce(function(s,c){ return s+(_safeNum(c.precio_unitario)||0); },0);
       if(montoRefConIva>0){
         var ivaPct = parseFloat(document.getElementById('fap-iva-pct')?.value)||16;
         var sinIva = Math.round(montoRefConIva/(1+ivaPct/100)*100)/100;
