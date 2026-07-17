@@ -3451,6 +3451,15 @@ async function autorizarReq(reqId) {
   var comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId && c.seleccionado; });
   if(!comps.length) comps = (comparativasData||[]).filter(function(c){ return c.requisicion_id===reqId; });
 
+  // Resolver proveedor: de comparativa seleccionada → primer comp → req directa
+  var reqObj = (requisicionesData||[]).find(function(r){ return r.id===reqId; });
+  var proveedorResuelto = (comps.length ? comps[0].proveedor : null) || (reqObj && reqObj.proveedor) || '';
+  if(!proveedorResuelto || !proveedorResuelto.trim()) {
+    showToast('❌ No se puede autorizar sin proveedor. Agrega una cotización primero.', true);
+    return;
+  }
+  window._autorizarProveedor = proveedorResuelto;
+
   if(comps.length) {
     try {
       // Calcular desde items (misma lógica que el detalle de cotización)
