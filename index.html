@@ -2659,7 +2659,7 @@ async function showRequisicion(id) {
         }
         return btns ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${btns}</div>` : '';
       })||'<div class="item-sub">Sin cotizaciones aún</div>'}
-      ${(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
+      ${(_est==='pendiente'||_est==='en comparativa')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
     </div>`;
 
   if(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada'||_est==='autorizada') {
