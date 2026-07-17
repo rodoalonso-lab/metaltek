@@ -2563,8 +2563,14 @@ async function showRequisicion(id) {
           <button onclick="editarCotiz('${c.id}')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Editar</button>
           <button onclick="eliminarCotiz('${c.id}','${id}')" style="background:#EF444422;border:1px solid #EF444444;color:#EF4444;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer" aria-label="Eliminar">🗑</button>
         </div>
-      </div>`).join(''):`<div class="item-sub" style="margin-bottom:10px">Sin cotizaciones aún</div>`}
-      <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>
+      </div>`).join('') : (r.proveedor||parseFloat(r.monto_cotizado||0)>0 ?
+        `<div class="comp-card selected" style="margin-bottom:10px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px">✅ ${r.proveedor||'Proveedor no registrado'}</div>
+          <div style="font-size:22px;font-weight:800;color:var(--accent);margin-bottom:4px">${fmt(r.monto_cotizado)}</div>
+          <div class="item-sub">Cotización directa (sin comparativa)</div>
+        </div>` :
+        `<div class="item-sub" style="margin-bottom:10px">Sin cotizaciones aún</div>`)}
+      ${(_est==='pendiente'||_est==='en comparativa')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
     </div>`;
 
   if(_est==='pendiente'||_est==='en comparativa'||_est==='autorizada') {
