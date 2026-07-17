@@ -2483,10 +2483,60 @@ async function toggleCompDetalle(compId, btnEl) {
 }
 
 function renderComparativas() {
-  const pendientes = requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'||e==='cotizada'||e==='autorizada'; });
-  let html=`<div class="item-sub" style="margin-bottom:12px">${comparativasData.length} cotizaciones registradas</div>`;
+  // ── Inicializar filtros si no existen ──
+  if(!window._compFiltros) window._compFiltros = {estado:'', obra:'', solicitante:'', partida:''};
+  const F = window._compFiltros;
+
+  // ── Universo base ──
+  var todos = requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'||e==='cotizada'||e==='autorizada'; });
+
+  // ── Opciones únicas para cada dropdown (del universo base) ──
+  var obras_opts      = [...new Set(todos.map(r=>{ var o=obrasData.find(x=>x.id===r.obra_id); return o?o.nombre:''; }).filter(Boolean))].sort();
+  var solic_opts      = [...new Set(todos.map(r=>r.solicitante||r.solicitante_nombre||'').filter(Boolean))].sort();
+  var partida_opts    = [...new Set(todos.map(r=>r.partida||'').filter(Boolean))].sort();
+  var estado_opts     = ['pendiente','en comparativa','cotizada','autorizada'];
+
+  // ── Aplicar filtros ──
+  var pendientes = todos.filter(r=>{
+    var e=(r.estado||'').toLowerCase();
+    if(F.estado && e!==F.estado) return false;
+    if(F.obra){ var o=obrasData.find(x=>x.id===r.obra_id); if(!o||o.nombre!==F.obra) return false; }
+    if(F.solicitante){ var s=(r.solicitante||r.solicitante_nombre||''); if(s!==F.solicitante) return false; }
+    if(F.partida && (r.partida||'')!==F.partida) return false;
+    return true;
+  });
+
+  var hayFiltros = F.estado||F.obra||F.solicitante||F.partida;
+  var selStyle = 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);font-family:Barlow,sans-serif;cursor:pointer;min-width:110px;';
+  var selActivo = 'border-color:var(--accent);color:var(--accent);';
+
+  // ── Barra de filtros ──
+  var filterBar = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+    <span style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-right:4px">Filtrar</span>
+    <select style="${selStyle}${F.estado?selActivo:''}" onchange="window._compFiltros.estado=this.value;renderComparativas()">
+      <option value="">Estado</option>
+      ${estado_opts.map(e=>`<option value="${e}"${F.estado===e?' selected':''}>${e.charAt(0).toUpperCase()+e.slice(1)}</option>`).join('')}
+    </select>
+    <select style="${selStyle}${F.obra?selActivo:''}" onchange="window._compFiltros.obra=this.value;renderComparativas()">
+      <option value="">Obra</option>
+      ${obras_opts.map(o=>`<option value="${escHtml(o)}"${F.obra===o?' selected':''}>${escHtml(o)}</option>`).join('')}
+    </select>
+    <select style="${selStyle}${F.solicitante?selActivo:''}" onchange="window._compFiltros.solicitante=this.value;renderComparativas()">
+      <option value="">Solicitante</option>
+      ${solic_opts.map(s=>`<option value="${escHtml(s)}"${F.solicitante===s?' selected':''}>${escHtml(s)}</option>`).join('')}
+    </select>
+    <select style="${selStyle}${F.partida?selActivo:''}" onchange="window._compFiltros.partida=this.value;renderComparativas()">
+      <option value="">Partida</option>
+      ${partida_opts.map(p=>`<option value="${escHtml(p)}"${F.partida===p?' selected':''}>${escHtml(p)}</option>`).join('')}
+    </select>
+    ${hayFiltros?`<button onclick="window._compFiltros={estado:'',obra:'',solicitante:'',partida:''};renderComparativas()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--dim);cursor:pointer;font-family:Barlow,sans-serif">✕ Limpiar</button>`:''}
+    <span style="margin-left:auto;font-size:11px;color:var(--dim)">${pendientes.length} de ${todos.length} requisición${todos.length!==1?'es':''}</span>
+  </div>`;
+
+  let html = filterBar;
+
   if(!pendientes.length) {
-    html+=`<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Sin requisiciones pendientes</div><div class="empty-sub">Las requisiciones aprobadas aparecerán aquí para cotizar</div></div>`;
+    html+=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">${hayFiltros?'Sin resultados':'Sin requisiciones pendientes'}</div><div class="empty-sub">${hayFiltros?'Prueba cambiando los filtros':'Las requisiciones aprobadas aparecerán aquí para cotizar'}</div></div>`;
   } else {
     html+=`<div class="section-title">Requisiciones activas</div>`;
     pendientes.forEach(r=>{
