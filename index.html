@@ -2483,7 +2483,7 @@ async function toggleCompDetalle(compId, btnEl) {
 }
 
 function renderComparativas() {
-  const pendientes = requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'||e==='autorizada'; });
+  const pendientes = requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'||e==='cotizada'||e==='autorizada'; });
   let html=`<div class="item-sub" style="margin-bottom:12px">${comparativasData.length} cotizaciones registradas</div>`;
   if(!pendientes.length) {
     html+=`<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Sin requisiciones pendientes</div><div class="empty-sub">Las requisiciones aprobadas aparecerán aquí para cotizar</div></div>`;
