@@ -3575,17 +3575,33 @@ async function autorizarReq(reqId) {
         }
       } else {
         // comparativa_items vacíos — usar precio_unitario del header de la comparativa
-        // (precio_unitario = total que el proveedor cotizó, puede incluir IVA)
+        // precio_unitario en el header = total CON IVA cotizado por el proveedor
         var montoHeaderTotal = comps.reduce(function(s,c){ return s+(_safeNum(c.precio_unitario)||0); },0);
         if(montoHeaderTotal > 0) {
-          // Asumir el IVA estándar actual del selector y derivar subtotal
-          var ivaSelEl = document.getElementById('fap-iva-pct');
-          var ivaPctHdr = parseFloat(ivaSelEl ? ivaSelEl.value : 16)||16;
-          var sinIvaHdr = Math.round(montoHeaderTotal/(1+ivaPctHdr/100)*100)/100;
-          if(refSinIva) refSinIva.textContent='$'+sinIvaHdr.toLocaleString('es-MX',{minimumFractionDigits:2});
-          if(refVal)    refVal.textContent='$'+montoHeaderTotal.toLocaleString('es-MX',{minimumFractionDigits:2});
+          // Usar iva_pct del req como referencia; si no está disponible, usar 16%
+          var ivaPctFromReq = reqObj ? (_safeNum(reqObj.iva_pct,16)||16) : 16;
+          var ivaSelectEl = document.getElementById('fap-iva-pct');
+          if(ivaSelectEl) ivaSelectEl.value = String(ivaPctFromReq);
+          var sinIvaHdr = Math.round(montoHeaderTotal/(1+ivaPctFromReq/100)*100)/100;
+          if(refSinIva) refSinIva.textContent='$'+sinIvaHdr.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+          if(refVal)    refVal.textContent='$'+montoHeaderTotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
           if(refWrap)   refWrap.style.display='block';
           if(montoInput){ montoInput.value=sinIvaHdr.toFixed(2); montoInput.dataset.refConIva=montoHeaderTotal.toFixed(2); calcTotalAutorizacion(); }
+        } else {
+          // último fallback: usar monto_cotizado del req si existe
+          var montoReqFallback = reqObj ? _safeNum(reqObj.monto_cotizado) : 0;
+          if(montoReqFallback > 0) {
+            var totalReqFb = reqObj && _safeNum(reqObj.monto_total_con_iva) > 0
+              ? _safeNum(reqObj.monto_total_con_iva) : montoReqFallback;
+            var ivaPctFb = reqObj && _safeNum(reqObj.iva_pct) > 0 ? _safeNum(reqObj.iva_pct) : 0;
+            var sinIvaFb = totalReqFb > montoReqFallback ? montoReqFallback : Math.round(totalReqFb/(1+ivaPctFb/100)*100)/100;
+            var ivaSelectEl2 = document.getElementById('fap-iva-pct');
+            if(ivaSelectEl2) ivaSelectEl2.value = String(ivaPctFb);
+            if(refSinIva) refSinIva.textContent='$'+sinIvaFb.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+            if(refVal)    refVal.textContent='$'+totalReqFb.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+            if(refWrap)   refWrap.style.display='block';
+            if(montoInput){ montoInput.value=sinIvaFb.toFixed(2); montoInput.dataset.refConIva=totalReqFb.toFixed(2); calcTotalAutorizacion(); }
+          }
         }
       }
     } catch(e){
