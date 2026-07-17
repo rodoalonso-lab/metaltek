@@ -3632,10 +3632,11 @@ function calcTotalAutorizacion() {
   if(ivaEl) ivaEl.textContent = '$' + ivaMonto.toLocaleString('es-MX', {minimumFractionDigits:2});
   if(totEl) totEl.textContent = '$' + total.toLocaleString('es-MX', {minimumFractionDigits:2});
   // Advertir si el monto ingresado coincide con el total con IVA de la cotización
+  // (solo aplica cuando IVA > 0%; con 0% es correcto que subtotal = total)
   var ivaWarn = document.getElementById('fap-iva-warning');
   if(ivaWarn && input && input.dataset.refConIva) {
     var refConIva = parseFloat(input.dataset.refConIva) || 0;
-    var pareceTotal = refConIva > 0 && Math.abs(subtotal - refConIva) < 1;
+    var pareceTotal = ivaPct > 0 && refConIva > 0 && Math.abs(subtotal - refConIva) < 1;
     ivaWarn.style.display = pareceTotal ? '' : 'none';
     if(input) input.style.borderColor = pareceTotal ? '#EF4444' : '';
   }
