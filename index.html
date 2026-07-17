@@ -2558,7 +2558,7 @@ function renderComparativas() {
                 (c.tiempo_entrega?'<div class="item-sub">⏱ '+c.tiempo_entrega+'</div>':'')+
                 (c.notas?'<div class="item-sub">📝 '+c.notas+'</div>':'')+
               '</div>'+
-              (c.seleccionado ? badge('✓ Seleccionado','#10B981') : '<button class="edit-btn" onclick="selectComparativa(\''+ c.id +'\',\''+ r.id +'\')">Seleccionar</button>')+
+              (c.seleccionado ? badge('✓ Seleccionado','#10B981') : (['autorizada','comprada','recibida'].includes((r.estado||'').toLowerCase()) ? '' : '<button class="edit-btn" onclick="selectComparativa(\''+ c.id +'\',\''+ r.id +'\')">Seleccionar</button>'))+
             '</div>'+
             '<button onclick="toggleCompDetalle(\''+ c.id +'\',this)" '+
               'style="width:100%;background:none;border:1px dashed var(--border);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--dim);cursor:pointer;font-family:Barlow,sans-serif;text-align:left">'+
