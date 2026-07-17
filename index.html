@@ -1669,7 +1669,8 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 // actionFn(c) → string HTML opcional; se agrega dentro de cada tarjeta de comparativa.
 // ═══════════════════════════════════════════════════════════
 function renderCotizacionCard(r, comps, actionFn) {
-  var monto = parseFloat(r.monto_cotizado||0);
+  // Mostrar total con IVA si está disponible; si no, monto_cotizado (legacy o 0% IVA)
+  var monto = parseFloat(r.monto_total_con_iva||0) > 0 ? parseFloat(r.monto_total_con_iva) : parseFloat(r.monto_cotizado||0);
   var _esc = typeof escHtml==='function' ? escHtml : function(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; };
   if(comps.length > 0) {
     var html = '';
