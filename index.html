@@ -3518,6 +3518,27 @@ async function autorizarReq(reqId) {
         if(montoInput){ montoInput.value=sinIva.toFixed(2); montoInput.dataset.refConIva=montoRefConIva.toFixed(2); calcTotalAutorizacion(); }
       }
     }
+  } else if(reqObj && parseFloat(reqObj.monto_cotizado||0) > 0) {
+    // Req cotizada directamente desde requisiciones.html (sin comparativas en tabla)
+    var montoCot  = Math.round(parseFloat(reqObj.monto_cotizado||0)*100)/100;
+    var ivaPctReq = parseFloat(reqObj.iva_pct||0);
+    var ivaMontoReq = Math.round(parseFloat(reqObj.iva_cotizado||0)*100)/100;
+    var totalReq  = Math.round(parseFloat(reqObj.monto_total_con_iva||0)*100)/100;
+    // Mostrar referencia
+    if(refSinIva) refSinIva.textContent = '$' + montoCot.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(refVal)    refVal.textContent    = '$' + (totalReq||montoCot).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(refWrap)   refWrap.style.display = 'block';
+    // Pre-llenar monto y seleccionar IVA
+    if(montoInput){
+      montoInput.value = montoCot.toFixed(2);
+      montoInput.dataset.refConIva = (totalReq||montoCot).toFixed(2);
+    }
+    var ivaSelect = document.getElementById('fap-iva-pct');
+    if(ivaSelect && ivaPctReq >= 0){
+      ivaSelect.value = ivaPctReq;
+      if(!ivaSelect.value) ivaSelect.value = 0; // fallback exento
+    }
+    calcTotalAutorizacion();
   }
   openSheet('autorizar-pago');
 }
