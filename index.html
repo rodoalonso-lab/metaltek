@@ -3604,15 +3604,49 @@ async function confirmarAutorizacion() {
   var btn = document.getElementById('fap-save-btn');
   btn.textContent='Autorizando...'; btn.disabled=true;
   try {
+    // Fetch fresco del req para tener obra_id, partida, cxp_id, etc.
+    var reqRows = await db('GET','requisiciones?id=eq.'+id+'&select=*');
+    var reqFull = reqRows && reqRows[0];
+
+    // 1) Actualizar estado + monto + proveedor en requisición
     await db('PATCH','requisiciones?id=eq.'+id,{
       estado:              'autorizada',
       proveedor:           window._autorizarProveedor || '',
-      monto_cotizado:      subtotal,       // siempre sin IVA
+      monto_cotizado:      subtotal,
       iva_pct:             ivaPct,
       iva_cotizado:        ivaMonto,
       monto_total_con_iva: totalConIva
     });
-    showToast('✅ Compra autorizada · Total con IVA: $'+totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2}));
+
+    // 2) Crear CxP si aún no existe
+    if(reqFull && !reqFull.cxp_id) {
+      var obra = (obrasData||[]).find(function(o){ return o.id===(reqFull.obra_id); });
+      var urgToPriv = {alta:'ALTA', media:'MEDIA', baja:'BAJA'};
+      var cxpPayload = {
+        proveedor:         window._autorizarProveedor || '',
+        obra_id:           reqFull.obra_id   || null,
+        obra_nombre:       obra ? obra.nombre : null,
+        concepto:          (reqFull.notas || reqFull.folio || '').toString().substring(0,200),
+        monto:             totalConIva,
+        partida:           reqFull.partida || 'MATERIAL',
+        requisicion_id:    id,
+        estatus:           'PENDIENTE',
+        prioridad:         urgToPriv[reqFull.urgencia] || 'MEDIA',
+        fecha_vencimiento: tipoPago === 'credito' ? (vencimiento || null) : (reqFull.fecha_requerida || null),
+        gestion:           reqFull.solicitante || reqFull.solicitante_nombre || null,
+        created_by:        currentUser ? currentUser.nombre : null
+      };
+      var cxpRows = await db('POST','cuentas_por_pagar', cxpPayload);
+      var cxpId   = cxpRows && cxpRows[0] && cxpRows[0].id;
+      var cxpFolio = cxpRows && cxpRows[0] && cxpRows[0].folio;
+      if(cxpId) {
+        await db('PATCH','requisiciones?id=eq.'+id, {cxp_id: cxpId});
+      }
+      showToast('✅ Compra autorizada · CxP '+(cxpFolio||'generada')+' · Total: $'+totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2}));
+    } else {
+      showToast('✅ Compra autorizada · Total con IVA: $'+totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2}));
+    }
+
     closeSheet('autorizar-pago');
     await loadMateriales();
     hideMatDetail();
