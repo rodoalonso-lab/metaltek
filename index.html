@@ -2571,11 +2571,21 @@ function renderComparativas() {
             '<div style="font-size:18px;font-weight:800;color:var(--accent)">'+fmt(r.monto_cotizado)+'</div>'+
           '</div>' : ''))+
         '</div>'+
-        (((r.estado||'').toLowerCase()!=='autorizada'&&(r.estado||'').toLowerCase()!=='comprada'&&(r.estado||'').toLowerCase()!=='recibida') ?
-        '<div style="display:flex;gap:8px">'+
-          '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
-          (((comps.some(c=>c.seleccionado)||(r.proveedor&&(r.estado||'').toLowerCase()==='cotizada'))&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
-        '</div>' : '')+
+        (()=>{
+          var _e=(r.estado||'').toLowerCase();
+          if(_e==='autorizada'||_e==='comprada'||_e==='recibida') return '';
+          // cotizada: solo Autorizar (proveedor+monto ya definidos)
+          if(_e==='cotizada') {
+            return (currentUser.rol==='admin'||currentUser.rol==='director')
+              ? '<div style="display:flex;gap:8px"><button class="btn-success" style="font-size:12px;padding:8px;width:100%" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button></div>'
+              : '';
+          }
+          // pendiente / en comparativa: + Cotización y Autorizar si hay seleccionado
+          return '<div style="display:flex;gap:8px">'+
+            '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
+            ((comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
+          '</div>';
+        })()+
       '</div>';
     });
   }
