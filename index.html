@@ -3504,9 +3504,19 @@ async function autorizarReq(reqId) {
   var refVal     = document.getElementById('fap-monto-ref-val');
   var refSinIva  = document.getElementById('fap-monto-ref-siniva');
   var ivaWarn    = document.getElementById('fap-iva-warning');
-  if(montoInput) { montoInput.value = ''; montoInput.setCustomValidity(''); }
+  if(montoInput) { montoInput.value = ''; montoInput.setCustomValidity(''); montoInput.style.borderColor = ''; }
   if(ivaWarn)  ivaWarn.style.display = 'none';
   if(refWrap)  refWrap.style.display = 'none';
+  // Resetear también el bloque de IVA/Total para evitar mostrar datos de una req previa
+  var totalWrapReset = document.getElementById('fap-total-wrap');
+  if(totalWrapReset) totalWrapReset.style.display = 'none';
+  var ivaMontoReset = document.getElementById('fap-iva-monto');
+  if(ivaMontoReset) ivaMontoReset.textContent = '$0.00';
+  var totalMontoReset = document.getElementById('fap-total-monto');
+  if(totalMontoReset) totalMontoReset.textContent = '$0.00';
+  // Resetear selector de IVA a 16% por defecto
+  var ivaSelectReset = document.getElementById('fap-iva-pct');
+  if(ivaSelectReset) ivaSelectReset.value = '16';
 
   // Obtener cotización seleccionada — siempre fetch fresco de BD
   var freshComps = [];
