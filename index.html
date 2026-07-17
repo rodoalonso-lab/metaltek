@@ -2460,7 +2460,7 @@ function renderComparativas() {
           reqBadge(r.estado)+
         '</div>'+
         '<div style="margin-bottom:10px">'+
-        comps.map(c=>{
+        (comps.length > 0 ? comps.map(c=>{
           return '<div class="comp-card'+(c.seleccionado?' selected':'')+'" style="margin-bottom:8px">'+
             '<div class="row" style="margin-bottom:4px">'+
               '<span style="font-weight:700;font-size:13px">'+c.proveedor+'</span>'+
@@ -2477,12 +2477,17 @@ function renderComparativas() {
             '</button>'+
             '<div id="comp-detalle-'+ c.id +'" style="display:none;margin-top:8px;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)"></div>'+
           '</div>';
-        }).join('')+
+        }).join('') : (r.proveedor || parseFloat(r.monto_cotizado||0)>0 ?
+          '<div class="comp-card selected" style="margin-bottom:8px">'+
+            '<div style="font-weight:700;font-size:13px;margin-bottom:2px">✅ '+(r.proveedor||'Proveedor no registrado')+'</div>'+
+            '<div style="font-size:18px;font-weight:800;color:var(--accent)">'+fmt(r.monto_cotizado)+'</div>'+
+          '</div>' : ''))+
         '</div>'+
+        (((r.estado||'').toLowerCase()!=='autorizada'&&(r.estado||'').toLowerCase()!=='comprada'&&(r.estado||'').toLowerCase()!=='recibida') ?
         '<div style="display:flex;gap:8px">'+
           '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
           ((comps.some(c=>c.seleccionado)&&(currentUser.rol==='admin'||currentUser.rol==='director')) ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
-        '</div>'+
+        '</div>' : '')+
       '</div>';
     });
   }
