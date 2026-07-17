@@ -3450,6 +3450,10 @@ async function autorizarReq(reqId) {
   // Obtener cotización seleccionada — siempre fetch fresco de BD
   var freshComps = [];
   try { freshComps = await db('GET','comparativas?requisicion_id=eq.'+reqId+'&order=created_at.asc') || []; } catch(e){}
+  // Actualizar cache global con los datos frescos de este req
+  if(freshComps.length) {
+    comparativasData = (comparativasData||[]).filter(function(c){ return c.requisicion_id!==reqId; }).concat(freshComps);
+  }
   var comps = freshComps.filter(function(c){ return c.seleccionado; });
   if(!comps.length) comps = freshComps;
 
