@@ -2587,14 +2587,18 @@ async function showRequisicion(id) {
           +'<div style="font-size:13px;font-weight:800;color:var(--accent)">'+rec.cantidad_recibida+' uds</div></div>';
       }).join('')+'</div>' : ''}
     <div class="card"><div class="card-label">COMPARATIVA DE PRECIOS</div>
-      ${renderCotizacionCard(r, comps, (_est==='pendiente'||_est==='en comparativa') ? function(c) {
-        if(c.seleccionado) return '';
-        var btns = `<button onclick="seleccionarCotiz('${c.id}','${id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #10B981;background:rgba(16,185,129,.1);color:#10B981;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Sel.</button>`;
-        btns += `<button onclick="generarPDFCotizacion('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #3B82F644;background:#3B82F622;color:#3B82F6;font-size:11px;cursor:pointer">📄</button>`;
-        btns += `<button onclick="editarCotiz('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;cursor:pointer">✏️</button>`;
-        btns += `<button onclick="eliminarCotiz('${c.id}','${id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #EF444444;background:#EF444422;color:#EF4444;font-size:11px;cursor:pointer">🗑</button>`;
-        return `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${btns}</div>`;
-      } : null)||'<div class="item-sub">Sin cotizaciones aún</div>'}
+      ${renderCotizacionCard(r, comps, function(c) {
+        var btns = '';
+        if(_est==='pendiente'||_est==='en comparativa') {
+          if(!c.seleccionado) btns += `<button onclick="seleccionarCotiz('${c.id}','${id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #10B981;background:rgba(16,185,129,.1);color:#10B981;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Sel.</button>`;
+          btns += `<button onclick="generarPDFCotizacion('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #3B82F644;background:#3B82F622;color:#3B82F6;font-size:11px;cursor:pointer">📄</button>`;
+          btns += `<button onclick="editarCotiz('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;cursor:pointer">✏️</button>`;
+          btns += `<button onclick="eliminarCotiz('${c.id}','${id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #EF444444;background:#EF444422;color:#EF4444;font-size:11px;cursor:pointer">🗑</button>`;
+        } else {
+          btns += `<button onclick="generarPDFCotizacion('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #3B82F644;background:#3B82F622;color:#3B82F6;font-size:11px;cursor:pointer">📄 PDF</button>`;
+        }
+        return btns ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${btns}</div>` : '';
+      })||'<div class="item-sub">Sin cotizaciones aún</div>'}
       ${(_est==='pendiente'||_est==='en comparativa')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
     </div>`;
 
