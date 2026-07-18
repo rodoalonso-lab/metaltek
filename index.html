@@ -8409,6 +8409,7 @@ aplicarTemaGuardado();
       return _msgBubble(m,m.usuario===_myName,m.usuario===_myName?'Tú':'Admin');
     }).join('');
     el.scrollTop=el.scrollHeight;
+    _markRead('para=eq.'+encodeURIComponent(_myName),function(m){return m.para===_myName;});
   }
 
   // ── ENVIAR ─────────────────────────────────────────────
