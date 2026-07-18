@@ -8390,6 +8390,7 @@ aplicarTemaGuardado();
     el.innerHTML=hdr+msgs.map(function(m){return _msgBubble(m,_isAdminMsg(m),_isAdminMsg(m)?'Tú':m.usuario);}).join('');
     el.scrollTop=el.scrollHeight;
     setTimeout(function(){var i=document.getElementById('chat-input');if(i)i.focus();},100);
+    _markRead('usuario=eq.'+encodeURIComponent(person)+'&para=is.null',function(m){return m.usuario===person&&!m.para;});
   }
 
   window._chatConv=function(p){_selUser=p;_renderConv(p);};
