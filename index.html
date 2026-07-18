@@ -8247,125 +8247,166 @@ aplicarTemaGuardado();
   </div>
 </div>
 
+<style>
+.chat-conv-item{
+  padding:10px;border-radius:10px;cursor:pointer;
+  background:var(--bg);border:1px solid var(--border);margin-bottom:6px;
+  transition:background .15s;
+}
+.chat-conv-item:hover{background:rgba(77,142,255,.1);border-color:var(--accent);}
+</style>
 <script>
 (function(){
   var CHAT_APP = 'metalek';
-  var _chatOpen = false;
-  var _chatLastTs = null;  // ISO timestamp del último mensaje visto
-  var _chatUnread = 0;
-  var _chatPollInterval = null;
-  var _chatAllMsgs = [];
+  var _open=false, _lastTs=null, _unread=0, _poll=null, _msgs=[], _selUser=null, _isAdmin=false, _myName='';
 
-  function _chatEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function _getMe(){return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.nombre||currentUser.email||'Usuario'):'Usuario';}
+  function _isAdminUser(){return (typeof currentUser!=='undefined'&&currentUser)&&(currentUser.rol==='admin'||currentUser.rol==='director');}
+  // Mensaje de admin = tiene campo "para" con un destinatario
+  function _isAdminMsg(m){return m.para!==null&&m.para!==undefined&&m.para!=='';}
+
+  function _buildUrl(since){
+    var base=SUPABASE_URL+'/rest/v1/chat_mensajes?order=created_at.asc&limit=200';
+    if(since) base=SUPABASE_URL+'/rest/v1/chat_mensajes?created_at=gt.'+encodeURIComponent(since)+'&order=created_at.asc&limit=50';
+    if(_isAdmin) return base; // admin: todos los mensajes
+    // usuario normal: solo mensajes donde yo soy emisor O destinatario
+    return base+'&or=(usuario.eq.'+encodeURIComponent(_myName)+',para.eq.'+encodeURIComponent(_myName)+')';
+  }
+  function _hdr(){return{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+(typeof getToken==='function'?getToken():SUPABASE_KEY)};}
+
+  async function _load(){
+    _myName=_getMe(); _isAdmin=_isAdminUser();
+    try{var r=await fetch(_buildUrl(null),{headers:_hdr()});var m=await r.json();if(!Array.isArray(m))return;_msgs=m;if(m.length)_lastTs=m[m.length-1].created_at;_render();}catch(e){}
+  }
+  async function _pollFn(){
+    _myName=_getMe(); _isAdmin=_isAdminUser();
+    try{
+      var r=await fetch(_buildUrl(_lastTs||new Date(0).toISOString()),{headers:_hdr()});
+      var nm=await r.json();if(!Array.isArray(nm)||!nm.length)return;
+      _msgs=_msgs.concat(nm);_lastTs=nm[nm.length-1].created_at;
+      if(!_open){
+        // contar solo mensajes nuevos relevantes para el badge
+        var cnt=_isAdmin
+          ? nm.filter(function(m){return!_isAdminMsg(m);}).length  // mensajes de equipo al admin
+          : nm.filter(function(m){return _isAdminMsg(m);}).length;  // respuestas del admin a mí
+        if(cnt>0){_unread+=cnt;var b=document.getElementById('chat-unread');if(b){b.textContent=_unread>9?'9+':_unread;b.style.display='flex';}}
+      } else {
+        _render();
+      }
+    }catch(e){}
+  }
 
   function toggleChatPanel(){
-    _chatOpen = !_chatOpen;
-    var panel = document.getElementById('chat-panel');
-    if(panel) panel.style.display = _chatOpen ? 'flex' : 'none';
-    if(_chatOpen){
-      _chatUnread = 0;
-      var badge = document.getElementById('chat-unread');
-      if(badge){ badge.style.display='none'; badge.textContent=''; }
-      // Cargar mensajes al abrir y arrancar polling si no está activo
-      chatLoadMsgs();
-      if(!_chatPollInterval) _chatPollInterval = setInterval(chatPoll, 4000);
-      setTimeout(function(){ var el=document.getElementById('chat-msgs'); if(el) el.scrollTop=el.scrollHeight; }, 100);
-      setTimeout(function(){ var inp=document.getElementById('chat-input'); if(inp) inp.focus(); }, 150);
+    _open=!_open;
+    var p=document.getElementById('chat-panel');if(p)p.style.display=_open?'flex':'none';
+    if(_open){
+      _unread=0;var b=document.getElementById('chat-unread');if(b){b.style.display='none';b.textContent='';}
+      _myName=_getMe();_isAdmin=_isAdminUser();
+      _load();if(!_poll)_poll=setInterval(_pollFn,4000);
+      if(!_isAdmin) setTimeout(function(){var i=document.getElementById('chat-input');if(i)i.focus();},200);
     }
   }
-  window.toggleChatPanel = toggleChatPanel;
+  window.toggleChatPanel=toggleChatPanel;
 
-  async function chatLoadMsgs(){
-    try{
-      var res = await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes?order=created_at.asc&limit=100', {
-        headers:{ 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+(typeof getToken==='function'?getToken():SUPABASE_KEY) }
-      });
-      var msgs = await res.json();
-      if(!Array.isArray(msgs)) return;
-      _chatAllMsgs = msgs;
-      if(msgs.length) _chatLastTs = msgs[msgs.length-1].created_at;
-      chatRender();
-    } catch(e){}
-  }
-
-  async function chatPoll(){
-    try{
-      var since = _chatLastTs || new Date(0).toISOString();
-      var res = await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes?created_at=gt.'+encodeURIComponent(since)+'&order=created_at.asc&limit=50', {
-        headers:{ 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+(typeof getToken==='function'?getToken():SUPABASE_KEY) }
-      });
-      var newMsgs = await res.json();
-      if(!Array.isArray(newMsgs) || !newMsgs.length) return;
-      _chatAllMsgs = _chatAllMsgs.concat(newMsgs);
-      _chatLastTs = newMsgs[newMsgs.length-1].created_at;
-      if(!_chatOpen){
-        _chatUnread += newMsgs.length;
-        var badge = document.getElementById('chat-unread');
-        if(badge){ badge.textContent = _chatUnread > 9 ? '9+' : _chatUnread; badge.style.display='flex'; }
-      } else {
-        chatRender();
-        setTimeout(function(){ var el=document.getElementById('chat-msgs'); if(el) el.scrollTop=el.scrollHeight; },50);
-      }
-    } catch(e){}
-  }
-
-  function chatRender(){
-    var el = document.getElementById('chat-msgs');
-    if(!el) return;
-    var myUser = (typeof currentUser!=='undefined' && currentUser) ? (currentUser.nombre||currentUser.email||'Yo') : 'Yo';
-    if(!_chatAllMsgs.length){
-      el.innerHTML='<div class="chat-empty">Sin mensajes aún.<br>¡Sé el primero en escribir!</div>';
-      return;
+  // ── RENDER principal ───────────────────────────────────
+  function _render(){
+    if(_isAdmin){
+      if(_selUser) _renderConv(_selUser); else _renderInbox();
+    } else {
+      _renderUser();
     }
-    el.innerHTML = _chatAllMsgs.map(function(m){
-      var isMine = (m.usuario||'') === myUser;
-      var ts = m.created_at ? new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-      var appLabel = m.app && m.app!=='general' ? ' · '+m.app : '';
-      return '<div class="chat-msg '+(isMine?'mine':'other')+'">'+
-        '<div class="msg-meta">'+(isMine?'Tú':_chatEsc(m.usuario))+appLabel+' · '+ts+'</div>'+
-        '<div class="msg-text">'+_chatEsc(m.mensaje)+'</div>'+
+  }
+
+  // ── ADMIN: bandeja de entrada ──────────────────────────
+  function _renderInbox(){
+    var el=document.getElementById('chat-msgs');if(!el)return;
+    var ir=document.querySelector('.chat-input-row');if(ir)ir.style.display='none';
+    // Agrupa por persona
+    var map={};
+    _msgs.forEach(function(m){
+      var person=_isAdminMsg(m)?m.para:m.usuario;
+      if(!person)return;
+      if(!map[person])map[person]={last:'',ts:'',unread:0};
+      map[person].last=m.mensaje;map[person].ts=m.created_at;
+      if(!_isAdminMsg(m))map[person].unread++;
+    });
+    var people=Object.keys(map).sort(function(a,b){return new Date(map[b].ts)-new Date(map[a].ts);});
+    if(!people.length){el.innerHTML='<div class="chat-empty">Sin mensajes aún.<br>Tu equipo te escribirá aquí.</div>';return;}
+    el.innerHTML=people.map(function(p){
+      var c=map[p];
+      var ts=c.ts?new Date(c.ts).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      return '<div class="chat-conv-item" onclick="window._chatConv(\''+_e(p)+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'+
+          '<strong style="font-size:13px">'+_e(p)+'</strong>'+
+          (c.unread?'<span style="background:#EF4444;color:#fff;font-size:9px;border-radius:8px;padding:2px 6px;font-weight:700">'+c.unread+'</span>':'')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_e(c.last.substring(0,55))+'</div>'+
+        '<div style="font-size:10px;color:var(--dim);margin-top:2px">'+ts+'</div>'+
       '</div>';
     }).join('');
-    el.scrollTop = el.scrollHeight;
   }
 
+  // ── ADMIN: conversación con una persona ────────────────
+  function _renderConv(person){
+    var el=document.getElementById('chat-msgs');if(!el)return;
+    var ir=document.querySelector('.chat-input-row');if(ir)ir.style.display='flex';
+    var msgs=_msgs.filter(function(m){return(!_isAdminMsg(m)&&m.usuario===person)||((_isAdminMsg(m))&&m.para===person);});
+    var hdr='<div style="display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;flex-shrink:0">'+
+      '<button onclick="window._chatBack()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:20px;padding:0;line-height:1">‹</button>'+
+      '<strong style="font-size:13px">'+_e(person)+'</strong>'+
+    '</div>';
+    if(!msgs.length){el.innerHTML=hdr+'<div class="chat-empty">Sin mensajes todavía.</div>';return;}
+    el.innerHTML=hdr+msgs.map(function(m){
+      var mine=_isAdminMsg(m);
+      var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      return '<div class="chat-msg '+(mine?'mine':'other')+'">'+
+        '<div class="msg-meta">'+(mine?'Tú':_e(m.usuario))+' · '+ts+'</div>'+
+        '<div class="msg-text">'+_e(m.mensaje)+'</div>'+
+      '</div>';
+    }).join('');
+    el.scrollTop=el.scrollHeight;
+    setTimeout(function(){var i=document.getElementById('chat-input');if(i)i.focus();},100);
+  }
+
+  window._chatConv=function(p){_selUser=p;_renderConv(p);};
+  window._chatBack=function(){_selUser=null;_renderInbox();};
+
+  // ── EQUIPO: hilo privado con el admin ──────────────────
+  function _renderUser(){
+    var el=document.getElementById('chat-msgs');if(!el)return;
+    var ir=document.querySelector('.chat-input-row');if(ir)ir.style.display='flex';
+    if(!_msgs.length){el.innerHTML='<div class="chat-empty">Escribe tu mensaje o reporte.<br>El administrador te responderá aquí.</div>';return;}
+    el.innerHTML=_msgs.map(function(m){
+      var mine=m.usuario===_myName;
+      var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      return '<div class="chat-msg '+(mine?'mine':'other')+'">'+
+        '<div class="msg-meta">'+(mine?'Tú':'Admin')+' · '+ts+'</div>'+
+        '<div class="msg-text">'+_e(m.mensaje)+'</div>'+
+      '</div>';
+    }).join('');
+    el.scrollTop=el.scrollHeight;
+  }
+
+  // ── ENVIAR ─────────────────────────────────────────────
   async function sendChatMsg(){
-    var inp = document.getElementById('chat-input');
-    if(!inp) return;
-    var texto = (inp.value||'').trim();
-    if(!texto) return;
-    var myUser = (typeof currentUser!=='undefined' && currentUser) ? (currentUser.nombre||currentUser.email||'Usuario') : 'Usuario';
-    inp.value = '';
+    var inp=document.getElementById('chat-input');if(!inp)return;
+    var txt=(inp.value||'').trim();if(!txt)return;
+    if(_isAdmin&&!_selUser){showToast&&showToast('Selecciona una conversación primero',true);return;}
+    inp.value='';
     try{
-      var res = await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes', {
-        method:'POST',
-        headers:{
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer '+(typeof getToken==='function'?getToken():SUPABASE_KEY),
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ usuario: myUser, mensaje: texto, app: CHAT_APP })
-      });
-      var saved = await res.json();
-      if(Array.isArray(saved) && saved.length){
-        _chatAllMsgs.push(saved[0]);
-        _chatLastTs = saved[0].created_at;
-        chatRender();
-      }
-    } catch(e){ inp.value = texto; showToast && showToast('Error al enviar', true); }
+      var payload={usuario:_myName,mensaje:txt,app:CHAT_APP,para:_isAdmin?_selUser:null};
+      var r=await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes',{method:'POST',
+        headers:Object.assign({'Content-Type':'application/json','Prefer':'return=representation'},_hdr()),
+        body:JSON.stringify(payload)});
+      var sv=await r.json();
+      if(Array.isArray(sv)&&sv.length){_msgs.push(sv[0]);_lastTs=sv[0].created_at;_render();}
+    }catch(e){inp.value=txt;}
   }
-  window.sendChatMsg = sendChatMsg;
+  window.sendChatMsg=sendChatMsg;
 
-  // Arrancar polling pasivo (solo para badge) sin abrir el panel
-  document.addEventListener('DOMContentLoaded', function(){
-    // Cargar mensajes iniciales (para timestamp de referencia)
-    setTimeout(function(){
-      chatLoadMsgs().then(function(){
-        // Después del carga inicial, arrancar polling pasivo
-        if(!_chatPollInterval) _chatPollInterval = setInterval(chatPoll, 4000);
-      });
-    }, 3000); // esperar a que la app cargue primero
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){_myName=_getMe();_isAdmin=_isAdminUser();_load().then(function(){if(!_poll)_poll=setInterval(_pollFn,4000);});},3000);
   });
 })();
 </script>
