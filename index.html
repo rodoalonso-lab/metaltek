@@ -8314,7 +8314,7 @@ aplicarTemaGuardado();
 
   // ── UPLOAD IMAGEN ──────────────────────────────────────
   async function uploadChatImg(fileInput){
-    var file=fileInput?fileInput.files[0]:null;if(!file)return;fileInput.value='';
+    var file=fileInput instanceof File?fileInput:(fileInput?fileInput.files[0]:null);if(!file)return;if(fileInput&&fileInput.value!==undefined)fileInput.value='';
     if(_isAdmin&&!_selUser){showToast&&showToast('Selecciona una conversación primero',true);return;}
     var ext=(file.name.split('.').pop()||'jpg').toLowerCase();
     var fname='chat/'+Date.now()+'_'+Math.random().toString(36).substr(2,8)+'.'+ext;
