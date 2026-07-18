@@ -8312,6 +8312,32 @@ aplicarTemaGuardado();
   }
   window.toggleChatPanel=toggleChatPanel;
 
+  // ── UPLOAD IMAGEN ──────────────────────────────────────
+  async function uploadChatImg(fileInput){
+    var file=fileInput?fileInput.files[0]:null;if(!file)return;fileInput.value='';
+    if(_isAdmin&&!_selUser){showToast&&showToast('Selecciona una conversación primero',true);return;}
+    var ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+    var fname='chat/'+Date.now()+'_'+Math.random().toString(36).substr(2,8)+'.'+ext;
+    try{
+      var up=await fetch(SUPABASE_URL+'/storage/v1/object/chat-imagenes/'+fname,{
+        method:'POST',headers:Object.assign({'Content-Type':file.type,'x-upsert':'true'},_hdr()),body:file});
+      if(!up.ok){showToast&&showToast('Error al subir imagen',true);return;}
+      var imgUrl=SUPABASE_URL+'/storage/v1/object/public/chat-imagenes/'+fname;
+      var r=await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes',{method:'POST',
+        headers:Object.assign({'Content-Type':'application/json','Prefer':'return=representation'},_hdr()),
+        body:JSON.stringify({usuario:_myName,mensaje:'',app:CHAT_APP,para:_isAdmin?_selUser:null,imagen_url:imgUrl})});
+      var sv=await r.json();if(Array.isArray(sv)&&sv.length){_msgs.push(sv[0]);_lastTs=sv[0].created_at;_render();}
+    }catch(e){showToast&&showToast('Error al subir imagen',true);}
+  }
+  window.uploadChatImg=uploadChatImg;
+
+  function _msgBubble(m,isMine,label){
+    var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    var img=m.imagen_url?'<a href="'+_e(m.imagen_url)+'" target="_blank"><img src="'+_e(m.imagen_url)+'" style="max-width:100%;border-radius:6px;margin-top:4px;display:block;cursor:zoom-in" loading="lazy"></a>':'';
+    var txt=m.mensaje?'<div class="msg-text">'+_e(m.mensaje)+'</div>':'';
+    return '<div class="chat-msg '+(isMine?'mine':'other')+'"><div class="msg-meta">'+_e(label)+' · '+ts+'</div>'+img+txt+'</div>';
+  }
+
   // ── RENDER principal ───────────────────────────────────
   function _render(){
     if(_isAdmin){
@@ -8325,13 +8351,12 @@ aplicarTemaGuardado();
   function _renderInbox(){
     var el=document.getElementById('chat-msgs');if(!el)return;
     var ir=document.querySelector('.chat-input-row');if(ir)ir.style.display='none';
-    // Agrupa por persona
     var map={};
     _msgs.forEach(function(m){
       var person=_isAdminMsg(m)?m.para:m.usuario;
       if(!person)return;
       if(!map[person])map[person]={last:'',ts:'',unread:0};
-      map[person].last=m.mensaje;map[person].ts=m.created_at;
+      map[person].last=m.imagen_url?'📷 Imagen':(m.mensaje||'');map[person].ts=m.created_at;
       if(!_isAdminMsg(m))map[person].unread++;
     });
     var people=Object.keys(map).sort(function(a,b){return new Date(map[b].ts)-new Date(map[a].ts);});
@@ -8360,14 +8385,7 @@ aplicarTemaGuardado();
       '<strong style="font-size:13px">'+_e(person)+'</strong>'+
     '</div>';
     if(!msgs.length){el.innerHTML=hdr+'<div class="chat-empty">Sin mensajes todavía.</div>';return;}
-    el.innerHTML=hdr+msgs.map(function(m){
-      var mine=_isAdminMsg(m);
-      var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-      return '<div class="chat-msg '+(mine?'mine':'other')+'">'+
-        '<div class="msg-meta">'+(mine?'Tú':_e(m.usuario))+' · '+ts+'</div>'+
-        '<div class="msg-text">'+_e(m.mensaje)+'</div>'+
-      '</div>';
-    }).join('');
+    el.innerHTML=hdr+msgs.map(function(m){return _msgBubble(m,_isAdminMsg(m),_isAdminMsg(m)?'Tú':m.usuario);}).join('');
     el.scrollTop=el.scrollHeight;
     setTimeout(function(){var i=document.getElementById('chat-input');if(i)i.focus();},100);
   }
@@ -8383,9 +8401,7 @@ aplicarTemaGuardado();
     el.innerHTML=_msgs.map(function(m){
       var mine=m.usuario===_myName;
       var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-      return '<div class="chat-msg '+(mine?'mine':'other')+'">'+
-        '<div class="msg-meta">'+(mine?'Tú':'Admin')+' · '+ts+'</div>'+
-        '<div class="msg-text">'+_e(m.mensaje)+'</div>'+
+      return _msgBubble(m,mine,mine?'Tú':'Admin')+
       '</div>';
     }).join('');
     el.scrollTop=el.scrollHeight;
