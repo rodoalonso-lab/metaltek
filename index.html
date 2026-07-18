@@ -8335,8 +8335,10 @@ aplicarTemaGuardado();
     var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     var img=m.imagen_url?'<a href="'+_e(m.imagen_url)+'" target="_blank"><img src="'+_e(m.imagen_url)+'" style="max-width:100%;border-radius:6px;margin-top:4px;display:block;cursor:zoom-in" loading="lazy"></a>':'';
     var txt=m.mensaje?'<div class="msg-text">'+_e(m.mensaje)+'</div>':'';
-    return '<div class="chat-msg '+(isMine?'mine':'other')+'"><div class="msg-meta">'+_e(label)+' · '+ts+'</div>'+img+txt+'</div>';
+    var ck=isMine?'<span style="font-size:10px;margin-left:3px;'+(m.leido_at?'color:#4D8EFF':'color:#94a3b8')+'">'+(m.leido_at?'✓✓':'✓')+'</span>':'';
+    return '<div class="chat-msg '+(isMine?'mine':'other')+'"><div class="msg-meta">'+_e(label)+' · '+ts+ck+'</div>'+img+txt+'</div>';
   }
+  async function _markRead(qf,lt){var now=new Date().toISOString();_msgs.forEach(function(m){if(lt(m)&&!m.leido_at)m.leido_at=now;});try{await fetch(SUPABASE_URL+'/rest/v1/chat_mensajes?'+qf+'&leido_at=is.null',{method:'PATCH',headers:Object.assign({'Content-Type':'application/json','Prefer':'return=minimal'},_hdr()),body:JSON.stringify({leido_at:now})});}catch(e){}}
 
   // ── RENDER principal ───────────────────────────────────
   function _render(){
