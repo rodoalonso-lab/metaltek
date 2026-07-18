@@ -8261,7 +8261,7 @@ aplicarTemaGuardado();
 <script>
 (function(){
   var CHAT_APP = 'metalek';
-  var _open=false, _lastTs=null, _unread=0, _poll=null, _msgs=[], _selUser=null, _isAdmin=false, _myName='';
+  var _open=false, _lastTs=null, _unread=0, _poll=null, _msgs=[], _selUser=null, _isAdmin=false, _myName='', _sending=false;
 
   function _e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function _getMe(){return (typeof currentUser!=='undefined'&&currentUser)?(currentUser.nombre||currentUser.email||'Usuario'):'Usuario';}
