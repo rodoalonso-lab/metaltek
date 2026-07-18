@@ -8359,7 +8359,7 @@ aplicarTemaGuardado();
       if(!person)return;
       if(!map[person])map[person]={last:'',ts:'',unread:0};
       map[person].last=m.imagen_url?'📷 Imagen':(m.mensaje||'');map[person].ts=m.created_at;
-      if(!_isAdminMsg(m))map[person].unread++;
+      if(!_isAdminMsg(m)&&!m.leido_at)map[person].unread++;
     });
     var people=Object.keys(map).sort(function(a,b){return new Date(map[b].ts)-new Date(map[a].ts);});
     if(!people.length){el.innerHTML='<div class="chat-empty">Sin mensajes aún.<br>Tu equipo te escribirá aquí.</div>';return;}
