@@ -8399,10 +8399,7 @@ aplicarTemaGuardado();
     var ir=document.querySelector('.chat-input-row');if(ir)ir.style.display='flex';
     if(!_msgs.length){el.innerHTML='<div class="chat-empty">Escribe tu mensaje o reporte.<br>El administrador te responderá aquí.</div>';return;}
     el.innerHTML=_msgs.map(function(m){
-      var mine=m.usuario===_myName;
-      var ts=m.created_at?new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-      return _msgBubble(m,mine,mine?'Tú':'Admin')+
-      '</div>';
+      return _msgBubble(m,m.usuario===_myName,m.usuario===_myName?'Tú':'Admin');
     }).join('');
     el.scrollTop=el.scrollHeight;
   }
