@@ -8357,9 +8357,9 @@ aplicarTemaGuardado();
     _msgs.forEach(function(m){
       var person=_isAdminMsg(m)?m.para:m.usuario;
       if(!person)return;
-      if(!map[person])map[person]={last:'',ts:'',unread:0};
+      if(!map[person]){var _lr=null;try{_lr=localStorage.getItem('_cr_'+CHAT_APP+'_'+person);}catch(e){}map[person]={last:'',ts:'',unread:0,_lr:_lr};}
       map[person].last=m.imagen_url?'📷 Imagen':(m.mensaje||'');map[person].ts=m.created_at;
-      if(!_isAdminMsg(m)&&!m.leido_at)map[person].unread++;
+      if(!_isAdminMsg(m)&&(!map[person]._lr||m.created_at>map[person]._lr))map[person].unread++;
     });
     var people=Object.keys(map).sort(function(a,b){return new Date(map[b].ts)-new Date(map[a].ts);});
     if(!people.length){el.innerHTML='<div class="chat-empty">Sin mensajes aún.<br>Tu equipo te escribirá aquí.</div>';return;}
