@@ -2575,11 +2575,12 @@ function renderComparativas() {
         (()=>{
           var _e=(r.estado||'').toLowerCase();
           if(_e==='autorizada'||_e==='comprada'||_e==='recibida') return '';
-          // cotizada: solo Autorizar (proveedor+monto ya definidos)
+          // cotizada: + Cotización para todos + Autorizar para admin/director
           if(_e==='cotizada') {
-            return (currentUser.rol==='admin'||currentUser.rol==='director')
-              ? '<div style="display:flex;gap:8px"><button class="btn-success" style="font-size:12px;padding:8px;width:100%" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button></div>'
-              : '';
+            return '<div style="display:flex;gap:8px">'+
+              '<button class="btn-secondary" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';openCotizarSheet(currentReqId)">+ Cotización</button>'+
+              ((currentUser.rol==='admin'||currentUser.rol==='director') ? '<button class="btn-success" style="font-size:12px;padding:8px" onclick="event.stopPropagation();currentReqId=\''+ r.id +'\';autorizarReq(currentReqId)">✓ Autorizar</button>' : '')+
+            '</div>';
           }
           // pendiente / en comparativa: + Cotización y Autorizar si hay seleccionado
           return '<div style="display:flex;gap:8px">'+
