@@ -2661,7 +2661,7 @@ async function showRequisicion(id) {
         }
         return btns ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${btns}</div>` : '';
       })||'<div class="item-sub">Sin cotizaciones aún</div>'}
-      ${(_est==='pendiente'||_est==='en comparativa')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
+      ${(_est!=='autorizada'&&_est!=='comprada'&&_est!=='recibida')?`<button class="btn-secondary" style="margin-top:8px;width:100%" onclick="event.stopPropagation();openCotizarSheet(currentReqId)">+ Agregar cotización</button>`:''}
     </div>`;
 
   if(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada'||_est==='autorizada') {
@@ -3260,6 +3260,12 @@ async function saveComparativa() {
     }
     document.querySelectorAll('.fc-prov-txt').forEach(function(el){ if(el.value.trim()) guardarProveedor(el.value.trim()); });
     const _savedReqId = document.getElementById('fc-req-id').value;
+    // Transición de estado: pendiente/cotizada → en comparativa
+    const _savedReq = requisicionesData.find(function(x){ return x.id===_savedReqId; });
+    const _savedEst = (_savedReq&&_savedReq.estado||'pendiente').toLowerCase();
+    if(_savedEst==='pendiente'||_savedEst==='cotizada') {
+      await db('PATCH','requisiciones?id=eq.'+_savedReqId,{ estado:'en comparativa' });
+    }
     showToast('✅ Cotización agregada');
     closeSheet('comp');
     await loadMateriales();
