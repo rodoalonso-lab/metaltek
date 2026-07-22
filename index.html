@@ -2651,7 +2651,7 @@ async function showRequisicion(id) {
     <div class="card"><div class="card-label">COMPARATIVA DE PRECIOS</div>
       ${renderCotizacionCard(r, comps, function(c) {
         var btns = '';
-        if(_est==='pendiente'||_est==='en comparativa') {
+        if(_est==='pendiente'||_est==='en comparativa'||_est==='cotizada') {
           if(!c.seleccionado) btns += `<button onclick="seleccionarCotiz('${c.id}','${id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #10B981;background:rgba(16,185,129,.1);color:#10B981;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Sel.</button>`;
           btns += `<button onclick="generarPDFCotizacion('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid #3B82F644;background:#3B82F622;color:#3B82F6;font-size:11px;cursor:pointer">📄</button>`;
           btns += `<button onclick="editarCotiz('${c.id}')" style="padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;cursor:pointer">✏️</button>`;
