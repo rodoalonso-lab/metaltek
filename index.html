@@ -5992,22 +5992,30 @@ function showTab(tabId) {
   if(tabId==='nominas') loadNominas();
   if(tabId==='costeo') loadCosteo();
 }
+let _navManual = false;  // el usuario ya eligio pantalla: initApp no debe pisarla
 document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click',()=>showTab(tab.dataset.tab));
+  tab.addEventListener('click',()=>{ _navManual = true; showTab(tab.dataset.tab); });
 });
 
 // ── INIT ─────────────────────────────────────────────
 async function initApp() {
-  try{ await loadClientes(); }catch(e){}
-  try{ await loadTiposObra(); }catch(e){}
-  try{ await loadObras(); }catch(e){}
-  try{ ganttData=await db('GET','gantt_etapas?order=orden')||[]; }catch(e){ ganttData=[]; }
-  try{ proveedoresData=await db('GET','proveedores?order=nombre')||[]; }catch(e){ proveedoresData=[]; }
-  try{ await loadMateriales(); }catch(e){}
-  try{ await loadReportes(); }catch(e){}
-  try{ await loadTareas(); }catch(e){}
-  try{ await loadNominas(); }catch(e){}
-  showTab('dashboard');
+  // Los 9 cargadores son independientes entre si -> en paralelo.
+  // allSettled: si uno falla los demas continuan, igual que los try/catch previos.
+  const _tareasInit = [
+    ['loadClientes',   loadClientes()],
+    ['loadTiposObra',  loadTiposObra()],
+    ['loadObras',      loadObras()],
+    ['gantt_etapas',   db('GET','gantt_etapas?order=orden').then(d=>{ganttData=d||[];}, ()=>{ganttData=[];})],
+    ['proveedores',    db('GET','proveedores?order=nombre').then(d=>{proveedoresData=d||[];}, ()=>{proveedoresData=[];})],
+    ['loadMateriales', loadMateriales()],
+    ['loadReportes',   loadReportes()],
+    ['loadTareas',     loadTareas()],
+    ['loadNominas',    loadNominas()]
+  ];
+  const _res = await Promise.allSettled(_tareasInit.map(t=>t[1]));
+  _res.forEach((r,i)=>{ if(r.status==='rejected') console.error('initApp:'+_tareasInit[i][0], r.reason); });
+  // Solo mandar al dashboard si el usuario no navego mientras cargaba.
+  if(!_navManual) showTab('dashboard');
   // Mostrar botón de refresh
   var rb = document.getElementById('refresh-btn');
   if(rb) rb.style.display = '';
