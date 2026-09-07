@@ -6335,7 +6335,7 @@ window.CANC = (function(){
 'use strict';
 
 // ── Carga bajo demanda del motor ──────────────────────────────────────
-var ARCHIVOS = ['canc-motor.js','serie-mc450.js','referencias.js','secciones.js','canc-dxf.js'];
+var ARCHIVOS = ['canc-dxf.js'];
 var _cargado = false, _cargando = null, _montado = false;
 
 function cargarMotor(){
@@ -6368,10 +6368,9 @@ function money(n){
 }
 
 // ── Estado ────────────────────────────────────────────────────────────
-var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null, ULT=null;
-var VISTA='alzado', REF_ACTUAL=null, EDIT_CLI=null, EDIT_OBRA=null, SUB='importar';
+var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null;
+var EDIT_CLI=null, EDIT_OBRA=null, SUB='importar';
 var IMP=null;   // { archivo, datos, items, creados, total }
-var SERIES=[], PERFILES=[], SERIE_ID=null, EDIT_SERIE=null, EDIT_PERF=null;
 var INSUMOS=[], EDIT_INS=null;
 var TIPOS_INS=[['material','Material'],['mano_obra','Mano de obra'],
                ['herramienta','Herramienta'],['equipo','Equipo'],['subcontrato','Subcontrato']];
@@ -6379,22 +6378,6 @@ function tipoLabel(t){
   for(var i=0;i<TIPOS_INS.length;i++) if(TIPOS_INS[i][0]===t) return TIPOS_INS[i][1];
   return t;
 }
-// Posición en el modelo → [etiqueta, roles que puede ocupar]
-// El rol es lo que decide qué perfiles del catálogo aparecen en cada selector.
-var POSICIONES=[
-  ['cabezal',  'Marco superior · cabezal',      ['travesano','cabezal']],
-  ['zoclo',    'Marco inferior · zoclo',        ['travesano','zoclo']],
-  ['jambaIzq', 'Marco izquierdo · jamba',       ['montante','jamba']],
-  ['jambaDer', 'Marco derecho · jamba',         ['montante','jamba']],
-  ['montante', 'Postes verticales · montante',  ['montante']],
-  ['travesano','Postes horizontales · travesaño',['travesano']],
-  ['tapaV',    'Tapa vertical',                 ['tapa']],
-  ['tapaH',    'Tapa horizontal',               ['tapa']]
-];
-var ROLES=[['montante','Montante'],['travesano','Travesaño'],['jamba','Jamba'],
-           ['cabezal','Cabezal'],['zoclo','Zoclo'],['tapa','Tapa'],['alero','Alerón'],
-           ['conector','Conector'],['moldura','Moldura'],['union','Unión'],
-           ['junquillo','Junquillo'],['hoja','Hoja'],['adaptador','Adaptador'],['otro','Otro']];
 
 // ── Plantilla ─────────────────────────────────────────────────────────
 function plantilla(){
@@ -6528,10 +6511,6 @@ function abrir(){
     $('canc-cargando').style.display = 'none';
     $('canc-app').style.display = '';
     _montado = true;
-    poblarPerfiles();
-    poblarRefs();
-    etiquetas();
-    calcular();
     pintarModelos();
     datos();
   }).catch(function(e){
@@ -6543,12 +6522,11 @@ function abrir(){
 
 function sub(s){
   SUB = s;
-  ['importar','diseno','guardados','perfiles','insumos','catalogo'].forEach(function(x){
+  ['importar','guardados','insumos','catalogo'].forEach(function(x){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
   if(s==='guardados') listar();
-  if(s==='perfiles'){ poblarSeries(); pintarSeries(); pintarPerfiles(); }
   if(s==='insumos') pintarInsumos();
 }
 function pista(txt,tipo){
@@ -6556,25 +6534,12 @@ function pista(txt,tipo){
   e.innerHTML = txt ? '<span style="color:var(--'+(tipo||'dim')+')">'+esc(txt)+'</span>' : '';
 }
 
-// Valores de arranque del diseño, en un solo lugar para que "Limpiar"
-// y el estado inicial del formulario no se separen con el tiempo.
-var INICIO={cW:1000, cH:1000, cPV:0, cPH:0, cCant:1,
-            cSan:10, cKerf:5, cTu:400, cEstr:'prioridad-retales', cHol:4,
-            cDTM:0, cDMS:0, cDMI:0};
-
-
-
-
-
-
-
 
 function cstat(l,v,s,col){
   return '<div class="cstat"><div class="cstat-l">'+l+'</div><div class="cstat-v"'+
     (col?' style="color:'+col+'"':'')+'>'+v+'</div>'+
     (s?'<div class="item-sub">'+s+'</div>':'')+'</div>';
 }
-
 
 
 // El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
@@ -6594,7 +6559,6 @@ function lienzoSVG(sw, sh, contenido, pie){
     '<div class="item-sub" style="margin-top:10px">'+pie+
     ' · rueda del ratón para acercar, arrastra para mover</div>';
 }
-
 
 
 // ── Zoom del alzado ───────────────────────────────────────────────────
@@ -6662,17 +6626,12 @@ function datos(){
   return Promise.all([
     db('GET','clientes?select=*&order=nombre'),
     db('GET','obras?select=id,nombre,cliente,cliente_id,ubicacion,estado&order=nombre'),
-    db('GET','canc_series?select=*&order=nombre'),
-    db('GET','canc_perfiles?select=*&order=codigo'),
     db('GET','canc_insumos?select=*&order=clave')
   ]).then(function(r){
-    CLIENTES=r[0]||[]; OBRAS=r[1]||[]; SERIES=r[2]||[]; PERFILES=r[3]||[];
-    INSUMOS=(r[4]||[]).filter(function(i){ return !i.es_grupo; });
-    pintarInsumos();
-    if(!SERIE_ID || !serieSel()) SERIE_ID = SERIES.length ? SERIES[0].id : null;
-    poblarSelects(); pintarClientes(); pintarObras(); listar();
-    poblarSeries(); pintarSeries(); pintarPerfiles();
-    poblarPerfiles(); calcular();
+    CLIENTES=r[0]||[]; OBRAS=r[1]||[];
+    INSUMOS=(r[2]||[]).filter(function(i){ return !i.es_grupo; });
+    poblarSelects(); pintarClientes(); pintarObras();
+    pintarInsumos(); listar();
   }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
@@ -6870,8 +6829,7 @@ function guardarImport(){
   if(!nom){ dpista('Ponle nombre al presupuesto.','danger'); return; }
   dpista('Guardando…');
   var cab={cliente_id:cli, obra_id:val('dPreObra')||null, nombre:nom,
-           estado:'borrador', serie_cod:(serieSel()||{}).codigo||null,
-           cfg:{origen:'dxf'}, creado_por:(currentUser&&currentUser.email)||null};
+           estado:'borrador', cfg:{origen:'dxf'}, creado_por:(currentUser&&currentUser.email)||null};
   var pCab = PRE ? db('PATCH','canc_presupuestos?id=eq.'+PRE.id,cab)
                  : db('POST','canc_presupuestos',cab);
   pCab.then(function(r){
@@ -7145,18 +7103,14 @@ function pintarModelos(){
        '<button class="chip" onclick="CANC.borrarModelo(\''+m.id+'\')">Borrar</button></td></tr>';
   });
   h+='</table><div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">'+
-     '<button class="btn-secondary" onclick="CANC.nuevoModelo()">+ Nuevo modelo</button>'+
+     '<button class="btn-secondary" onclick="CANC.sub(\'importar\')">+ Importar otro DXF</button>'+
      '<span class="item-sub" style="margin:0">Total: '+
      (Number(PRE.costo_total)?money(PRE.costo_total):'sin precios cargados')+'</span></div>';
   c.innerHTML=h;
 }
 function abrirModelo(id){
   var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
-  // Un modelo importado no tiene vano ni postes: mandarlo al formulario de
-  // diseño lo dejaría vacío. Se abre en su propia pantalla, de sólo lectura.
-  if(m.tipo==='dxf'){ verModeloDxf(m); return; }
-  MODELO_ID=id; aplicarDiseno(m.modelo); pintarModelos();
-  pista('Editando '+m.clave+'.'); sub('diseno');
+  verModeloDxf(m);
 }
 
 // Reconstruye la vista de importación desde lo que se guardó. No vuelve a
@@ -7214,33 +7168,37 @@ function abrirPre(id){
   ]).then(function(r){
     PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
     sincronizarCabecera();
-    // Se abre en la pantalla del primer modelo: importado o diseñado.
-    var primero=MODELOS[0];
-    if(primero && primero.tipo==='dxf'){ pintarModelos(); verModeloDxf(primero); }
-    else {
-      if(primero){ MODELO_ID=primero.id; aplicarDiseno(primero.modelo); }
-      pintarModelos(); sub('diseno');
-    }
-    pista('Abierto '+PRE.folio+'.');
+    pintarModelos();
+    if(MODELOS.length) verModeloDxf(MODELOS[0]); else sub('importar');
+    dpista('Abierto '+PRE.folio+'.');
   }).catch(function(e){ alert('No se pudo abrir: '+e.message); });
 }
 
 // ── API publica ───────────────────────────────────────────────────────
 return {
-  abrir:abrir, sub:sub, vista:vista, repartir:repartir, calcular:calcular, cargarRef:cargarRef,
-  zoom:zoom, filtrarObras:filtrarObras, limpiarModelo:limpiarModelo,
-  limpiarPerfilesModelo:limpiarPerfilesModelo,
-  leerDxf:leerDxf, guardarImport:guardarImport, filtrarObrasDxf:filtrarObrasDxf,
-  cambiarSerie:cambiarSerie, guardarSerie:guardarSerie, editarSerie:editarSerie,
-  limpiarSerie:limpiarSerie, pintarPerfiles:pintarPerfiles,
-  guardarPerfil:guardarPerfil, editarPerfil:editarPerfil,
-  limpiarPerfil:limpiarPerfil, borrarPerfil:borrarPerfil,
-  guardarInsumo:guardarInsumo, editarInsumo:editarInsumo, limpiarInsumo:limpiarInsumo,
-  activarInsumo:activarInsumo, pintarInsumos:pintarInsumos, familiaSugerida:familiaSugerida,
-  guardarCliente:guardarCliente, editarCliente:editarCliente, limpiarCliente:limpiarCliente,
-  guardarObra:guardarObra, editarObra:editarObra, limpiarObra:limpiarObra,
-  nuevoPresupuesto:nuevoPresupuesto, guardarModelo:guardarModelo, nuevoModelo:nuevoModelo,
-  abrirModelo:abrirModelo, borrarModelo:borrarModelo, listar:listar, abrirPre:abrirPre
+  abrir:abrir,
+  sub:sub,
+  zoom:zoom,
+  filtrarObras:filtrarObras,
+  leerDxf:leerDxf,
+  guardarImport:guardarImport,
+  filtrarObrasDxf:filtrarObrasDxf,
+  guardarInsumo:guardarInsumo,
+  editarInsumo:editarInsumo,
+  limpiarInsumo:limpiarInsumo,
+  activarInsumo:activarInsumo,
+  pintarInsumos:pintarInsumos,
+  guardarCliente:guardarCliente,
+  editarCliente:editarCliente,
+  limpiarCliente:limpiarCliente,
+  guardarObra:guardarObra,
+  editarObra:editarObra,
+  limpiarObra:limpiarObra,
+  nuevoPresupuesto:nuevoPresupuesto,
+  abrirModelo:abrirModelo,
+  borrarModelo:borrarModelo,
+  listar:listar,
+  abrirPre:abrirPre
 };
 })();
 </script>
