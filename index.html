@@ -6536,8 +6536,13 @@ function cstat(l,v,s,col){
 }
 
 
-// El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
-// el lienzo conserva su alto y la pantalla no se mueve.
+// ══ LIENZO DE DIBUJO ══════════════════════════════════════════════════
+// Reservado para el plano de montaje. Es lo único que se conservó del
+// motor geométrico: el cálculo lo hace WinPerfil, pero el dibujo sigue
+// haciendo falta para presentar el plano en pantalla y para imprimirlo.
+//
+// El contenido va dentro de <g id="cZoom">: acercar sólo cambia ese
+// transform, el lienzo conserva su alto y la pantalla no se mueve.
 function lienzoSVG(sw, sh, contenido, pie){
   return '<div class="lienzo" id="cLienzo">'+
       '<svg id="cSvg" viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'" preserveAspectRatio="xMidYMid meet">'+
