@@ -6967,6 +6967,8 @@ function leerDxf(input){
 
 function procesarDxf(texto, nombre){
   if(typeof CANC_DXF==='undefined'){ dpista('El lector de DXF no cargó.','danger'); return; }
+  planoCerrar();          // si estaba abierto, mostraba el modelo anterior
+  IMP=null;               // nada del archivo previo sobrevive a éste
   var d = CANC_DXF.parsear(texto);
   var piezas = d.perfiles.length + d.vidrios.length + d.accesorios.length + d.longitud.length;
   if(!piezas){
