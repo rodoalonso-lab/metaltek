@@ -6511,11 +6511,15 @@ function backToPresDet(){ setCosteoView('presupuesto'); renderPresupuesto(); }
 
 function setCotab(t){
   _coTabActivo = t;
-  ['pres','cat'].forEach(x=>{
-    document.getElementById('cotab-'+x).classList.toggle('active', x===t);
-    document.getElementById('co-'+(x==='pres'?'pres-v':'cat-v')).style.display = x===t?'':'none';
+  var _mapa = {pres:'co-pres-v', cat:'co-cat-v', dis:'co-dis-v'};
+  ['pres','cat','dis'].forEach(x=>{
+    var chip = document.getElementById('cotab-'+x);
+    if(chip) chip.classList.toggle('active', x===t);
+    var cont = document.getElementById(_mapa[x]);
+    if(cont) cont.style.display = x===t?'':'none';
   });
   if(t==='cat') { loadCatalogo(); }
+  if(t==='dis' && window.CANC) { CANC.abrir(); }
 }
 
 // ── CARGA PRINCIPAL ───────────────────────────────────────────────
