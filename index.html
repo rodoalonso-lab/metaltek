@@ -1195,7 +1195,6 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 </div>
 
 
-
 <!-- SHEET: Nueva Subtarea -->
 <div class="sheet-overlay" id="sheet-ns">
   <div class="sheet">
@@ -1910,8 +1909,6 @@ function toggleInvObra(id) {
   el.style.display = isOpen ? 'none' : 'block';
   if(icon) icon.textContent = isOpen ? '▶' : '▼';
 }
-
-
 
 
 // ── FILTROS DE REQUISICIONES ─────────────────────────
@@ -2748,7 +2745,6 @@ async function openCompSheet(reqId) {
       +'</div></div>';
   }).join('');
 }
-
 
 
 function toggleMismoProv(checked) {
@@ -3700,8 +3696,6 @@ let fotosBase64 = [];
 const etapasObra = ['Proyecto ejecutivo','Fabricación en taller','Transporte a obra','Instalación','Sellados y acabados','Entrega'];
 
 
-
-
 function generarResumenTexto(r, obra, etapas) {
   let txt = `📊 *REPORTE DIARIO DE AVANCE*
 `;
@@ -3763,7 +3757,6 @@ function previewFotos(input) {
     reader.readAsDataURL(file);
   });
 }
-
 
 
 // TAREAS
@@ -4343,8 +4336,6 @@ async function saveUsuario() {
   } catch(e) { showToast('Error: '+e.message,true); }
   btn.textContent='Guardar'; btn.disabled=false;
 }
-
-
 
 
 // ── NÓMINAS ──────────────────────────────────────────
@@ -4968,7 +4959,6 @@ async function eliminarDescanso(id){
   try{ await db('DELETE','descansos?id=eq.'+id); await loadNominas(); }
   catch(e){showToast('Error',true);}
 }
-
 
 
 // ── ASISTENCIAS ───────────────────────────────────────
@@ -5961,46 +5951,10 @@ function _n(id){
 // ── Navegación de sub-vistas ──────────────────────────────────────
 
 
-// ── CARGA PRINCIPAL ───────────────────────────────────────────────
-
-
 // ── Abrir presupuesto: cargar capítulos y conceptos ───────────────
 
 
-
-// ── APU EDITOR ───────────────────────────────────────────────────
-
-
-
-
-async function recalcYGuardarPU(){
-  // Recalcula el precio unitario del concepto activo y actualiza en DB
-  if(!_coConceptoAct) return;
-  var calc = recalcAPU();
-  if(!calc) return;
-  var PU = calc.PU;
-  var cant = _coConceptoAct.cantidad||1;
-  var total = PU * cant;
-  try {
-    await db('PATCH','presupuesto_conceptos?id=eq.'+_coConceptoAct.id,{precio_unitario:PU, total:total});
-    _coConceptoAct.precio_unitario = PU;
-    _coConceptoAct.total = total;
-    // Actualizar en cache local
-    Object.values(_coConceptos).forEach(function(arr){
-      var c = arr.find(function(x){return x.id===_coConceptoAct.id;});
-      if(c){ c.precio_unitario=PU; c.total=total; }
-    });
-  } catch(e){}
-}
-
-// ── CRUD PRESUPUESTOS ─────────────────────────────────────────────
-
-
-
-
-
 // ── CRUD CAPÍTULOS ────────────────────────────────────────────────
-
 
 
 // ── CRUD CONCEPTOS ────────────────────────────────────────────────
@@ -6009,19 +5963,7 @@ async function recalcYGuardarPU(){
 // ── CRUD INSUMOS APU ──────────────────────────────────────────────
 
 
-
-
-
-
-
 // ── CATÁLOGO DE INSUMOS ───────────────────────────────────────────
-
-
-
-
-
-
-
 
 
 // ── CALCULADORA DE INDIRECTOS ─────────────────────────────────────────────
@@ -6051,21 +5993,8 @@ var _oficinaDefaults = [
 ];
 
 
-
-
-
-
-
-
 // ── IMPRESIÓN ─────────────────────────────────────────────────────────────────
 // ── Configuración de empresa (localStorage) ───────────────────────────────
-
-
-
-
-
-
-
 
 
 function toggleTema(){var c=document.body.classList.toggle('tema-claro');localStorage.setItem('proc_tema',c?'claro':'oscuro');}
