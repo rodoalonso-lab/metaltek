@@ -6627,11 +6627,12 @@ function abrir(){
 
 function sub(s){
   SUB = s;
-  ['diseno','guardados','catalogo'].forEach(function(x){
+  ['diseno','guardados','perfiles','catalogo'].forEach(function(x){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
   if(s==='guardados') listar();
+  if(s==='perfiles'){ poblarSeries(); pintarSeries(); pintarPerfiles(); }
 }
 function vista(v){
   VISTA=v;
@@ -6656,7 +6657,7 @@ function repartirIgual(total,n){
 function repartir(){
   $('cCols').value = repartirIgual(num('cW'), num('cPV')+1).join(',');
   $('cRows').value = repartirIgual(num('cH'), num('cPH')+1).join(',');
-  etiquetas(); calcular();
+  etiquetas(); habilitarPorDiseno(); calcular();
 }
 function etiquetas(){
   var nv=num('cPV'), nh=num('cPH');
@@ -7415,10 +7416,17 @@ function estadoDiseno(){
           perfiles:perfilesElegidos(),
           descuentos:{traMon:num('cDTM'), monSup:num('cDMS'), monInf:num('cDMI')},
           corte:{san:num('cSan'), kerf:num('cKerf'), tu:num('cTu'), estr:val('cEstr'), hol:num('cHol')},
-          serie:'MC-450'};
+          serie_id:SERIE_ID,
+          serie:(serieSel()||{}).codigo||'MC-450'};
 }
 function aplicarDiseno(m){
   if(!m) return;
+  // La serie primero: los selectores de posición dependen de ella.
+  if(m.serie_id && SERIES.some(function(s){return s.id===m.serie_id;})){
+    SERIE_ID=m.serie_id;
+    if($('cSerie')) $('cSerie').value=SERIE_ID;
+    poblarPerfiles(); infoSerie();
+  }
   $('cW').value=m.W; $('cH').value=m.H;
   $('cPV').value=m.postesV; $('cPH').value=m.postesH;
   $('cCols').value=m.cols; $('cRows').value=m.rows; $('cCant').value=m.cant||1;
