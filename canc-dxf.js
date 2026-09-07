@@ -117,6 +117,17 @@
       return isFinite(p[0]) && isFinite(p[1]); }); });
   }
 
+  // Paleta ACI de AutoCAD, sólo los índices que WinPerfil usa. Devuelve
+  // null cuando el color es "por capa" (256) o el negro/blanco por defecto
+  // (7): en esos casos manda la paleta del plano, no la del archivo.
+  var ACI = { 1:'#e11d48', 2:'#eab308', 3:'#16a34a', 4:'#06b6d4', 5:'#2563eb',
+              6:'#c026d3', 8:'#6b7280', 9:'#9ca3af', 30:'#ea8c00', 40:'#f59e0b',
+              250:'#3f3f46', 251:'#52525b', 252:'#71717a', 253:'#a1a1aa', 254:'#d4d4d8' };
+  function colorACI(n) {
+    if (n === undefined || n === null || n === 256 || n === 7 || n === 0) return null;
+    return ACI[n] || null;
+  }
+
   function caja(pts) {
     var xs = pts.map(function (p) { return p[0]; });
     var ys = pts.map(function (p) { return p[1]; });
@@ -209,6 +220,7 @@
         }),
         cerrada: f.cerrada !== false,
         cristal: esCristal({ x: c.x0, y: c.y0, w: w, h: h }),
+        color: colorACI(f.color),
         area: w * h
       });
     });
