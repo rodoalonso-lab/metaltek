@@ -7166,11 +7166,152 @@ function opt(sel,v,t){ var o=document.createElement('option'); o.value=v; o.text
 function datos(){
   return Promise.all([
     db('GET','clientes?select=*&order=nombre'),
-    db('GET','obras?select=id,nombre,cliente,cliente_id,ubicacion,estado&order=nombre')
+    db('GET','obras?select=id,nombre,cliente,cliente_id,ubicacion,estado&order=nombre'),
+    db('GET','canc_series?select=*&order=nombre'),
+    db('GET','canc_perfiles?select=*&order=codigo')
   ]).then(function(r){
-    CLIENTES=r[0]||[]; OBRAS=r[1]||[];
+    CLIENTES=r[0]||[]; OBRAS=r[1]||[]; SERIES=r[2]||[]; PERFILES=r[3]||[];
+    if(!SERIE_ID || !serieSel()) SERIE_ID = SERIES.length ? SERIES[0].id : null;
     poblarSelects(); pintarClientes(); pintarObras(); listar();
+    poblarSeries(); pintarSeries(); pintarPerfiles();
+    poblarPerfiles(); calcular();
   }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
+}
+
+// ── Catálogo: series ──────────────────────────────────────────────────
+function poblarSeries(){
+  [['cSerie',true],['pSerie',false]].forEach(function(par){
+    var s=$(par[0]); if(!s) return;
+    var v=s.value; s.innerHTML='';
+    if(!SERIES.length) opt(s,'','— sin series en el catálogo —');
+    SERIES.forEach(function(x){ opt(s, x.id, x.codigo+' · '+x.nombre); });
+    s.value = v || SERIE_ID || (SERIES[0]&&SERIES[0].id) || '';
+  });
+  if($('cSerie') && SERIE_ID) $('cSerie').value=SERIE_ID;
+  infoSerie();
+}
+function infoSerie(){
+  var e=$('cSerieInfo'); if(!e) return;
+  var s=serieSel();
+  if(!s){ e.innerHTML='<span style="color:var(--warning)">Sin serie: se está usando la MC-450 del archivo.</span>'; return; }
+  var n=perfilesDeSerie().length;
+  e.innerHTML = n+' perfil'+(n===1?'':'es')+' · '+
+    (s.calibrada
+      ? '<span style="color:var(--accent)">calibrada</span>'
+      : '<span style="color:var(--warning)">sin calibrar — los cortes no son de producción</span>');
+}
+function cambiarSerie(){
+  SERIE_ID = val('cSerie') || null;
+  poblarPerfiles(); infoSerie(); calcular();
+}
+function guardarSerie(){
+  var cod=val('sCod').trim(), nom=val('sNom').trim();
+  if(!cod || !nom){ alert('La serie necesita código y nombre.'); return; }
+  var cuerpo={codigo:cod, nombre:nom, proveedor:val('sProv').trim()||null,
+              material:val('sMat').trim()||null, tipo:val('sTipo'),
+              ensamble_marco:val('sEns'), calibrada:$('sCal').checked};
+  var p = EDIT_SERIE ? db('PATCH','canc_series?id=eq.'+EDIT_SERIE,cuerpo)
+                     : db('POST','canc_series',cuerpo);
+  p.then(function(r){ if(!EDIT_SERIE && r && r[0]) SERIE_ID=r[0].id;
+                      limpiarSerie(); return datos(); })
+   .catch(function(e){ alert('No se guardó: '+e.message); });
+}
+function editarSerie(id){
+  var s=SERIES.filter(function(x){return x.id===id;})[0]; if(!s) return;
+  EDIT_SERIE=id;
+  $('sCod').value=s.codigo||''; $('sNom').value=s.nombre||'';
+  $('sProv').value=s.proveedor||''; $('sMat').value=s.material||'';
+  $('sTipo').value=s.tipo||'muro'; $('sEns').value=s.ensamble_marco||'90H';
+  $('sCal').checked=!!s.calibrada;
+  $('sCancel').style.display=''; $('sCod').focus();
+}
+function limpiarSerie(){
+  EDIT_SERIE=null;
+  ['sCod','sNom','sProv','sMat'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('sCal')) $('sCal').checked=false;
+  if($('sCancel')) $('sCancel').style.display='none';
+}
+function pintarSeries(){
+  var c=$('cTablaSeries'); if(!c) return;
+  if(!SERIES.length){ c.innerHTML='<div class="item-sub">Todavía no hay series.</div>'; return; }
+  var h='<table><tr><th>Serie</th><th class="n">Perfiles</th><th></th></tr>';
+  SERIES.forEach(function(s){
+    var n=PERFILES.filter(function(p){return p.serie_id===s.id;}).length;
+    h+='<tr><td><b>'+esc(s.codigo)+'</b><div class="item-sub">'+esc(s.nombre)+
+       (s.calibrada?'':' · <span style="color:var(--warning)">sin calibrar</span>')+'</div></td>'+
+       '<td class="n">'+n+'</td>'+
+       '<td style="text-align:right"><button class="chip" onclick="CANC.editarSerie(\''+s.id+'\')">Editar</button></td></tr>';
+  });
+  c.innerHTML=h+'</table>';
+}
+
+// ── Catálogo: perfiles ────────────────────────────────────────────────
+function poblarRoles(){
+  var s=$('pRol'); if(!s || s.options.length) return;
+  ROLES.forEach(function(r){ opt(s, r[0], r[1]); });
+  s.value='montante';
+}
+function guardarPerfil(){
+  var sid=val('pSerie');
+  if(!sid){ alert('Primero da de alta una serie.'); return; }
+  var cod=val('pCod').trim(), nom=val('pNom').trim();
+  if(!cod || !nom){ alert('El perfil necesita código y nombre.'); return; }
+  var cuerpo={serie_id:sid, codigo:cod, nombre:nom, rol:val('pRol'),
+              ancho_visto:num('pAv'), galce:num('pGal'), kg_m:num('pKg'),
+              precio_tramo:num('pPre'), largo_tramo:num('pTramo')||6000};
+  var p = EDIT_PERF ? db('PATCH','canc_perfiles?id=eq.'+EDIT_PERF,cuerpo)
+                    : db('POST','canc_perfiles',cuerpo);
+  p.then(function(){ limpiarPerfil(); return datos(); })
+   .catch(function(e){
+      alert(/duplicate|unique/i.test(e.message)
+        ? 'Ya existe un perfil con el código '+cod+' en esa serie.'
+        : 'No se guardó: '+e.message);
+   });
+}
+function editarPerfil(id){
+  var p=PERFILES.filter(function(x){return x.id===id;})[0]; if(!p) return;
+  EDIT_PERF=id;
+  $('pSerie').value=p.serie_id; $('pCod').value=p.codigo||''; $('pNom').value=p.nombre||'';
+  $('pRol').value=p.rol||'otro'; $('pAv').value=p.ancho_visto||0; $('pGal').value=p.galce||0;
+  $('pKg').value=p.kg_m||0; $('pPre').value=p.precio_tramo||0; $('pTramo').value=p.largo_tramo||6000;
+  $('pCancel').style.display=''; $('pCod').focus();
+}
+function limpiarPerfil(){
+  EDIT_PERF=null;
+  ['pCod','pNom'].forEach(function(k){ if($(k)) $(k).value=''; });
+  [['pAv',0],['pGal',0],['pKg',0],['pPre',0],['pTramo',6000]].forEach(function(x){
+    if($(x[0])) $(x[0]).value=x[1]; });
+  if($('pCancel')) $('pCancel').style.display='none';
+}
+function borrarPerfil(id){
+  var p=PERFILES.filter(function(x){return x.id===id;})[0]; if(!p) return;
+  if(!confirm('¿Borrar el perfil '+p.codigo+'? Los presupuestos ya guardados no cambian, '+
+              'porque guardan su propia copia del despiece.')) return;
+  db('DELETE','canc_perfiles?id=eq.'+id)
+    .then(function(){ if(EDIT_PERF===id) limpiarPerfil(); return datos(); })
+    .catch(function(e){ alert('No se borró: '+e.message); });
+}
+function pintarPerfiles(){
+  var c=$('cTablaPerf'); if(!c) return;
+  poblarRoles();
+  var sid=val('pSerie');
+  var arr=PERFILES.filter(function(p){ return p.serie_id===sid; });
+  if(!arr.length){ c.innerHTML='<div class="item-sub">Esta serie todavía no tiene perfiles.</div>'; return; }
+  var h='<table><tr><th>Código</th><th>Nombre</th><th>Rol</th><th class="n">Ancho visto</th>'+
+        '<th class="n">Galce</th><th class="n">Tramo</th><th class="n">Precio</th><th></th></tr>';
+  arr.forEach(function(p){
+    var av=Number(p.ancho_visto)||0, ga=Number(p.galce)||0, pr=Number(p.precio_tramo)||0;
+    h+='<tr><td class="mono"><b>'+esc(p.codigo)+'</b></td><td>'+esc(p.nombre)+'</td>'+
+       '<td>'+esc(rolLabel(p.rol))+'</td>'+
+       '<td class="n">'+(av?av:'<span style="color:var(--warning)">0</span>')+'</td>'+
+       '<td class="n">'+(ga?ga:'<span style="color:var(--dim)">deducido</span>')+'</td>'+
+       '<td class="n">'+mmf(p.largo_tramo)+'</td>'+
+       '<td class="n">'+(pr?money(pr):'<span style="color:var(--warning)">falta</span>')+'</td>'+
+       '<td style="text-align:right;white-space:nowrap">'+
+       '<button class="chip" onclick="CANC.editarPerfil(\''+p.id+'\')">Editar</button> '+
+       '<button class="chip" onclick="CANC.borrarPerfil(\''+p.id+'\')">Borrar</button></td></tr>';
+  });
+  c.innerHTML=h+'</table>';
 }
 function poblarSelects(){
   [['cPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
