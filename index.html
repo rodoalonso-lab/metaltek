@@ -6861,17 +6861,17 @@ function cargarRef(){
 // ── Calculo ───────────────────────────────────────────────────────────
 function calcular(){
   if(!_cargado || !_montado) return;
-  var falta=faltanPerfiles();
-  if(falta.length){
+  // Sin perfiles no hay despiece, pero sí croquis: la retícula se cuadra
+  // antes de asignar los perfiles.
+  if(faltanPerfiles().length){
     ULT=null;
-    if($('cStats')) $('cStats').innerHTML='';
-    if($('cSalida')) $('cSalida').innerHTML=
-      '<div style="text-align:center;padding:44px 20px;color:var(--dim)">'+
-      '<div style="font-size:34px;margin-bottom:10px">🔩</div>'+
-      '<div style="font-weight:600;color:var(--text);margin-bottom:6px">Faltan perfiles por elegir</div>'+
-      '<div class="item-sub">'+falta.map(esc).join('<br>')+'</div>'+
-      '<div class="item-sub" style="margin-top:10px">Se eligen en «Perfiles del modelo», '+
-      'en el panel de la izquierda.</div></div>';
+    var cnC0=cotasNum('cCols','cW'), cnR0=cotasNum('cRows','cH');
+    if($('cStats')) $('cStats').innerHTML=
+      cstat('Vano', mmf(num('cW'))+' × '+mmf(num('cH')), 'mm')+
+      cstat('Módulos', cnC0.length*cnR0.length, cnC0.length+' × '+cnR0.length)+
+      cstat('Postes', Math.max(0,num('cPV'))+' V · '+Math.max(0,num('cPH'))+' H', '')+
+      cstat('Despiece', 'pendiente', 'faltan perfiles', 'var(--warning)');
+    pintar();
     return;
   }
   try{
@@ -6897,7 +6897,19 @@ function cstat(l,v,s,col){
     (s?'<div class="item-sub">'+s+'</div>':'')+'</div>';
 }
 function pintar(){
-  if(!ULT || !$('cStats')) return;
+  if(!$('cSalida')) return;
+  // Sin cálculo sólo se puede dibujar el croquis; las demás vistas
+  // dependen del despiece.
+  if(!ULT){
+    if(VISTA==='alzado'){ $('cSalida').innerHTML=vCroquis(); montarZoom(); }
+    else $('cSalida').innerHTML='<div style="text-align:center;padding:44px 20px;color:var(--dim)">'+
+      '<div style="font-size:34px;margin-bottom:10px">🔩</div>'+
+      '<div style="font-weight:600;color:var(--text);margin-bottom:6px">Falta asignar perfiles</div>'+
+      '<div class="item-sub">'+faltanPerfiles().map(esc).join('<br>')+'</div>'+
+      '<div class="item-sub" style="margin-top:10px">Mientras tanto, la vista '+
+      '<b>Alzado</b> te muestra el croquis del vano.</div></div>';
+    return;
+  }
   var d=ULT.d, q=ULT.q, opt=ULT.opt, vid=ULT.vid;
   var ml=ULT.cortes.reduce(function(a,c){return a+c.largo*c.cant;},0)/1000;
   var tramos=0, hojas=0, merma=0, nperf=0;
