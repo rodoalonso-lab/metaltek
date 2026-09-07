@@ -6658,6 +6658,32 @@ function repartirIgual(total,n){
   a[n-1]+=total-base*n;
   return a;
 }
+// Valores de arranque del diseño, en un solo lugar para que "Limpiar"
+// y el estado inicial del formulario no se separen con el tiempo.
+var INICIO={cW:6000, cH:3200, cPV:2, cPH:1, cCant:1,
+            cSan:10, cKerf:5, cTu:400, cEstr:'prioridad-retales', cHol:4,
+            cDTM:0, cDMS:0, cDMI:0};
+
+function limpiarModelo(){
+  // Si viene de un modelo guardado, avisar: al limpiar se suelta.
+  if(MODELO_ID){
+    var m=MODELOS.filter(function(x){return x.id===MODELO_ID;})[0];
+    if(!confirm('Vas a limpiar el diseño. El modelo '+((m&&m.clave)||'')+
+                ' ya guardado NO se borra, pero se suelta: el siguiente '+
+                '"Guardar modelo" creará uno nuevo.\n\n¿Continuar?')) return;
+  }
+  Object.keys(INICIO).forEach(function(k){ if($(k)) $(k).value=INICIO[k]; });
+  if($('cRef')) $('cRef').value='';
+  REF_ACTUAL=null;
+  MODELO_ID=null;                 // no pisar un modelo guardado con uno vacío
+  poblarPerfiles(true);           // perfiles de vuelta al primero de cada rol
+  etiquetas();
+  repartir();                     // recalcula cotas, habilitados y despiece
+  pintarModelos();
+  vista('alzado');
+  pista('Diseño limpio.');
+}
+
 function repartir(){
   $('cCols').value = repartirIgual(num('cW'), num('cPV')+1).join(',');
   $('cRows').value = repartirIgual(num('cH'), num('cPH')+1).join(',');
@@ -6725,7 +6751,7 @@ function serieActual(){
 // ── Selectores de posición ────────────────────────────────────────────
 // Cada posición ofrece primero los perfiles con el rol correcto; el resto
 // de la serie queda en un grupo aparte, para no dejarlos inalcanzables.
-function poblarPerfiles(){
+function poblarPerfiles(forzar){
   var lista2=perfilesDeSerie();
   if(!lista2.length && typeof SERIE_MC450!=='undefined'){
     lista2=Object.keys(SERIE_MC450.perfiles).map(function(cod){
@@ -6754,7 +6780,7 @@ function poblarPerfiles(){
     }
     sel.innerHTML=h;
     // conserva la elección previa; si ya no existe, toma el primero del rol
-    sel.value = previo;
+    if(!forzar) sel.value = previo;
     if(!sel.value) sel.value = buenos.length ? buenos[0].codigo : '';
     sel.onchange=calcular;
   });
