@@ -6781,7 +6781,11 @@ function habilitarPorDiseno(){
 }
 function perfilesElegidos(){
   var r={};
-  POSICIONES.forEach(function(par){ var e=$('cpf-'+par[0]); if(e && e.value) r[par[0]]=e.value; });
+  POSICIONES.forEach(function(par){
+    var e=$('cpf-'+par[0]);
+    // una posición apagada no manda perfil al motor
+    if(e && e.value && !e.disabled) r[par[0]]=e.value;
+  });
   return r;
 }
 function poblarRefs(){
