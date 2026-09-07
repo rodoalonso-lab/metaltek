@@ -8063,8 +8063,32 @@ function pintarModelos(){
 function nuevoModelo(){ MODELO_ID=null; pintarModelos(); pista('El siguiente guardado crea un modelo nuevo.'); }
 function abrirModelo(id){
   var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
+  // Un modelo importado no tiene vano ni postes: mandarlo al formulario de
+  // diseño lo dejaría vacío. Se abre en su propia pantalla, de sólo lectura.
+  if(m.tipo==='dxf'){ verModeloDxf(m); return; }
   MODELO_ID=id; aplicarDiseno(m.modelo); pintarModelos();
   pista('Editando '+m.clave+'.'); sub('diseno');
+}
+
+// Reconstruye la vista de importación desde lo que se guardó. No vuelve a
+// leer el archivo ni a consultar precios: muestra la foto del momento en
+// que se importó, que es lo que se cotizó.
+function verModeloDxf(m){
+  var d=m.despiece||{}, items=(d.items||[]).map(function(i){
+    return { ref:i.ref, descripcion:i.descripcion, seccion:i.seccion||'perfiles',
+             clave:i.clave, cantidad:Number(i.cantidad)||0, unidad:i.unidad||'ml',
+             precio:Number(i.precio)||0, importe:Number(i.importe)||0,
+             piezas:0, cortes:i.cortes||[], creado:false };
+  });
+  IMP = { archivo:(m.modelo&&m.modelo.archivo)||m.clave, datos:null, items:items,
+          avisos:[], resuelto:false, guardado:true,
+          total:Number(d.total)||Number(m.costo)||0,
+          creados:0,
+          sinPrecio:items.filter(function(i){ return !i.precio; }).length };
+  pintarImport();
+  dpista('Mostrando '+m.clave+' tal como se importó el '+
+    String((m.modelo&&m.modelo.importado)||'').slice(0,10)+'. Es una foto: no se recalcula.');
+  sub('importar');
 }
 function borrarModelo(id){
   var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
