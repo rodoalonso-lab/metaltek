@@ -6831,15 +6831,20 @@ function planoTablas(vidrios, perfiles){
   });
   h+='</table>';
 
-  h+='<div class="pl-th">PERFILES</div><table class="pl-t"><tr><th>Ref.</th><th>Descripción</th><th>Corte</th><th>Pzas</th></tr>';
+  var minis=(IMP && IMP.minis) || {};
+  h+='<div class="pl-th">PERFILES</div><table class="pl-t"><tr><th></th><th>Ref.</th>'+
+     '<th>Descripción</th><th>Corte</th><th>Pzas</th></tr>';
   perfiles.forEach(function(p){
     var cs=(p.cortes||[]);
+    var mini=miniSVG(minis[p.ref]);
     cs.forEach(function(c,k){
-      h+='<tr><td class="pl-ref">'+(k?'':esc(p.ref))+'</td>'+
-         '<td>'+(k?'':esc(String(p.descripcion).slice(0,30)))+'</td>'+
+      h+='<tr><td class="pl-mini">'+(k?'':mini)+'</td>'+
+         '<td class="pl-ref">'+(k?'':esc(p.ref))+'</td>'+
+         '<td>'+(k?'':esc(String(p.descripcion).slice(0,28)))+'</td>'+
          '<td class="pl-r">'+mmf(c.largo)+'</td><td class="pl-r">'+c.uds+'</td></tr>';
     });
-    if(!cs.length) h+='<tr><td class="pl-ref">'+esc(p.ref)+'</td><td>'+esc(p.descripcion)+'</td><td></td><td class="pl-r">'+p.piezas+'</td></tr>';
+    if(!cs.length) h+='<tr><td class="pl-mini">'+mini+'</td><td class="pl-ref">'+esc(p.ref)+
+       '</td><td>'+esc(p.descripcion)+'</td><td></td><td class="pl-r">'+p.piezas+'</td></tr>';
   });
   h+='</table>';
   h+='<div class="pl-aviso">La lista de corte optimizada la genera WinPerfil. '+
