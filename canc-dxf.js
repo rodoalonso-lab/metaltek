@@ -137,8 +137,9 @@
                                    .map(function (v) { return [v.ancho, v.alto]; });
     if (!medidas.length) return null;
 
+    var todas = leerFormas(contenido);
     var rects = [], vistos = {};
-    leerFormas(contenido).filter(function (e) { return e.pts.length <= 6; }).forEach(function (e) {
+    todas.filter(function (e) { return e.pts.length <= 6; }).forEach(function (e) {
       var c = caja(e.pts);
       var w = c.x1 - c.x0, h = c.y1 - c.y0;
       if (w < 1 || h < 1) return;
