@@ -6818,6 +6818,24 @@ function texto(x,y,txt,fs,fuerte,rot){
 }
 
 
+// El corte seccional del perfil, en miniatura, junto a su renglón. Es lo
+// que WinPerfil pone en la primera columna de la tabla y lo que hace que el
+// plano se lea como plano de taller y no como una lista.
+function miniSVG(m){
+  if(!m || !m.formas || !m.formas.length) return '';
+  var pad=m.w*0.06+1;
+  var vb=[-pad,-pad,m.w+pad*2,m.h+pad*2].join(' ');
+  var lin=Math.max(m.w,m.h)*0.022;
+  var g='';
+  m.formas.forEach(function(f){
+    if(!f.pts || f.pts.length<2) return;
+    g+='<path d="M '+f.pts.map(function(p){return p[0]+' '+p[1];}).join(' L ')+
+       (f.cerrada?' Z':'')+'" fill="'+(f.color||'#c8d2da')+'" fill-opacity="'+(f.color?0.25:0.9)+
+       '" stroke="'+(f.color||'#3f4a55')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+  });
+  return '<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
+}
+
 function planoTablas(vidrios, perfiles){
   var h='<div class="pl-th">CRISTALES</div><table class="pl-t"><tr><th>N°</th><th>Medida</th><th>Pzas</th></tr>';
   // Las marcas del dibujo van por posición; aquí se listan en el mismo orden
