@@ -6689,27 +6689,28 @@ function planoDibujo(a, vidrios){
   var vb=[-M*0.35, -M*0.35, W+M*1.35, H+M*1.35].join(' ');
   var g='';
 
-  // ── EL ALUMINIO, COMO UNA SOLA SILUETA ──────────────────────────────
-  // WinPerfil dibuja cada perfil como un rectángulo, y los perfiles se
-  // traslapan: marco, bastidor, hoja. Si a cada rectángulo se le pone borde,
-  // salen cajas dentro de cajas — ocho o diez líneas concéntricas donde
-  // debería leerse una sola pieza de aluminio. Era lo que ensuciaba el plano.
+  // ── LA GEOMETRÍA DEL DXF, TAL CUAL ──────────────────────────────────
+  // Dos intentos previos fallaron por la misma raíz: yo reducía cada
+  // polilínea a su rectángulo envolvente. Con borde salían cajas dentro de
+  // cajas; sin borde, una mancha gris. Ninguna de las dos se parecía al
+  // archivo abierto en AutoCAD, porque el detalle —manijas, herrajes,
+  // junquillos— vive en los vértices que yo estaba tirando.
   //
-  // Se pintan SIN borde y del mismo tono: al tocarse se funden en una
-  // silueta continua. El contorno sólo va donde de verdad hay un canto:
-  // el perímetro del vano y el borde de cada cristal.
-  var lin=Math.max(W,H)*0.0022;
-  a.piezas.filter(function(p){return !p.cristal;}).forEach(function(p){
-    g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" fill="#c9d1d9"/>';
+  // Ahora se dibujan los vértices completos, con trazo capilar. En una
+  // puerta eso son 504 vértices en vez de 60 rectángulos.
+  var lin=Math.max(W,H)*0.0007;          // hairline, como AutoCAD
+  var camino=function(f){
+    return 'M '+f.pts.map(function(p){ return p[0]+' '+p[1]; }).join(' L ')+(f.cerrada?' Z':'');
+  };
+  (a.formas||[]).forEach(function(f){
+    if(f.pts.length<2) return;
+    g+='<path d="'+camino(f)+'" fill="'+(f.cristal?PL_VIDRIO:'#dde3e8')+
+       '" stroke="#55606b" stroke-width="'+lin+'" stroke-linejoin="round"/>';
   });
   var crist=a.piezas.filter(function(p){return p.cristal;});
-  crist.forEach(function(p){
-    g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
-       '" fill="'+PL_VIDRIO+'" stroke="#8a97a3" stroke-width="'+lin+'"/>';
-  });
   // contorno del vano: el único trazo grueso del dibujo
   g+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="none" stroke="'+PL_TINTA+
-     '" stroke-width="'+(lin*3.2)+'"/>';
+     '" stroke-width="'+(lin*3.4)+'"/>';
 
   // numerar cada cristal y anotar su medida
   var marcas={}, n=0, D0=Math.max(W,H);
