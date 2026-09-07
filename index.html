@@ -6370,8 +6370,26 @@ function money(n){
 // ── Estado ────────────────────────────────────────────────────────────
 var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null, ULT=null;
 var VISTA='alzado', REF_ACTUAL=null, EDIT_CLI=null, EDIT_OBRA=null, SUB='diseno';
-var POSICIONES=[['cabezal','MC-TRA'],['zoclo','MC-TRA'],['jambaIzq','MC-MON'],['jambaDer','MC-MON'],
-                ['montante','MC-MON'],['travesano','MC-TRA'],['tapaV','MC-TPV'],['tapaH','MC-TPH']];
+// Posición en el modelo → [etiqueta, roles que puede ocupar]
+// El rol es lo que decide qué perfiles del catálogo aparecen en cada selector.
+var POSICIONES=[
+  ['cabezal',  'Marco superior · cabezal',      ['travesano','cabezal']],
+  ['zoclo',    'Marco inferior · zoclo',        ['travesano','zoclo']],
+  ['jambaIzq', 'Marco izquierdo · jamba',       ['montante','jamba']],
+  ['jambaDer', 'Marco derecho · jamba',         ['montante','jamba']],
+  ['montante', 'Postes verticales · montante',  ['montante']],
+  ['travesano','Postes horizontales · travesaño',['travesano']],
+  ['tapaV',    'Tapa vertical',                 ['tapa']],
+  ['tapaH',    'Tapa horizontal',               ['tapa']]
+];
+var ROLES=[['montante','Montante'],['travesano','Travesaño'],['jamba','Jamba'],
+           ['cabezal','Cabezal'],['zoclo','Zoclo'],['tapa','Tapa'],['alero','Alerón'],
+           ['conector','Conector'],['moldura','Moldura'],['union','Unión'],
+           ['junquillo','Junquillo'],['hoja','Hoja'],['adaptador','Adaptador'],['otro','Otro']];
+function rolLabel(r){
+  for(var i=0;i<ROLES.length;i++) if(ROLES[i][0]===r) return ROLES[i][1];
+  return r;
+}
 
 // ── Plantilla ─────────────────────────────────────────────────────────
 function plantilla(){
