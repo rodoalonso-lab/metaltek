@@ -6716,28 +6716,59 @@ function planoDibujo(a, vidrios){
   var D=Math.max(W,H);
   var ct=IMP.cotas||{};
   var cH=(ct.H||[]).slice(), cV=(ct.V||[]).slice();
-  var tH=ct.totalH||W, tV=ct.totalV||H;
+  var tH=(ct.totalH&&ct.totalH.valor)||W, tV=(ct.totalV&&ct.totalV.valor)||H;
+  var sep=D*0.018, alt=D*0.052, fs=D*0.026;
 
-  var n1=H+D*0.055, n2=H+D*0.135;          // dos niveles, sin encimarse
-  var m1=W+D*0.055, m2=W+D*0.135;
+  // Las parciales se acomodan proporcionalmente sobre el ancho dibujado: así
+  // siempre cierran contra el total aunque el marco medido difiera un par de
+  // milímetros del que declara WinPerfil.
+  var acc=0, i, y0=H+sep, corte;
+  if(cH.length){
+    g+=celda(0, y0, W, alt);
+    acc=0;
+    for(i=0;i<cH.length;i++){
+      var xa=acc/tH*W; acc+=cH[i].valor; var xb=acc/tH*W;
+      if(i<cH.length-1) g+=div(xb, y0, xb, y0+alt);
+      g+=texto((xa+xb)/2, y0+alt*0.68, 'H'+cH[i].n+'='+cH[i].valor, fs, false);
+    }
+    y0+=alt;
+  }
+  g+=celda(0, y0, W, alt);
+  g+=texto(W/2, y0+alt*0.68, 'H'+((ct.totalH&&ct.totalH.n)||1)+'='+tH, fs, true);
 
-  // Las parciales se acomodan proporcionalmente sobre el ancho dibujado:
-  // así siempre cierran contra el total aunque el marco medido difiera un
-  // par de milímetros del que declara WinPerfil.
-  var acc=0, i;
-  for(i=0;i<cH.length;i++){
-    var xa=acc/tH*W; acc+=cH[i];
-    g+=cotaH(xa, acc/tH*W, n1, D, false, H, cH[i]);
+  var x0=W+sep;
+  if(cV.length){
+    g+=celda(x0, 0, alt, H);
+    acc=0;
+    for(i=0;i<cV.length;i++){
+      var ya=acc/tV*H; acc+=cV[i].valor; var yb=acc/tV*H;
+      if(i<cV.length-1) g+=div(x0, yb, x0+alt, yb);
+      g+=texto(x0+alt*0.68, (ya+yb)/2, 'V'+cV[i].n+'='+cV[i].valor, fs, false, true);
+    }
+    x0+=alt;
   }
-  g+=cotaH(0, W, cH.length?n2:n1, D, true, H, tH);
-  acc=0;
-  for(i=0;i<cV.length;i++){
-    var ya=acc/tV*H; acc+=cV[i];
-    g+=cotaV(ya, acc/tV*H, m1, D, false, W, cV[i]);
-  }
-  g+=cotaV(0, H, cV.length?m2:m1, D, true, W, tV);
+  g+=celda(x0, 0, alt, H);
+  g+=texto(x0+alt*0.68, H/2, 'V'+((ct.totalV&&ct.totalV.n)||1)+'='+tV, fs, true, true);
 
   return '<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
+}
+
+// ── Banda de cotas, al estilo de WinPerfil ────────────────────────────
+// Nada de flechas sobre el dibujo: cada medida vive en su propia celda, con
+// su etiqueta. Así es imposible que dos cotas se empalmen, que era justo el
+// problema de la primera versión.
+function celda(x,y,w,h){
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="#fff" stroke="'+
+         PL_TINTA+'" stroke-width="'+(Math.max(w,h)*0.0022)+'"/>';
+}
+function div(x1,y1,x2,y2){
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+PL_TINTA+
+         '" stroke-width="'+((Math.abs(x2-x1)+Math.abs(y2-y1))*0.012+2)+'"/>';
+}
+function texto(x,y,txt,fs,fuerte,rot){
+  var t='<text x="'+x+'" y="'+y+'" font-size="'+fs+'" text-anchor="middle" fill="'+PL_TINTA+
+        '" font-weight="'+(fuerte?700:500)+'">'+esc(txt)+'</text>';
+  return rot ? '<g transform="rotate(-90 '+x+','+y+')">'+t+'</g>' : t;
 }
 
 function flecha(x,y,dx,dy){
