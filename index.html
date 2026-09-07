@@ -7380,6 +7380,225 @@ function datos(){
   }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
+// ── Importación de DXF ────────────────────────────────────────────────
+// La geometría viene de WinPerfil. Aquí sólo se lee, se valoriza contra el
+// catálogo y se guarda. No se recalcula ningún corte: por eso no hay riesgo
+// de que un descuento mal calibrado ensucie una cotización.
+function dpista(t, c){
+  var e=$('dPista'); if(e) e.innerHTML = t ? '<span style="color:var(--'+(c||'dim')+')">'+esc(t)+'</span>' : '';
+}
+function filtrarObrasDxf(){
+  var s=$('dPreObra'); if(!s) return;
+  var cli=val('dPreCli'), v=s.value;
+  s.innerHTML=''; opt(s,'','— sin obra —');
+  OBRAS.filter(function(o){ return !cli || o.cliente_id===cli || !o.cliente_id; })
+       .forEach(function(o){ opt(s,o.id,o.nombre+(o.cliente_id?'':'  (sin cliente)')); });
+  s.value=v;
+}
+
+// De qué tabla del DXF viene cada material: es el dato más confiable para
+// decidir familia y unidad de un insumo nuevo.
+var ORIGEN_TABLA = {
+  perfiles:   { familia:'MAT-001', unidad:'ml',  etiqueta:'Perfil' },
+  vidrios:    { familia:'MAT-002', unidad:'m2',  etiqueta:'Cristal' },
+  longitud:   { familia:'MAT-003', unidad:'ml',  etiqueta:'Accesorio por longitud' },
+  accesorios: { familia:'MAT-003', unidad:'pza', etiqueta:'Accesorio por pieza' }
+};
+
+function leerDxf(input){
+  var file = input && input.files && input.files[0];
+  if(!file) return;
+  dpista('Leyendo ' + file.name + '…');
+  var fr = new FileReader();
+  fr.onerror = function(){ dpista('No se pudo leer el archivo.','danger'); };
+  fr.onload = function(){
+    try { procesarDxf(String(fr.result), file.name); }
+    catch(e){
+      if(typeof logError==='function') logError('canc:dxf',e,{silencioso:true});
+      dpista('El archivo no se pudo interpretar: '+e.message,'danger');
+    }
+  };
+  // WinPerfil escribe el DXF en codificación de Windows, no en UTF-8
+  fr.readAsText(file, 'windows-1252');
+}
+
+function procesarDxf(texto, nombre){
+  if(typeof CANC_DXF==='undefined'){ dpista('El lector de DXF no cargó.','danger'); return; }
+  var d = CANC_DXF.parsear(texto);
+  var piezas = d.perfiles.length + d.vidrios.length + d.accesorios.length + d.longitud.length;
+  if(!piezas){
+    dpista('No se encontraron tablas de despiece. ¿Es un DXF exportado por WinPerfil?','danger');
+    IMP=null; pintarImport(); return;
+  }
+
+  // una entrada por referencia, conservando de qué tabla salió
+  var mapa = {};
+  ['perfiles','vidrios','longitud','accesorios'].forEach(function(sec){
+    d[sec].forEach(function(p){
+      var k = p.refBase || p.ref;
+      if(!mapa[k]) mapa[k] = { ref:k, seccion:sec, descripcion:p.descripcion||'',
+                               ml:0, m2:0, piezas:0, cortes:[] };
+      var m = mapa[k];
+      if(!m.descripcion && p.descripcion) m.descripcion = p.descripcion;
+      if(sec==='vidrios'){
+        if(p.ancho && p.alto){ m.m2 += (p.ancho*p.alto/1e6)*p.uds; m.piezas += p.uds;
+                               m.cortes.push({ancho:p.ancho,alto:p.alto,uds:p.uds}); }
+      } else if(p.largo){
+        m.ml += p.largo*p.uds/1000;
+        m.piezas += p.uds;
+        m.cortes.push({largo:p.largo,uds:p.uds});
+      } else {
+        m.piezas += p.uds;
+      }
+    });
+  });
+  var items = Object.keys(mapa).map(function(k){ return mapa[k]; });
+  items.forEach(function(i){
+    i.ml = Math.round(i.ml*1000)/1000;
+    i.m2 = Math.round(i.m2*10000)/10000;
+    i.cantidad = i.ml || i.m2 || i.piezas;
+    i.unidad = ORIGEN_TABLA[i.seccion].unidad;
+  });
+  items.sort(function(a,b){ return a.seccion===b.seccion ? (a.ref<b.ref?-1:1)
+    : (['perfiles','vidrios','longitud','accesorios'].indexOf(a.seccion)
+     - ['perfiles','vidrios','longitud','accesorios'].indexOf(b.seccion)); });
+
+  IMP = { archivo:nombre, datos:d, items:items, avisos:d.avisos||[], resuelto:false };
+  dpista('Leídas '+items.length+' referencias. Buscándolas en el catálogo…');
+  pintarImport();
+  resolverInsumos();
+}
+
+// Empata contra el catálogo y da de alta lo que falte, en una sola llamada.
+function resolverInsumos(){
+  if(!IMP) return;
+  var lote = IMP.items.map(function(i){
+    return { ref:i.ref, desc:i.descripcion, familia:ORIGEN_TABLA[i.seccion].familia,
+             tipo:'material', unidad:i.unidad };
+  });
+  db('POST','rpc/canc_resolver_refs', {
+      p_items: lote, p_origen: IMP.archivo,
+      p_usuario: (currentUser&&currentUser.email)||null })
+  .then(function(r){
+    var porRef={}; (r||[]).forEach(function(x){ porRef[x.ref]=x; });
+    IMP.items.forEach(function(i){
+      var x=porRef[i.ref];
+      i.insumo_id = x?x.insumo_id:null;
+      i.clave     = x?x.clave:null;
+      i.creado    = !!(x&&x.creado);
+    });
+    IMP.resuelto = true;
+    return datos();                 // recarga el catálogo con las altas nuevas
+  })
+  .then(function(){
+    var porId={}; INSUMOS.forEach(function(x){ porId[x.id]=x; });
+    IMP.items.forEach(function(i){
+      var ins = porId[i.insumo_id];
+      i.precio  = ins ? Number(ins.precio)||0 : 0;
+      i.desc_ins= ins ? ins.descripcion : '';
+      i.importe = Math.round(i.cantidad*i.precio*100)/100;
+    });
+    IMP.total   = IMP.items.reduce(function(a,i){ return a+i.importe; },0);
+    IMP.creados = IMP.items.filter(function(i){ return i.creado; }).length;
+    IMP.sinPrecio = IMP.items.filter(function(i){ return !i.precio; }).length;
+    dpista('');
+    pintarImport();
+  })
+  .catch(function(e){ dpista('No se pudo consultar el catálogo: '+e.message,'danger'); });
+}
+
+function pintarImport(){
+  var c=$('dSalida'), r=$('dResumen'); if(!c) return;
+  if(!IMP){ if(r) r.innerHTML=''; c.innerHTML='<div class="item-sub">Elige un archivo .dxf de WinPerfil.</div>'; return; }
+  if(r) r.innerHTML =
+    cstat('Referencias', IMP.items.length, IMP.archivo)+
+    cstat('Piezas', IMP.items.reduce(function(a,i){return a+i.piezas;},0), '')+
+    cstat('Altas nuevas', IMP.creados===undefined?'…':IMP.creados,
+          IMP.creados?'con precio pendiente':'ninguna',
+          IMP.creados?'var(--warning)':'var(--accent)')+
+    cstat('Costo de material', IMP.total===undefined?'…':money(IMP.total),
+          IMP.sinPrecio?IMP.sinPrecio+' sin precio':'catálogo completo',
+          IMP.sinPrecio?'var(--warning)':'var(--accent)');
+
+  var h='';
+  if(IMP.avisos.length)
+    h+='<div class="aviso"><b>Al leer el archivo:</b><br>'+IMP.avisos.map(esc).join('<br>')+'</div>';
+  if(IMP.sinPrecio)
+    h+='<div class="aviso"><b>'+IMP.sinPrecio+' material(es) sin precio.</b> '+
+       'El costo de abajo está incompleto hasta capturarlos en la pestaña Insumos.</div>';
+
+  h+='<table><tr><th>Ref. WinPerfil</th><th>Material</th><th>Insumo</th>'+
+     '<th class="n">Cantidad</th><th class="n">P. unitario</th><th class="n">Importe</th></tr>';
+  var sec=null;
+  IMP.items.forEach(function(i){
+    if(i.seccion!==sec){
+      sec=i.seccion;
+      h+='<tr><td colspan="6" style="padding-top:12px;color:var(--dim);font-size:11px;'+
+         'font-weight:700;letter-spacing:.05em;border-bottom:none">'+
+         esc(ORIGEN_TABLA[sec].etiqueta.toUpperCase())+'</td></tr>';
+    }
+    h+='<tr><td class="mono">'+esc(i.ref)+'</td>'+
+       '<td>'+esc(i.descripcion||'—')+
+       '<div class="item-sub">'+i.cortes.map(function(x){
+          return x.largo ? x.uds+' × '+mmf(x.largo)+' mm'
+                         : x.uds+' × '+mmf(x.ancho)+'×'+mmf(x.alto);
+       }).join(' · ')+'</div></td>'+
+       '<td class="mono">'+(i.clave?esc(i.clave):'…')+
+       (i.creado?' <span class="badge" style="color:var(--warning);border-color:var(--warning)">nuevo</span>':'')+
+       '</td>'+
+       '<td class="n">'+i.cantidad.toFixed(i.unidad==='pza'?0:3)+' '+i.unidad+'</td>'+
+       '<td class="n">'+(i.precio?money(i.precio):'<span style="color:var(--warning)">falta</span>')+'</td>'+
+       '<td class="n">'+(i.importe?money(i.importe):'—')+'</td></tr>';
+  });
+  h+='<tr><td colspan="5" style="text-align:right;font-weight:700;padding-top:12px">COSTO DIRECTO DE MATERIAL</td>'+
+     '<td class="n" style="font-weight:700;padding-top:12px">'+money(IMP.total||0)+'</td></tr>';
+  h+='</table>';
+
+  if(IMP.resuelto)
+    h+='<div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">'+
+       '<button class="btn-primary" onclick="CANC.guardarImport()">Guardar en el presupuesto</button>'+
+       '<button class="btn-secondary" onclick="CANC.sub(\'insumos\')">Capturar precios faltantes</button>'+
+       '<span id="dGuardado" class="item-sub" style="margin:0"></span></div>';
+  c.innerHTML=h;
+}
+
+function guardarImport(){
+  if(!IMP || !IMP.resuelto){ dpista('Todavía no termina de leerse el archivo.','danger'); return; }
+  var cli=val('dPreCli');
+  if(!cli){ dpista('Elige el cliente.','danger'); return; }
+  var nom=val('dPreNom').trim();
+  if(!nom){ dpista('Ponle nombre al presupuesto.','danger'); return; }
+  dpista('Guardando…');
+  var cab={cliente_id:cli, obra_id:val('dPreObra')||null, nombre:nom,
+           estado:'borrador', serie_cod:(serieSel()||{}).codigo||null,
+           cfg:{origen:'dxf'}, creado_por:(currentUser&&currentUser.email)||null};
+  var pCab = PRE ? db('PATCH','canc_presupuestos?id=eq.'+PRE.id,cab)
+                 : db('POST','canc_presupuestos',cab);
+  pCab.then(function(r){
+    PRE=r[0];
+    var orden = MODELOS.length+1;
+    return db('POST','canc_modelos', {
+      presupuesto_id:PRE.id, orden:orden,
+      clave:'M-'+(orden<10?'0':'')+orden,
+      descripcion: IMP.archivo.replace(/\.dxf$/i,'') + ' · ' + IMP.items.length + ' referencias',
+      cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
+      // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
+      modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString() },
+      despiece: { items:IMP.items.map(function(i){
+                    return {ref:i.ref, descripcion:i.descripcion, seccion:i.seccion,
+                            clave:i.clave, cantidad:i.cantidad, unidad:i.unidad,
+                            precio:i.precio, importe:i.importe, cortes:i.cortes};
+                  }), total:IMP.total, calculado:new Date().toISOString() },
+      costo: IMP.total, precio: IMP.total });
+  }).then(function(){
+    return recargarModelos();
+  }).then(function(){
+    dpista('Guardado en '+PRE.folio+'.','accent');
+    var g=$('dGuardado');
+    if(g) g.innerHTML='<span style="color:var(--accent)">Guardado en '+esc(PRE.folio)+'</span>';
+  }).catch(function(e){ dpista('No se guardó: '+e.message,'danger'); });
+}
+
 // ── Catálogo: insumos ─────────────────────────────────────────────────
 // Es la "TablaInsumos" del Excel: la fuente única de precios.
 function familiaSugerida(){
