@@ -189,6 +189,40 @@
              piezas: piezas, cristales: panes.length, total: piezas.length };
   }
 
+  // ── 1c. Las cotas que WinPerfil ya escribió ─────────────────────────
+  // Vienen como texto en el DXF: "H1=2000", "V3=3200". La última de cada
+  // eje es el total; las demás son las parciales, ordenadas por su posición
+  // en el dibujo (no por el número de la etiqueta: en CW-02 el H1 está a la
+  // derecha).
+  //
+  // Usarlas tal cual, en vez de deducirlas de la geometría, resuelve de un
+  // golpe el caso de la puerta: WinPerfil acota ahí sólo el total, porque el
+  // detalle va en las secciones. Deduciéndolas salían once cotas inútiles.
+  function cotasEtiquetadas(contenido) {
+    var rx = /^([HV])(\d+)\s*=\s*([\d.]+)$/;
+    var H = [], V = [];
+    leerTextos(contenido).forEach(function (t) {
+      var m = rx.exec(t.texto.replace(/\s+/g, ''));
+      if (!m) return;
+      var reg = { n: parseInt(m[2], 10), valor: Math.round(parseFloat(m[3])), x: t.x, y: t.y };
+      (m[1] === 'H' ? H : V).push(reg);
+    });
+    if (!H.length && !V.length) return null;
+
+    // El total es la etiqueta de número más alto; se separa del resto.
+    function partir(arr, ejeX) {
+      if (!arr.length) return { partes: [], total: null };
+      var max = arr.reduce(function (a, b) { return b.n > a.n ? b : a; });
+      var partes = arr.filter(function (r) { return r !== max; })
+                      .sort(function (a, b) { return ejeX ? a.x - b.x : b.y - a.y; });
+      // con una sola cota, ésa es el total y no hay parciales
+      return { partes: partes, total: max.valor };
+    }
+    var h = partir(H, true), v = partir(V, false);
+    return { H: h.partes.map(function (r) { return r.valor; }), totalH: h.total,
+             V: v.partes.map(function (r) { return r.valor; }), totalV: v.total };
+  }
+
   // ── 2. Reconstrucción de las tablas ─────────────────────────────────
   var SECCIONES = [
     { clave: 'perfiles',   titulo: /^perfiles$/i },
