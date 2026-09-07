@@ -342,9 +342,22 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
         <button class="chip active" id="cotab-pres" onclick="setCotab('pres')">📋 Presupuestos</button>
         <button class="chip" id="cotab-cat" onclick="setCotab('cat')">📚 Catálogo</button>
+        <button class="chip" id="cotab-dis" onclick="setCotab('dis')">📐 Diseño cancelería</button>
       </div>
       <div id="co-pres-v"></div>
       <div id="co-cat-v" style="display:none"></div>
+
+      <!-- ══ Diseño y presupuesto de cancelería ══
+           El motor (canc-motor.js, secciones.js, etc.) se carga bajo demanda
+           la primera vez que se abre esta pestaña: son 145 KB que no tienen
+           por qué pesarle a quien nunca entra aquí. -->
+      <div id="co-dis-v" style="display:none">
+        <div id="canc-cargando" style="text-align:center;padding:40px 20px;color:var(--dim)">
+          <div style="font-size:36px;margin-bottom:12px">📐</div>
+          <div style="font-weight:600">Cargando el motor de cancelería…</div>
+        </div>
+        <div id="canc-app" style="display:none"></div>
+      </div>
     </div>
 
     <!-- Vista 2: Capítulos y Conceptos -->
