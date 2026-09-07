@@ -90,11 +90,17 @@
       if (cod === 0) {
         if (ent && ent.pts.length) out.push(ent);
         var tipo = valor.trim().toUpperCase();
-        ent = (tipo === 'LWPOLYLINE' || tipo === 'LINE') ? { t: tipo, pts: [] } : null;
+        ent = (tipo === 'LWPOLYLINE' || tipo === 'LINE') ? { t: tipo, pts: [], color: 256 } : null;
         esperaY = false;
         continue;
       }
       if (!ent) continue;
+
+      // 62 = color de la entidad en índice ACI. 256 significa "por capa";
+      // WinPerfil dibuja todo en la capa 0, así que ahí no hay color y se
+      // pinta con la paleta propia. Si el archivo sí trae colores, se usan.
+      if (cod === 62) { ent.color = parseInt(valor, 10); continue; }
+      if (cod === 70 && ent.t === 'LWPOLYLINE') { ent.cerrada = (parseInt(valor,10) & 1) === 1; continue; }
 
       if (ent.t === 'LWPOLYLINE') {
         if (cod === 10) { ent.pts.push([parseFloat(valor), 0]); esperaY = true; }
