@@ -6457,6 +6457,11 @@ function plantilla(){
       '</div>'+
       '<label style="margin-top:12px">Archivo .dxf</label>'+
       '<input class="form-input" id="dArchivo" type="file" accept=".dxf" onchange="CANC.leerDxf(this)">'+
+      '<div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">'+
+        '<button class="btn-secondary" onclick="CANC.limpiarImport()">Limpiar y empezar de cero</button>'+
+        '<span class="item-sub" style="margin:0">Suelta el presupuesto abierto. Úsalo al cambiar de obra '+
+        'o de cliente; para agregar otro modelo al mismo presupuesto, sólo elige el archivo.</span>'+
+      '</div>'+
       '<div id="dPista" class="item-sub" style="margin-top:8px"></div>'+
     '</div>'+
     '<div id="dResumen" class="cstats"></div>'+
