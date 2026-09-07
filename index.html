@@ -6752,10 +6752,10 @@ function rotulo(x,y,txt,fs,fuerte,rot){
         '" font-weight="'+(fuerte?700:500)+'">'+txt+'</text>';
   return rot ? '<g transform="rotate(-90 '+x+','+y+')">'+t+'</g>' : t;
 }
-function cotaH(x1,x2,y,D,fuerte,H){
+function cotaH(x1,x2,y,D,fuerte,H,valor){
   var L=x2-x1; if(L<1) return '';
   var w=fuerte?D*0.0016:D*0.0011, fs=fuerte?D*0.030:D*0.024;
-  var txt=String(Math.round(L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
+  var txt=String(Math.round(valor!==undefined?valor:L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
   var fl=D*0.011, ext=D*0.010;
   // líneas de extensión: van del dibujo a la cota, sin tocarlo
   var g='<line x1="'+x1+'" y1="'+(H+ext)+'" x2="'+x1+'" y2="'+(y+fl*0.6)+'" stroke="'+PL_GRIS+
@@ -6770,10 +6770,10 @@ function cotaH(x1,x2,y,D,fuerte,H){
   // cuando no cabe, el número sube un renglón para no pisar al vecino
   return g+rotulo((x1+x2)/2, y-(cabe?fs*0.45:fs*1.35), txt, fs, fuerte, false);
 }
-function cotaV(y1,y2,x,D,fuerte,W){
+function cotaV(y1,y2,x,D,fuerte,W,valor){
   var L=y2-y1; if(L<1) return '';
   var w=fuerte?D*0.0016:D*0.0011, fs=fuerte?D*0.030:D*0.024;
-  var txt=String(Math.round(L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
+  var txt=String(Math.round(valor!==undefined?valor:L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
   var fl=D*0.011, ext=D*0.010;
   var g='<line x1="'+(W+ext)+'" y1="'+y1+'" x2="'+(x+fl*0.6)+'" y2="'+y1+'" stroke="'+PL_GRIS+
         '" stroke-width="'+(w*0.6)+'"/>'+
@@ -6998,10 +6998,11 @@ function procesarDxf(texto, nombre){
     : (['perfiles','vidrios','longitud','accesorios'].indexOf(a.seccion)
      - ['perfiles','vidrios','longitud','accesorios'].indexOf(b.seccion)); });
 
-  var alz=null;
+  var alz=null, cot=null;
   try { alz = CANC_DXF.alzado(texto, d); } catch(e){ alz=null; }
+  try { cot = CANC_DXF.cotas(texto); } catch(e){ cot=null; }
 
-  IMP = { archivo:nombre, datos:d, items:items, alzado:alz,
+  IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot,
           avisos:d.avisos||[], resuelto:false };
   dpista('Leídas '+items.length+' referencias. Buscándolas en el catálogo…');
   pintarImport();
@@ -7128,7 +7129,7 @@ function guardarImport(){
       cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
       // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
       modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString(),
-                  alzado:IMP.alzado },
+                  alzado:IMP.alzado, cotas:IMP.cotas },
       despiece: { items:IMP.items.map(function(i){
                     return {ref:i.ref, descripcion:i.descripcion, seccion:i.seccion,
                             clave:i.clave, cantidad:i.cantidad, unidad:i.unidad,
@@ -7411,7 +7412,8 @@ function verModeloDxf(m){
              piezas:0, cortes:i.cortes||[], creado:false };
   });
   IMP = { archivo:(m.modelo&&m.modelo.archivo)||m.clave, datos:null, items:items,
-          alzado:(m.modelo&&m.modelo.alzado)||null, clave:m.clave,
+          alzado:(m.modelo&&m.modelo.alzado)||null, cotas:(m.modelo&&m.modelo.cotas)||null,
+          clave:m.clave,
           avisos:[], resuelto:false, guardado:true,
           total:Number(d.total)||Number(m.costo)||0,
           creados:0,
