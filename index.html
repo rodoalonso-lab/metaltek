@@ -6706,7 +6706,7 @@ function abrir(){
 
 function sub(s){
   SUB = s;
-  ['diseno','guardados','perfiles','insumos','catalogo'].forEach(function(x){
+  ['importar','diseno','guardados','perfiles','insumos','catalogo'].forEach(function(x){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
@@ -7829,13 +7829,14 @@ function pintarPerfiles(){
   c.innerHTML=h+'</table>';
 }
 function poblarSelects(){
-  [['cPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
+  [['cPreCli','— elige cliente —'],['dPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
     var s=$(par[0]); if(!s) return;
     var v=s.value; s.innerHTML=''; opt(s,'',par[1]);
     CLIENTES.forEach(function(c){ opt(s,c.id,c.nombre); });
     s.value=v;
   });
   filtrarObras();
+  filtrarObrasDxf();
 }
 // Solo las obras del cliente elegido; las que no tienen cliente ligado se
 // muestran siempre, para poder asignarlas sin salir de aqui.
