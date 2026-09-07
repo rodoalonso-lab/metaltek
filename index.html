@@ -6576,9 +6576,26 @@ function abrir(){
     pintarModelos();
     datos();
   }).catch(function(e){
+    // Un 404 aquí casi siempre significa lo mismo: el archivo existe en la
+    // computadora pero el watcher no lo conoce, porque se le agregó al mapa
+    // después de arrancar. Decirlo, en vez de sólo "no se pudo cargar".
+    var f = e.archivo || 'un archivo del módulo';
     $('canc-cargando').innerHTML =
-      '<div style="color:var(--danger);font-weight:600">'+esc(e.message)+'</div>'+
-      '<div class="item-sub" style="margin-top:8px">Si acabas de publicar, espera unos segundos y vuelve a entrar.</div>';
+      '<div style="font-size:34px;margin-bottom:10px">🔌</div>'+
+      '<div style="color:var(--danger);font-weight:700;font-size:15px;margin-bottom:8px">'+
+        'Falta publicar <span class="mono">'+esc(f)+'</span></div>'+
+      '<div class="item-sub" style="max-width:520px;margin:0 auto;line-height:1.7">'+
+        'El archivo está en tu computadora pero no en GitHub. Pasa cuando se agrega '+
+        'un archivo nuevo al módulo: el watcher sólo vigila los que conocía al arrancar.'+
+        '<br><br><b>Solución:</b> doble clic en '+
+        '<span class="mono">Documentos\\Procepal\\REINICIAR_WATCHER.bat</span>, '+
+        'espera a que aparezca <span class="mono">'+esc(f)+'</span> en la lista, '+
+        'y recarga con <b>Ctrl+F5</b>.'+
+        '<br><br>Desde la versión de hoy el watcher se reinicia solo cuando cambia su '+
+        'configuración, así que esto no debería repetirse.'+
+      '</div>'+
+      '<div style="margin-top:14px"><button class="btn-secondary" onclick="location.reload(true)">'+
+        'Reintentar</button></div>';
   });
 }
 
