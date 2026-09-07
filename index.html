@@ -6511,6 +6511,62 @@ function plantilla(){
     '</div>'+
   '</div>'+
 
+  '<div id="cv-perfiles" style="display:none">'+
+    '<div class="cgrid" style="grid-template-columns:340px 1fr">'+
+      '<div>'+
+        '<div class="card" style="margin-bottom:12px">'+
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Serie</div>'+
+          '<label>Código</label><input class="form-input" id="sCod" placeholder="MC450-AD">'+
+          '<label>Nombre</label><input class="form-input" id="sNom" placeholder="CUPRUM MC-450 muro cortina">'+
+          '<label>Proveedor</label><input class="form-input" id="sProv">'+
+          '<label>Material</label><input class="form-input" id="sMat" placeholder="Aluminio 6063-T5">'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+            '<div><label>Tipo</label><select class="form-input" id="sTipo">'+
+              '<option value="muro">Muro cortina</option><option value="ventana">Ventana</option>'+
+              '<option value="puerta">Puerta</option><option value="otro">Otro</option></select></div>'+
+            '<div><label>Ensamble de marco</label><select class="form-input" id="sEns">'+
+              '<option value="90H">90° horizontal</option><option value="90V">90° vertical</option>'+
+              '<option value="45">Inglete 45°</option></select></div>'+
+          '</div>'+
+          '<label style="margin-top:10px;display:flex;align-items:center;gap:8px;cursor:pointer">'+
+            '<input type="checkbox" id="sCal" style="width:16px;height:16px;accent-color:var(--accent)">'+
+            '<span>Calibrada contra fabricación real</span></label>'+
+          '<div class="item-sub">Mientras esté apagada, el módulo avisa que los cortes no son de producción.</div>'+
+          '<div style="display:flex;gap:8px;margin-top:12px">'+
+            '<button class="btn-primary" onclick="CANC.guardarSerie()">Guardar serie</button>'+
+            '<button class="btn-secondary" id="sCancel" onclick="CANC.limpiarSerie()" style="display:none">Cancelar</button>'+
+          '</div>'+
+          '<div id="cTablaSeries" style="margin-top:14px"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="card">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">'+
+            '<div style="font-weight:700;font-size:13px">Perfiles de la serie</div>'+
+            '<select class="form-input" id="pSerie" style="width:auto;min-width:220px" onchange="CANC.pintarPerfiles()"></select>'+
+          '</div>'+
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">'+
+            '<div><label>Código</label><input class="form-input" id="pCod" placeholder="MC-MON"></div>'+
+            '<div><label>Nombre</label><input class="form-input" id="pNom" placeholder="Montante 4.5&quot;"></div>'+
+            '<div><label>Rol</label><select class="form-input" id="pRol"></select></div>'+
+            '<div><label>Ancho visto (mm)</label><input class="form-input" id="pAv" type="number" step="0.01" value="0"></div>'+
+            '<div><label>Galce (mm)</label><input class="form-input" id="pGal" type="number" step="0.01" value="0"></div>'+
+            '<div><label>Largo de tramo (mm)</label><input class="form-input" id="pTramo" type="number" value="6000"></div>'+
+            '<div><label>Kg por metro</label><input class="form-input" id="pKg" type="number" step="0.001" value="0"></div>'+
+            '<div><label>Precio del tramo</label><input class="form-input" id="pPre" type="number" step="0.01" value="0"></div>'+
+          '</div>'+
+          '<div class="item-sub" style="margin-top:6px">El <b>ancho visto</b> es lo que tapa el perfil en el alzado; '+
+          'el <b>galce</b> es lo que entra el cristal por lado. De esos dos salen los cortes.</div>'+
+          '<div style="display:flex;gap:8px;margin-top:12px">'+
+            '<button class="btn-primary" onclick="CANC.guardarPerfil()">Guardar perfil</button>'+
+            '<button class="btn-secondary" id="pCancel" onclick="CANC.limpiarPerfil()" style="display:none">Cancelar</button>'+
+          '</div>'+
+          '<div id="cTablaPerf" style="margin-top:14px"></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+
   '<div id="cv-catalogo" style="display:none">'+
     '<div class="item-sub" style="margin-bottom:12px">Son las mismas tablas de Clientes y Obras que ya usa el resto de la app.</div>'+
     '<div class="cgrid" style="grid-template-columns:1fr 1fr">'+
