@@ -6527,10 +6527,6 @@ function sub(s){
   if(s==='guardados') listar();
   if(s==='insumos') pintarInsumos();
 }
-function dpista(txt,tipo){
-  var e=$('cPista'); if(!e) return;
-  e.innerHTML = txt ? '<span style="color:var(--'+(tipo||'dim')+')">'+esc(txt)+'</span>' : '';
-}
 
 
 function cstat(l,v,s,col){
