@@ -6403,14 +6403,34 @@ function rolLabel(r){
 function plantilla(){
   return ''+
   '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
-    '<button class="chip active" id="cs-diseno" onclick="CANC.sub(\'diseno\')">✏️ Diseño</button>'+
+    '<button class="chip active" id="cs-importar" onclick="CANC.sub(\'importar\')">📥 Importar DXF</button>'+
+    '<button class="chip" id="cs-diseno" onclick="CANC.sub(\'diseno\')">✏️ Diseño</button>'+
     '<button class="chip" id="cs-guardados" onclick="CANC.sub(\'guardados\')">📁 Guardados</button>'+
     '<button class="chip" id="cs-perfiles" onclick="CANC.sub(\'perfiles\')">🔩 Perfiles</button>'+
     '<button class="chip" id="cs-insumos" onclick="CANC.sub(\'insumos\')">📦 Insumos</button>'+
     '<button class="chip" id="cs-catalogo" onclick="CANC.sub(\'catalogo\')">👥 Clientes y obras</button>'+
   '</div>'+
 
-  '<div id="cv-diseno">'+
+  '<div id="cv-importar">'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Importar despiece de WinPerfil</div>'+
+      '<div class="item-sub" style="margin-bottom:10px">La geometría y los cortes salen de WinPerfil, '+
+      'que es donde está el catálogo calibrado. Aquí se leen y se valorizan contra tus insumos. '+
+      'Lo que no exista se da de alta solo, con precio pendiente.</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'+
+        '<div><label>Cliente</label><select class="form-input" id="dPreCli" onchange="CANC.filtrarObrasDxf()"></select></div>'+
+        '<div><label>Obra</label><select class="form-input" id="dPreObra"></select></div>'+
+        '<div><label>Nombre del presupuesto</label><input class="form-input" id="dPreNom" placeholder="Fachada poniente"></div>'+
+      '</div>'+
+      '<label style="margin-top:12px">Archivo .dxf</label>'+
+      '<input class="form-input" id="dArchivo" type="file" accept=".dxf" onchange="CANC.leerDxf(this)">'+
+      '<div id="dPista" class="item-sub" style="margin-top:8px"></div>'+
+    '</div>'+
+    '<div id="dResumen" class="cstats"></div>'+
+    '<div class="card"><div id="dSalida" class="item-sub">Elige un archivo .dxf de WinPerfil.</div></div>'+
+  '</div>'+
+
+  '<div id="cv-diseno" style="display:none">'+
     '<div class="card" style="margin-bottom:12px">'+
       '<div style="font-weight:700;font-size:13px;margin-bottom:10px">Presupuesto</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'+
