@@ -6676,8 +6676,9 @@ function dato(k,v){ return '<div><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>'
 // Dibujo a escala, con cotas encadenadas y los cristales numerados.
 function planoDibujo(a, vidrios){
   var W=a.W, H=a.H;
-  var M=190;                              // margen para cotas, en mm de dibujo
-  var vb=[-M, -M, W+M*2, H+M*2].join(' ');
+  // margen para las bandas de cota: separación + dos bandas + aire
+  var M=Math.max(W,H)*0.16;
+  var vb=[-M*0.35, -M*0.35, W+M*1.35, H+M*1.35].join(' ');
   var g='';
 
   // perfiles primero, cristales encima
@@ -6771,55 +6772,6 @@ function texto(x,y,txt,fs,fuerte,rot){
   return rot ? '<g transform="rotate(-90 '+x+','+y+')">'+t+'</g>' : t;
 }
 
-function flecha(x,y,dx,dy){
-  return '<path d="M'+x+' '+y+' l'+dx+' '+(-dy)+' l0 '+(dy*2)+' Z" fill="'+PL_TINTA+'"/>';
-}
-// Fondo blanco detrás del número: ninguna cifra se lee encima de una línea.
-function rotulo(x,y,txt,fs,fuerte,rot){
-  var an=String(txt).length*fs*0.60, al=fs*1.05;
-  var t='<rect x="'+(x-an/2-fs*0.22)+'" y="'+(y-al*0.78)+'" width="'+(an+fs*0.44)+'" height="'+al+
-        '" fill="#fff"/>'+
-        '<text x="'+x+'" y="'+y+'" font-size="'+fs+'" text-anchor="middle" fill="'+PL_TINTA+
-        '" font-weight="'+(fuerte?700:500)+'">'+txt+'</text>';
-  return rot ? '<g transform="rotate(-90 '+x+','+y+')">'+t+'</g>' : t;
-}
-function cotaH(x1,x2,y,D,fuerte,H,valor){
-  var L=x2-x1; if(L<1) return '';
-  var w=fuerte?D*0.0016:D*0.0011, fs=fuerte?D*0.030:D*0.024;
-  var txt=String(Math.round(valor!==undefined?valor:L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
-  var fl=D*0.011, ext=D*0.010;
-  // líneas de extensión: van del dibujo a la cota, sin tocarlo
-  var g='<line x1="'+x1+'" y1="'+(H+ext)+'" x2="'+x1+'" y2="'+(y+fl*0.6)+'" stroke="'+PL_GRIS+
-        '" stroke-width="'+(w*0.6)+'"/>'+
-        '<line x1="'+x2+'" y1="'+(H+ext)+'" x2="'+x2+'" y2="'+(y+fl*0.6)+'" stroke="'+PL_GRIS+
-        '" stroke-width="'+(w*0.6)+'"/>'+
-        '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>';
-  if(cabe) g+=flecha(x1,y,fl,fl*0.42)+flecha(x2,y,-fl,fl*0.42);
-  else     g+=flecha(x1,y,-fl,fl*0.42)+flecha(x2,y,fl,fl*0.42)+   // flechas por fuera
-              '<line x1="'+(x1-fl*1.6)+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
-              '<line x1="'+x2+'" y1="'+y+'" x2="'+(x2+fl*1.6)+'" y2="'+y+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>';
-  // cuando no cabe, el número sube un renglón para no pisar al vecino
-  return g+rotulo((x1+x2)/2, y-(cabe?fs*0.45:fs*1.35), txt, fs, fuerte, false);
-}
-function cotaV(y1,y2,x,D,fuerte,W,valor){
-  var L=y2-y1; if(L<1) return '';
-  var w=fuerte?D*0.0016:D*0.0011, fs=fuerte?D*0.030:D*0.024;
-  var txt=String(Math.round(valor!==undefined?valor:L)), an=txt.length*fs*0.60, cabe=L>an*1.5;
-  var fl=D*0.011, ext=D*0.010;
-  var g='<line x1="'+(W+ext)+'" y1="'+y1+'" x2="'+(x+fl*0.6)+'" y2="'+y1+'" stroke="'+PL_GRIS+
-        '" stroke-width="'+(w*0.6)+'"/>'+
-        '<line x1="'+(W+ext)+'" y1="'+y2+'" x2="'+(x+fl*0.6)+'" y2="'+y2+'" stroke="'+PL_GRIS+
-        '" stroke-width="'+(w*0.6)+'"/>'+
-        '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>';
-  if(cabe) g+=flechaV(x,y1,fl,fl*0.42)+flechaV(x,y2,-fl,fl*0.42);
-  else     g+=flechaV(x,y1,-fl,fl*0.42)+flechaV(x,y2,fl,fl*0.42)+
-              '<line x1="'+x+'" y1="'+(y1-fl*1.6)+'" x2="'+x+'" y2="'+y1+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
-              '<line x1="'+x+'" y1="'+y2+'" x2="'+x+'" y2="'+(y2+fl*1.6)+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>';
-  return g+rotulo(x+(cabe?fs*0.45:fs*1.35), (y1+y2)/2, txt, fs, fuerte, true);
-}
-function flechaV(x,y,dy,dx){
-  return '<path d="M'+x+' '+y+' l'+(-dx)+' '+dy+' l'+(dx*2)+' 0 Z" fill="'+PL_TINTA+'"/>';
-}
 
 function planoTablas(vidrios, perfiles){
   var h='<div class="pl-th">CRISTALES</div><table class="pl-t"><tr><th>N°</th><th>Medida</th><th>Pzas</th></tr>';
