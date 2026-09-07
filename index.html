@@ -6705,8 +6705,11 @@ function planoDibujo(a, vidrios){
   if(a.formas && a.formas.length){
     a.formas.forEach(function(f){
       if(!f.pts || f.pts.length<2) return;
-      g+='<path d="'+camino(f)+'" fill="'+(f.cristal?PL_VIDRIO:'#dde3e8')+
-         '" stroke="#55606b" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+      // si el DXF trae color de entidad se respeta; si no, paleta del plano
+      var rel=f.color||(f.cristal?PL_VIDRIO:'#dde3e8');
+      var tra=f.color||'#55606b';
+      g+='<path d="'+camino(f)+'" fill="'+rel+'" fill-opacity="'+(f.color?0.20:1)+
+         '" stroke="'+tra+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
     });
   } else {
     // Modelo guardado antes de que se leyeran los vértices: sólo tiene las
@@ -6744,11 +6747,11 @@ function planoDibujo(a, vidrios){
     g+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#fff" stroke="'+PL_TINTA+
        '" stroke-width="'+(lin*1.4)+'"/>'+
        '<text x="'+cx+'" y="'+(cy+fsm*0.35)+'" font-size="'+fsm+'" text-anchor="middle" '+
-       'fill="'+PL_TINTA+'" font-weight="700">'+marcas[k]+'</text>'+
+       'fill="'+PL_TINTA+'" font-weight="700">'+p.marca+'</text>'+
        '<text x="'+cx+'" y="'+(cy+r+fsd*1.35)+'" font-size="'+fsd+'" text-anchor="middle" fill="'+PL_GRIS+'">'+
        Math.round(p.w)+' × '+Math.round(p.h)+'</text>';
   });
-  a.marcas=marcas;
+
 
   // ── cotas ──
   // Se usan LAS DE WINPERFIL, leídas del propio DXF ("H1=2000", "V3=3200").
@@ -6817,6 +6820,8 @@ function texto(x,y,txt,fs,fuerte,rot){
 
 function planoTablas(vidrios, perfiles){
   var h='<div class="pl-th">CRISTALES</div><table class="pl-t"><tr><th>N°</th><th>Medida</th><th>Pzas</th></tr>';
+  // Las marcas del dibujo van por posición; aquí se listan en el mismo orden
+  var marcas=(IMP && IMP.alzado && IMP.alzado.marcasDibujo) || null;
   var n=0;
   vidrios.forEach(function(v){
     (v.cortes||[]).forEach(function(c){
