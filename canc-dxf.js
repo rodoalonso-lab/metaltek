@@ -219,8 +219,10 @@
       return { partes: partes, total: max.valor };
     }
     var h = partir(H, true), v = partir(V, false);
-    return { H: h.partes.map(function (r) { return r.valor; }), totalH: h.total,
-             V: v.partes.map(function (r) { return r.valor; }), totalV: v.total };
+    // Se conserva el número de etiqueta original: WinPerfil numera por orden
+    // de captura, no de posición, y en el plano se rotulan tal cual (en
+    // CW-02 la banda dice H3, H4, H2, H1 de izquierda a derecha).
+    return { H: h.partes, totalH: h.total, V: v.partes, totalV: v.total };
   }
 
   // ── 2. Reconstrucción de las tablas ─────────────────────────────────
