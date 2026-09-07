@@ -6444,6 +6444,10 @@ function plantilla(){
           '<label style="margin-top:12px">Piezas iguales</label><input class="form-input" id="cCant" type="number" value="1" min="1">'+
           '<label style="margin-top:12px">Caso de referencia (DXF de WinPerfil)</label>'+
           '<select class="form-input" id="cRef" onchange="CANC.cargarRef()"><option value="">— caso libre —</option></select>'+
+          '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>'+
+          '<button class="btn-secondary" style="width:100%" onclick="CANC.limpiarModelo()">Limpiar modelo</button>'+
+          '<div class="item-sub" style="margin-top:4px">Regresa el diseño a cero. No toca el cliente, '+
+          'la obra ni los modelos ya guardados.</div>'+
         '</div>'+
         '<div class="card" style="margin-bottom:12px">'+
           '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Perfiles del modelo</div>'+
