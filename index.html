@@ -6462,8 +6462,12 @@ function plantilla(){
                    '<select class="form-input pf" id="cpf-'+p[0]+'"></select>'+
                    '<div class="item-sub" id="cwhy-'+p[0]+'"></div>';
           }).join('')+
-          '<div style="margin-top:12px"><button class="btn-secondary" style="width:100%" '+
-          'onclick="CANC.sub(\'perfiles\')">Administrar catálogo de perfiles</button></div>'+
+          '<div style="display:flex;gap:8px;margin-top:12px">'+
+            '<button class="btn-secondary" style="flex:1" onclick="CANC.limpiarPerfilesModelo()">Limpiar perfiles</button>'+
+            '<button class="btn-secondary" style="flex:1" onclick="CANC.sub(\'perfiles\')">Catálogo</button>'+
+          '</div>'+
+          '<div class="item-sub" style="margin-top:4px">«Limpiar perfiles» deja el diseño como está '+
+          'y lo regresa al croquis.</div>'+
         '</div>'+
         '<div class="card" style="margin-bottom:12px">'+
           '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Corte y optimización</div>'+
