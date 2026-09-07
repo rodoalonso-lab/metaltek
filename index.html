@@ -6406,6 +6406,15 @@ function plantilla(){
     '</div>'+
     '<div id="dResumen" class="cstats"></div>'+
     '<div class="card"><div id="dSalida" class="item-sub">Elige un archivo .dxf de WinPerfil.</div></div>'+
+    '<div id="planoWrap" style="display:none">'+
+      '<div class="pl-barra">'+
+        '<button class="btn-primary" onclick="CANC.planoImprimir()">Imprimir / Guardar PDF</button>'+
+        '<button class="btn-secondary" onclick="CANC.planoCerrar()">Cerrar</button>'+
+        '<span class="item-sub" style="margin:0">En el diálogo de impresión elige '+
+        '<b>Guardar como PDF</b> y orientación <b>horizontal</b>.</span>'+
+      '</div>'+
+      '<div id="planoHoja"></div>'+
+    '</div>'+
   '</div>'+
 
   '<div id="cv-guardados" style="display:none">'+
