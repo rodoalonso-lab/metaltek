@@ -6728,11 +6728,16 @@ function planoDibujo(a, vidrios){
   g+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="none" stroke="'+PL_TINTA+
      '" stroke-width="'+(lin*3.4)+'"/>';
 
-  // numerar cada cristal y anotar su medida
-  var marcas={}, n=0, D0=Math.max(W,H);
+  // Numerar cada cristal POR POSICIÓN, no por medida. Numerar por medida
+  // hacía que dos hojas idénticas llevaran el mismo número: en una ventana
+  // corrediza de dos hojas iguales, las dos salían como "1".
+  var n=0, D0=Math.max(W,H);
+  crist.sort(function(a,b){
+    // de arriba a abajo y de izquierda a derecha, como se leen los planos
+    return (Math.abs(a.y-b.y)>Math.min(a.h,b.h)*0.5) ? a.y-b.y : a.x-b.x;
+  });
   crist.forEach(function(p){
-    var k=Math.round(p.w)+'x'+Math.round(p.h);
-    if(!marcas[k]) marcas[k]=++n;
+    p.marca=++n;
     var cx=p.x+p.w/2, cy=p.y+p.h/2;
     var r=Math.min(D0*0.030, Math.min(p.w,p.h)*0.30);
     var fsm=r*1.05, fsd=D0*0.019;
