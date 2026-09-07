@@ -6685,12 +6685,13 @@ function abrir(){
 
 function sub(s){
   SUB = s;
-  ['diseno','guardados','perfiles','catalogo'].forEach(function(x){
+  ['diseno','guardados','perfiles','insumos','catalogo'].forEach(function(x){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
   if(s==='guardados') listar();
   if(s==='perfiles'){ poblarSeries(); pintarSeries(); pintarPerfiles(); }
+  if(s==='insumos') pintarInsumos();
 }
 function vista(v){
   VISTA=v;
@@ -7875,6 +7876,8 @@ return {
   limpiarSerie:limpiarSerie, pintarPerfiles:pintarPerfiles,
   guardarPerfil:guardarPerfil, editarPerfil:editarPerfil,
   limpiarPerfil:limpiarPerfil, borrarPerfil:borrarPerfil,
+  guardarInsumo:guardarInsumo, editarInsumo:editarInsumo, limpiarInsumo:limpiarInsumo,
+  activarInsumo:activarInsumo, pintarInsumos:pintarInsumos, familiaSugerida:familiaSugerida,
   guardarCliente:guardarCliente, editarCliente:editarCliente, limpiarCliente:limpiarCliente,
   guardarObra:guardarObra, editarObra:editarObra, limpiarObra:limpiarObra,
   nuevoPresupuesto:nuevoPresupuesto, guardarModelo:guardarModelo, nuevoModelo:nuevoModelo,
