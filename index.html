@@ -6371,6 +6371,13 @@ function money(n){
 var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null, ULT=null;
 var VISTA='alzado', REF_ACTUAL=null, EDIT_CLI=null, EDIT_OBRA=null, SUB='diseno';
 var SERIES=[], PERFILES=[], SERIE_ID=null, EDIT_SERIE=null, EDIT_PERF=null;
+var INSUMOS=[], EDIT_INS=null;
+var TIPOS_INS=[['material','Material'],['mano_obra','Mano de obra'],
+               ['herramienta','Herramienta'],['equipo','Equipo'],['subcontrato','Subcontrato']];
+function tipoLabel(t){
+  for(var i=0;i<TIPOS_INS.length;i++) if(TIPOS_INS[i][0]===t) return TIPOS_INS[i][1];
+  return t;
+}
 // Posición en el modelo → [etiqueta, roles que puede ocupar]
 // El rol es lo que decide qué perfiles del catálogo aparecen en cada selector.
 var POSICIONES=[
@@ -7338,9 +7345,12 @@ function datos(){
     db('GET','clientes?select=*&order=nombre'),
     db('GET','obras?select=id,nombre,cliente,cliente_id,ubicacion,estado&order=nombre'),
     db('GET','canc_series?select=*&order=nombre'),
-    db('GET','canc_perfiles?select=*&order=codigo')
+    db('GET','canc_perfiles?select=*&order=codigo'),
+    db('GET','canc_insumos?select=*&order=clave')
   ]).then(function(r){
     CLIENTES=r[0]||[]; OBRAS=r[1]||[]; SERIES=r[2]||[]; PERFILES=r[3]||[];
+    INSUMOS=(r[4]||[]).filter(function(i){ return !i.es_grupo; });
+    pintarInsumos();
     if(!SERIE_ID || !serieSel()) SERIE_ID = SERIES.length ? SERIES[0].id : null;
     poblarSelects(); pintarClientes(); pintarObras(); listar();
     poblarSeries(); pintarSeries(); pintarPerfiles();
