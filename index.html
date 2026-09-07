@@ -6536,6 +6536,164 @@ function cstat(l,v,s,col){
 }
 
 
+// ══ PLANO DE MONTAJE ══════════════════════════════════════════════════
+// Una hoja por modelo, carta horizontal, pensada para imprimirse en blanco
+// y negro sin perder nada. La geometría es la que dibujó WinPerfil; lo que
+// cambia es la presentación.
+var PL_TINTA='#111', PL_GRIS='#666', PL_VIDRIO='#eef3f6';
+
+function planoAbrir(){
+  if(!IMP || !IMP.alzado){ dpista('Este modelo no trae geometría para dibujar.','danger'); return; }
+  var h=$('planoHoja'); if(!h) return;
+  h.innerHTML = planoHTML();
+  $('planoWrap').style.display='';
+  window.scrollTo(0, $('planoWrap').offsetTop - 20);
+}
+function planoCerrar(){ var w=$('planoWrap'); if(w) w.style.display='none'; }
+function planoImprimir(){ window.print(); }
+
+function planoHTML(){
+  var a=IMP.alzado;
+  var cli=(CLIENTES.filter(function(c){return c.id===(PRE?PRE.cliente_id:val('dPreCli'));})[0]||{}).nombre||'—';
+  var obr=(OBRAS.filter(function(o){return o.id===(PRE?PRE.obra_id:val('dPreObra'));})[0]||{}).nombre||'—';
+  var nom=(PRE&&PRE.nombre)||val('dPreNom')||'—';
+  var folio=(PRE&&PRE.folio)||'sin guardar';
+  var clave=IMP.clave||'—';
+  var hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+
+  // cristales y perfiles, para las tablas y para numerar el dibujo
+  var vidrios=[], perfiles=[];
+  IMP.items.forEach(function(i){
+    if(i.seccion==='vidrios') vidrios.push(i);
+    else if(i.seccion==='perfiles') perfiles.push(i);
+  });
+
+  return ''+
+  '<div class="pl-hoja">'+
+    '<div class="pl-cab">'+
+      '<div class="pl-marca">PROCEPAL</div>'+
+      '<div class="pl-tit">PLANO DE MONTAJE</div>'+
+      '<div class="pl-clave">'+esc(clave)+'</div>'+
+    '</div>'+
+    '<div class="pl-datos">'+
+      dato('Obra', obr)+dato('Cliente', cli)+dato('Presupuesto', nom)+
+      dato('Folio', folio)+dato('Medida del vano', mmf(a.W)+' × '+mmf(a.H)+' mm')+dato('Fecha', hoy)+
+    '</div>'+
+    '<div class="pl-cuerpo">'+
+      '<div class="pl-dib">'+planoDibujo(a, vidrios)+'</div>'+
+      '<div class="pl-tab">'+planoTablas(vidrios, perfiles)+'</div>'+
+    '</div>'+
+    '<div class="pl-pie">'+
+      '<div class="pl-firma"><div class="pl-linea"></div>APROBADO PARA FABRICACIÓN — CLIENTE</div>'+
+      '<div class="pl-firma"><div class="pl-linea"></div>REVISÓ — PROCEPAL</div>'+
+      '<div class="pl-nota">Medidas en milímetros. Verificar vano en obra antes de fabricar.</div>'+
+    '</div>'+
+  '</div>';
+}
+function dato(k,v){ return '<div><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>'; }
+
+// Dibujo a escala, con cotas encadenadas y los cristales numerados.
+function planoDibujo(a, vidrios){
+  var W=a.W, H=a.H;
+  var M=190;                              // margen para cotas, en mm de dibujo
+  var vb=[-M, -M, W+M*2, H+M*2].join(' ');
+  var g='';
+
+  // perfiles primero, cristales encima
+  a.piezas.filter(function(p){return !p.cristal;}).forEach(function(p){
+    g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
+       '" fill="#d8dee3" stroke="'+PL_TINTA+'" stroke-width="6"/>';
+  });
+  var crist=a.piezas.filter(function(p){return p.cristal;});
+  crist.forEach(function(p){
+    g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
+       '" fill="'+PL_VIDRIO+'" stroke="'+PL_TINTA+'" stroke-width="6"/>';
+  });
+  // contorno del vano
+  g+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="none" stroke="'+PL_TINTA+'" stroke-width="14"/>';
+
+  // numerar cada cristal y anotar su medida
+  var marcas={}, n=0;
+  crist.forEach(function(p){
+    var k=Math.round(p.w)+'x'+Math.round(p.h);
+    if(!marcas[k]) marcas[k]=++n;
+    var cx=p.x+p.w/2, cy=p.y+p.h/2, r=Math.min(120, Math.min(p.w,p.h)/3.2);
+    g+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#fff" stroke="'+PL_TINTA+'" stroke-width="6"/>'+
+       '<text x="'+cx+'" y="'+(cy+r*0.36)+'" font-size="'+(r*1.1)+'" text-anchor="middle" '+
+       'fill="'+PL_TINTA+'" font-weight="700">'+marcas[k]+'</text>'+
+       '<text x="'+cx+'" y="'+(cy+r+95)+'" font-size="72" text-anchor="middle" fill="'+PL_GRIS+'">'+
+       Math.round(p.w)+' × '+Math.round(p.h)+'</text>';
+  });
+  a.marcas=marcas;
+
+  // ── cotas ──
+  var ejeX=[], ejeY=[];
+  a.piezas.forEach(function(p){
+    if(!p.cristal) return;
+    if(ejeX.indexOf(Math.round(p.x))<0) ejeX.push(Math.round(p.x));
+    if(ejeX.indexOf(Math.round(p.x+p.w))<0) ejeX.push(Math.round(p.x+p.w));
+    if(ejeY.indexOf(Math.round(p.y))<0) ejeY.push(Math.round(p.y));
+    if(ejeY.indexOf(Math.round(p.y+p.h))<0) ejeY.push(Math.round(p.y+p.h));
+  });
+  ejeX.sort(function(x,y){return x-y;}); ejeY.sort(function(x,y){return x-y;});
+  var yC=H+80, xC=W+80;
+  for(var i=0;i<ejeX.length-1;i++) g+=cotaH(ejeX[i], ejeX[i+1], yC);
+  g+=cotaH(0, W, H+165, true);
+  for(var j=0;j<ejeY.length-1;j++) g+=cotaV(ejeY[j], ejeY[j+1], xC);
+  g+=cotaV(0, H, W+165, true);
+
+  return '<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
+}
+function flecha(x,y,dx,dy){
+  return '<path d="M'+x+' '+y+' l'+dx+' '+(-dy)+' l0 '+(dy*2)+' Z" fill="'+PL_TINTA+'"/>';
+}
+function cotaH(x1,x2,y,fuerte){
+  if(x2-x1<1) return '';
+  var w=fuerte?9:6, fs=fuerte?96:82;
+  return '<line x1="'+x1+'" y1="'+(y-45)+'" x2="'+x1+'" y2="'+(y+35)+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         '<line x1="'+x2+'" y1="'+(y-45)+'" x2="'+x2+'" y2="'+(y+35)+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         flecha(x1,y,55,26)+flecha(x2,y,-55,26)+
+         '<text x="'+((x1+x2)/2)+'" y="'+(y-60)+'" font-size="'+fs+'" text-anchor="middle" '+
+         'fill="'+PL_TINTA+'" font-weight="'+(fuerte?700:400)+'">'+Math.round(x2-x1)+'</text>';
+}
+function cotaV(y1,y2,x,fuerte){
+  if(y2-y1<1) return '';
+  var w=fuerte?9:6, fs=fuerte?96:82, ym=(y1+y2)/2;
+  return '<line x1="'+(x-45)+'" y1="'+y1+'" x2="'+(x+35)+'" y2="'+y1+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         '<line x1="'+(x-45)+'" y1="'+y2+'" x2="'+(x+35)+'" y2="'+y2+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" stroke="'+PL_TINTA+'" stroke-width="'+w+'"/>'+
+         '<text x="'+(x+70)+'" y="'+ym+'" font-size="'+fs+'" text-anchor="middle" fill="'+PL_TINTA+
+         '" font-weight="'+(fuerte?700:400)+'" transform="rotate(90 '+(x+70)+','+ym+')">'+Math.round(y2-y1)+'</text>';
+}
+
+function planoTablas(vidrios, perfiles){
+  var h='<div class="pl-th">CRISTALES</div><table class="pl-t"><tr><th>N°</th><th>Medida</th><th>Pzas</th></tr>';
+  var n=0;
+  vidrios.forEach(function(v){
+    (v.cortes||[]).forEach(function(c){
+      h+='<tr><td class="pl-n">'+(++n)+'</td><td>'+mmf(c.ancho)+' × '+mmf(c.alto)+'</td><td>'+c.uds+'</td></tr>';
+    });
+    if(v.descripcion) h+='<tr><td></td><td colspan="2" class="pl-desc">'+esc(v.descripcion)+'</td></tr>';
+  });
+  h+='</table>';
+
+  h+='<div class="pl-th">PERFILES</div><table class="pl-t"><tr><th>Ref.</th><th>Descripción</th><th>Corte</th><th>Pzas</th></tr>';
+  perfiles.forEach(function(p){
+    var cs=(p.cortes||[]);
+    cs.forEach(function(c,k){
+      h+='<tr><td class="pl-ref">'+(k?'':esc(p.ref))+'</td>'+
+         '<td>'+(k?'':esc(String(p.descripcion).slice(0,30)))+'</td>'+
+         '<td class="pl-r">'+mmf(c.largo)+'</td><td class="pl-r">'+c.uds+'</td></tr>';
+    });
+    if(!cs.length) h+='<tr><td class="pl-ref">'+esc(p.ref)+'</td><td>'+esc(p.descripcion)+'</td><td></td><td class="pl-r">'+p.piezas+'</td></tr>';
+  });
+  h+='</table>';
+  h+='<div class="pl-aviso">La lista de corte optimizada la genera WinPerfil. '+
+     'Este plano es para montaje.</div>';
+  return h;
+}
+
 // ══ LIENZO DE DIBUJO ══════════════════════════════════════════════════
 // Reservado para el plano de montaje. Es lo único que se conservó del
 // motor geométrico: el cálculo lo hace WinPerfil, pero el dibujo sigue
