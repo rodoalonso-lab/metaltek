@@ -216,7 +216,8 @@
       var partes = arr.filter(function (r) { return r !== max; })
                       .sort(function (a, b) { return ejeX ? a.x - b.x : b.y - a.y; });
       // con una sola cota, ésa es el total y no hay parciales
-      return { partes: partes, total: max.valor };
+      return { partes: partes.map(function (r) { return { n: r.n, valor: r.valor }; }),
+               total: { n: max.n, valor: max.valor } };
     }
     var h = partir(H, true), v = partir(V, false);
     // Se conserva el número de etiqueta original: WinPerfil numera por orden
