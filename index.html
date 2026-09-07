@@ -6702,12 +6702,28 @@ function planoDibujo(a, vidrios){
   var camino=function(f){
     return 'M '+f.pts.map(function(p){ return p[0]+' '+p[1]; }).join(' L ')+(f.cerrada?' Z':'');
   };
-  (a.formas||[]).forEach(function(f){
-    if(f.pts.length<2) return;
-    g+='<path d="'+camino(f)+'" fill="'+(f.cristal?PL_VIDRIO:'#dde3e8')+
-       '" stroke="#55606b" stroke-width="'+lin+'" stroke-linejoin="round"/>';
-  });
-  var crist=a.piezas.filter(function(p){return p.cristal;});
+  if(a.formas && a.formas.length){
+    a.formas.forEach(function(f){
+      if(!f.pts || f.pts.length<2) return;
+      g+='<path d="'+camino(f)+'" fill="'+(f.cristal?PL_VIDRIO:'#dde3e8')+
+         '" stroke="#55606b" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+    });
+  } else {
+    // Modelo guardado antes de que se leyeran los vértices: sólo tiene las
+    // cajas envolventes. Se dibujan para que el plano no salga vacío, con
+    // aviso de que el detalle se recupera reimportando el DXF.
+    (a.piezas||[]).forEach(function(p){
+      g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
+         '" fill="'+(p.cristal?PL_VIDRIO:'#dde3e8')+'" stroke="#55606b" stroke-width="'+lin+'"/>';
+    });
+  }
+  var crist=(a.piezas||[]).filter(function(p){return p.cristal;});
+  if(!crist.length && a.formas)
+    crist=a.formas.filter(function(f){ return f.cristal; }).map(function(f){
+      var xs=f.pts.map(function(p){return p[0];}), ys=f.pts.map(function(p){return p[1];});
+      var x0=Math.min.apply(null,xs), y0=Math.min.apply(null,ys);
+      return { x:x0, y:y0, w:Math.max.apply(null,xs)-x0, h:Math.max.apply(null,ys)-y0, cristal:true };
+    });
   // contorno del vano: el único trazo grueso del dibujo
   g+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="none" stroke="'+PL_TINTA+
      '" stroke-width="'+(lin*3.4)+'"/>';
