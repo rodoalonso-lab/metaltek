@@ -7383,31 +7383,71 @@ function recargarModelos(){
       return db('PATCH','canc_presupuestos?id=eq.'+PRE.id,{costo_total:costo,precio_total:precio});
     }).then(function(r){ if(r&&r[0]) PRE=r[0]; sincronizarCabecera(); pintarModelos(); });
 }
+// Los modelos del presupuesto abierto, dentro de Guardados. Antes esto se
+// pintaba en la tarjeta de Diseño; al quitarla, el contenedor desapareció y
+// la lista se dejó de ver sin que nada avisara.
 function pintarModelos(){
-  var c=$('cModelos'); if(!c) return;
-  if(!PRE){ c.innerHTML='<div class="item-sub">Sin presupuesto abierto. Al guardar el primer modelo se genera el folio.</div>'; return; }
-  var h='<div class="section-title">'+esc(PRE.folio)+' · '+esc(PRE.nombre)+
-        ' <span class="badge" style="color:var(--dim);border-color:var(--border)">'+esc(PRE.estado)+'</span></div>';
-  if(!MODELOS.length){ c.innerHTML=h+'<div class="item-sub">Todavía sin modelos.</div>'; return; }
-  h+='<table><tr><th>Clave</th><th>Modelo</th><th class="n">Cant.</th><th class="n">Costo</th><th></th></tr>';
+  var c=$('cModelos'), card=$('cCardModelos'); if(!c) return;
+  if(!PRE){ if(card) card.style.display='none'; c.innerHTML=''; return; }
+  if(card) card.style.display='';
+
+  var venc = PRE.fecha ? '' : '';
+  var h='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<div><span class="mono" style="font-weight:800;font-size:15px">'+esc(PRE.folio)+'</span> '+
+        '<span style="font-weight:700">'+esc(PRE.nombre)+'</span> '+
+        '<span class="badge" style="color:var(--dim);border-color:var(--border)">'+esc(PRE.estado)+'</span></div>'+
+        '<button class="chip" onclick="CANC.cerrarPre()">Cerrar</button></div>';
+
+  if(!MODELOS.length){
+    c.innerHTML=h+'<div class="item-sub">Este presupuesto todavía no tiene modelos. '+
+      'Importa un DXF para agregarle el primero.</div>'+
+      '<div style="margin-top:10px"><button class="btn-secondary" onclick="CANC.sub(\'importar\')">'+
+      'Ir a Importar</button></div>';
+    return;
+  }
+
+  h+='<table><tr><th>Clave</th><th>Modelo</th><th>Origen</th><th class="n">Pzas</th>'+
+     '<th class="n">Costo</th><th></th></tr>';
   MODELOS.forEach(function(m){
-    var ed=m.id===MODELO_ID, dxf=(m.tipo==='dxf');
-    h+='<tr'+(ed?' style="background:rgba(91,196,192,.07)"':'')+'>'+
-       '<td class="mono">'+esc(m.clave)+(ed?' <span style="color:var(--accent)">◄ editando</span>':'')+'</td>'+
+    var dxf=(m.tipo==='dxf');
+    var arch=(m.modelo&&m.modelo.archivo)||'';
+    var conPlano = !!(m.modelo&&m.modelo.alzado);
+    h+='<tr>'+
+       '<td class="mono" style="font-weight:700">'+esc(m.clave)+'</td>'+
        '<td>'+esc(m.descripcion||'')+
-       '<div class="item-sub">'+(dxf
-          ? '<span style="color:var(--info)">importado de WinPerfil</span>'
-          : 'diseñado en la app')+'</div></td><td class="n">'+m.cantidad+'</td>'+
+         (arch?'<div class="item-sub mono">'+esc(arch)+'</div>':'')+'</td>'+
+       '<td>'+(dxf?'<span style="color:var(--info)">WinPerfil</span>':'diseño')+'</td>'+
+       '<td class="n">'+m.cantidad+'</td>'+
        '<td class="n">'+money(m.costo)+'</td>'+
        '<td style="text-align:right;white-space:nowrap">'+
-       '<button class="chip" onclick="CANC.abrirModelo(\''+m.id+'\')">Abrir</button> '+
-       '<button class="chip" onclick="CANC.borrarModelo(\''+m.id+'\')">Borrar</button></td></tr>';
+         '<button class="chip" onclick="CANC.abrirModelo(\''+m.id+'\')">Despiece</button> '+
+         (conPlano?'<button class="chip" onclick="CANC.verPlano(\''+m.id+'\')">Plano</button> ':'')+
+         '<button class="chip" onclick="CANC.borrarModelo(\''+m.id+'\')">Borrar</button>'+
+       '</td></tr>';
   });
-  h+='</table><div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">'+
-     '<button class="btn-secondary" onclick="CANC.sub(\'importar\')">+ Importar otro DXF</button>'+
-     '<span class="item-sub" style="margin:0">Total: '+
-     (Number(PRE.costo_total)?money(PRE.costo_total):'sin precios cargados')+'</span></div>';
+  var pzas=MODELOS.reduce(function(a,m){ return a+Number(m.cantidad||0); },0);
+  h+='<tr><td colspan="3" style="text-align:right;font-weight:700;padding-top:10px">TOTAL</td>'+
+     '<td class="n" style="font-weight:700;padding-top:10px">'+pzas+'</td>'+
+     '<td class="n" style="font-weight:700;padding-top:10px">'+
+       (Number(PRE.costo_total)?money(PRE.costo_total):'—')+'</td><td></td></tr>';
+  h+='</table><div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">'+
+     '<button class="btn-secondary" onclick="CANC.sub(\'importar\')">+ Importar otro DXF a este presupuesto</button>'+
+     (Number(PRE.costo_total)?'':'<span class="item-sub" style="margin:0;color:var(--warning)">'+
+       'Sin precios cargados: el total está incompleto.</span>')+'</div>';
   c.innerHTML=h;
+}
+
+// Cierra el presupuesto abierto sin borrar nada
+function cerrarPre(){
+  PRE=null; MODELOS=[]; MODELO_ID=null; IMP=null;
+  pintarModelos(); pintarImport(); listar();
+}
+
+// Abre el plano de un modelo guardado, directo desde la lista
+function verPlano(id){
+  var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
+  verModeloDxf(m);
+  planoAbrir();
 }
 function abrirModelo(id){
   var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
