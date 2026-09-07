@@ -7493,13 +7493,16 @@ function listar(){
     var h='<table><tr><th>Folio</th><th>Presupuesto</th><th>Cliente / obra</th><th>Estado</th>'+
           '<th class="n">Modelos</th><th class="n">Total</th><th></th></tr>';
     r.forEach(function(p){
-      h+='<tr><td class="mono">'+esc(p.folio)+'</td>'+
+      var act = PRE && p.id===PRE.id;
+      h+='<tr'+(act?' style="background:rgba(91,196,192,.09)"':'')+'>'+
+         '<td class="mono">'+esc(p.folio)+(act?' <span style="color:var(--accent)">◄</span>':'')+'</td>'+
          '<td><b>'+esc(p.nombre)+'</b><div class="item-sub">'+esc(p.fecha)+
          (p.vencido?' · <span style="color:var(--warning)">vencido</span>':'')+'</div></td>'+
          '<td>'+esc(p.cliente_nombre||'—')+'<div class="item-sub">'+esc(p.obra_nombre||'sin obra')+'</div></td>'+
          '<td>'+esc(p.estado)+'</td><td class="n">'+p.modelos+'</td>'+
          '<td class="n">'+money(p.precio_total)+'</td>'+
-         '<td style="text-align:right"><button class="chip" onclick="CANC.abrirPre(\''+p.id+'\')">Abrir</button></td></tr>';
+         '<td style="text-align:right"><button class="chip" onclick="CANC.abrirPre(\''+p.id+'\')">'+
+         (act?'Recargar':'Ver modelos')+'</button></td></tr>';
     });
     c.innerHTML=h+'</table>';
   }).catch(function(e){ c.innerHTML='<div style="color:var(--danger)">No se pudo leer: '+esc(e.message)+'</div>'; });
@@ -7528,6 +7531,8 @@ return {
   filtrarObras:filtrarObras,
   leerDxf:leerDxf,
   limpiarImport:limpiarImport,
+  cerrarPre:cerrarPre,
+  verPlano:verPlano,
   planoAbrir:planoAbrir,
   planoCerrar:planoCerrar,
   planoImprimir:planoImprimir,
