@@ -6672,28 +6672,111 @@ function cfgActual(){
     hojaVidrioW:3600,hojaVidrioH:2600,holguraVidrio:5,
     holguraCristal:num('cHol'),rotarVidrio:true};
 }
+// Perfiles de la serie activa, tal como los tiene el catálogo
+function perfilesDeSerie(sid){
+  return PERFILES.filter(function(p){ return p.serie_id===(sid||SERIE_ID) && p.activo!==false; });
+}
+function serieSel(){
+  for(var i=0;i<SERIES.length;i++) if(SERIES[i].id===SERIE_ID) return SERIES[i];
+  return null;
+}
+// Arma el objeto que espera el motor a partir de las filas del catálogo.
+// Si todavía no hay base (sin sesión, o catálogo vacío) cae al archivo
+// serie-mc450.js, para que el diseño siga funcionando.
 function serieActual(){
-  var s=JSON.parse(JSON.stringify(SERIE_MC450));
+  var s, ser=serieSel(), lista2=perfilesDeSerie();
+  if(!ser || !lista2.length){
+    s=JSON.parse(JSON.stringify(SERIE_MC450));
+  } else {
+    s={ id:ser.codigo, nombre:ser.nombre, proveedor:ser.proveedor, material:ser.material,
+        tipo:ser.tipo, calibrada:!!ser.calibrada,
+        ensambleMarco:ser.ensamble_marco||'90H', ensambleHoja:ser.ensamble_hoja||'90',
+        perfiles:{}, muro:{}, descuentos:Object.assign({}, ser.descuentos||{}),
+        marcos:{}, aperturas:{}, travesanos:{} };
+    lista2.forEach(function(p){
+      s.perfiles[p.codigo]={ nombre:p.nombre, rol:p.rol,
+        av:Number(p.ancho_visto)||0, galce:Number(p.galce)||0,
+        kgm:Number(p.kg_m)||0, precioTramo:Number(p.precio_tramo)||0,
+        largoTramo:Number(p.largo_tramo)||6000 };
+    });
+    var prim=function(rol){ var r=lista2.filter(function(p){return p.rol===rol;}); return r.length?r[0].codigo:null; };
+    s.muro={ montante:prim('montante'), travesano:prim('travesano'),
+             tapaV:null, tapaH:null, empaque:'EN-1011', tornillo:'TORN-PB' };
+  }
   s.muro.anclajeSup='ANCLAJE'; s.muro.anclajeInf='ANCLAJE';
-  // La serie piloto no trae galce de catalogo; se usa el deducido del DXF.
+  // Galce: si el catálogo lo trae en cero se usa el deducido del DXF, para
+  // no calcular cristales de medida absurda mientras no se capture el real.
   var g=(GALCE_MENOS_HOLGURA/2)+num('cHol');
-  s.perfiles['MC-MON'].galce=g; s.perfiles['MC-TRA'].galce=g;
-  if(num('cDTM')) s.descuentos['MC-TRA|MC-MON|90i']=num('cDTM');
-  if(num('cDMS')) s.descuentos['MC-MON|ANCLAJE|90i']=num('cDMS');
+  Object.keys(s.perfiles).forEach(function(cod){
+    var p=s.perfiles[cod];
+    if(!p.galce && (p.rol==='montante'||p.rol==='travesano'||p.rol==='jamba'||
+                    p.rol==='cabezal'||p.rol==='zoclo')) p.galce=g;
+  });
+  if(num('cDTM')) s.descuentos[(s.muro.travesano||'MC-TRA')+'|'+(s.muro.montante||'MC-MON')+'|90i']=num('cDTM');
+  if(num('cDMS')) s.descuentos[(s.muro.montante||'MC-MON')+'|ANCLAJE|90i']=num('cDMS');
   return s;
 }
+
+// ── Selectores de posición ────────────────────────────────────────────
+// Cada posición ofrece primero los perfiles con el rol correcto; el resto
+// de la serie queda en un grupo aparte, para no dejarlos inalcanzables.
 function poblarPerfiles(){
-  POSICIONES.forEach(function(par){
-    var pos=par[0], def=par[1], sel=$('cpf-'+pos);
-    if(!sel || sel.options.length) return;
-    var o0=document.createElement('option'); o0.value=''; o0.textContent='— ninguno —'; sel.appendChild(o0);
-    Object.keys(SERIE_MC450.perfiles).forEach(function(cod){
-      var p=SERIE_MC450.perfiles[cod], o=document.createElement('option');
-      o.value=cod; o.textContent=cod+' · '+p.nombre+(p.av?'  ('+p.av+' mm)':'');
-      sel.appendChild(o);
+  var lista2=perfilesDeSerie();
+  if(!lista2.length && typeof SERIE_MC450!=='undefined'){
+    lista2=Object.keys(SERIE_MC450.perfiles).map(function(cod){
+      var p=SERIE_MC450.perfiles[cod];
+      return {codigo:cod, nombre:p.nombre, rol:p.rol||'otro', ancho_visto:p.av};
     });
-    sel.value=def;
+  }
+  POSICIONES.forEach(function(par){
+    var pos=par[0], roles=par[2], sel=$('cpf-'+pos);
+    if(!sel) return;
+    var previo=sel.value;
+    var buenos=lista2.filter(function(p){ return roles.indexOf(p.rol)>=0; });
+    var otros =lista2.filter(function(p){ return roles.indexOf(p.rol)<0; });
+    var txt=function(p){ return p.codigo+' · '+p.nombre+
+      (Number(p.ancho_visto)?'  ('+Number(p.ancho_visto)+' mm)':''); };
+    var h='<option value="">— ninguno —</option>';
+    if(buenos.length){
+      h+='<optgroup label="'+roles.map(rolLabel).join(' / ')+'">';
+      buenos.forEach(function(p){ h+='<option value="'+esc(p.codigo)+'">'+esc(txt(p))+'</option>'; });
+      h+='</optgroup>';
+    }
+    if(otros.length){
+      h+='<optgroup label="Otros perfiles de la serie">';
+      otros.forEach(function(p){ h+='<option value="'+esc(p.codigo)+'">'+esc(txt(p))+'</option>'; });
+      h+='</optgroup>';
+    }
+    sel.innerHTML=h;
+    // conserva la elección previa; si ya no existe, toma el primero del rol
+    sel.value = previo;
+    if(!sel.value) sel.value = buenos.length ? buenos[0].codigo : '';
     sel.onchange=calcular;
+  });
+  habilitarPorDiseno();
+}
+
+// Apaga las posiciones que este diseño no tiene. Sin postes verticales no
+// hay montante que elegir, y dejar el selector activo sólo confunde.
+function habilitarPorDiseno(){
+  var nv=num('cPV'), nh=num('cPH');
+  var hayTapa=perfilesDeSerie().some(function(p){return p.rol==='tapa';}) ||
+              (!perfilesDeSerie().length);
+  var motivo={
+    montante:  nv>0 ? '' : 'El diseño no tiene postes verticales.',
+    travesano: nh>0 ? '' : 'El diseño no tiene postes horizontales.',
+    tapaV:     hayTapa ? '' : 'La serie no tiene perfiles de tapa.',
+    tapaH:     hayTapa ? '' : 'La serie no tiene perfiles de tapa.'
+  };
+  POSICIONES.forEach(function(par){
+    var pos=par[0], sel=$('cpf-'+pos), why=$('cwhy-'+pos);
+    if(!sel) return;
+    var m=motivo[pos]||'';
+    sel.disabled=!!m;
+    sel.style.opacity=m?'.45':'';
+    if(why) why.innerHTML = m
+      ? '<span style="color:var(--dim)">'+esc(m)+'</span>'
+      : '';
   });
 }
 function perfilesElegidos(){
