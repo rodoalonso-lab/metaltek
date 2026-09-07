@@ -8945,14 +8945,13 @@ function guardarModelo(){
     var actual = MODELOS.filter(function(m){return m.id===MODELO_ID;})[0];
     var orden = actual ? actual.orden : MODELOS.length+1;
     var cuerpo={presupuesto_id:PRE.id, orden:orden,
-      clave:'M-'+String(orden).length<2?'M-0'+orden:'M-'+orden,
+      clave:'M-'+(orden<10?'0':'')+orden,
       descripcion: mmf(num('cW'))+' × '+mmf(num('cH'))+' mm · '+
                    (num('cPV')+1)+'×'+(num('cPH')+1)+' módulos',
       cantidad:Math.max(1,num('cCant')), tipo:'muro',
       vano_w:num('cW'), vano_h:num('cH'),
       modelo:estadoDiseno(), despiece:snapshotDespiece(),
       costo:c.costo, precio:c.costo};
-    cuerpo.clave = 'M-'+(orden<10?'0':'')+orden;
     var pMod = MODELO_ID ? db('PATCH','canc_modelos?id=eq.'+MODELO_ID,cuerpo)
                          : db('POST','canc_modelos',cuerpo);
     return pMod.then(function(rm){
