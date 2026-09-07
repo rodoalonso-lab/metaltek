@@ -6329,6 +6329,57 @@ aplicarTemaGuardado();
   font-variant-numeric:tabular-nums}
 #canc-app .aviso{border:1px solid var(--warning);background:rgba(240,165,0,.10);border-radius:12px;
   padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.6}
+
+/* ══ PLANO DE MONTAJE ══════════════════════════════════════════════
+   La hoja es blanca siempre, también con la app en oscuro: se imprime.
+   Medidas en milímetros para que al imprimir salga a tamaño carta. */
+#canc-app .pl-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
+#canc-app .pl-hoja{background:#fff;color:#111;width:279mm;min-height:216mm;padding:9mm 10mm;
+  margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.4);
+  font-family:'Barlow',Arial,sans-serif;display:flex;flex-direction:column}
+#canc-app .pl-cab{display:flex;align-items:baseline;gap:14px;border-bottom:2.2pt solid #111;padding-bottom:4px}
+#canc-app .pl-marca{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22pt;letter-spacing:.04em}
+#canc-app .pl-tit{font-size:11pt;font-weight:700;letter-spacing:.16em;color:#555;flex:1}
+#canc-app .pl-clave{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20pt;
+  border:2.2pt solid #111;padding:1px 12px}
+#canc-app .pl-datos{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border-bottom:1pt solid #111;
+  margin-bottom:5mm}
+#canc-app .pl-datos>div{padding:3px 8px 5px;border-right:.6pt solid #bbb}
+#canc-app .pl-datos>div:last-child{border-right:none}
+#canc-app .pl-datos span{display:block;font-size:6.5pt;letter-spacing:.09em;color:#666;text-transform:uppercase}
+#canc-app .pl-datos b{font-size:9.5pt;line-height:1.25;display:block}
+#canc-app .pl-cuerpo{display:grid;grid-template-columns:1fr 74mm;gap:6mm;flex:1;min-height:0}
+#canc-app .pl-dib{display:flex;align-items:center;justify-content:center;min-height:0}
+#canc-app .pl-dib svg{width:100%;height:100%;max-height:140mm;background:none;border:none;border-radius:0}
+#canc-app .pl-th{font-size:7.5pt;font-weight:800;letter-spacing:.12em;color:#111;
+  border-bottom:1.4pt solid #111;padding-bottom:2px;margin:0 0 3px}
+#canc-app .pl-th:not(:first-child){margin-top:5mm}
+#canc-app table.pl-t{width:100%;border-collapse:collapse;font-size:7.6pt}
+#canc-app table.pl-t th{text-align:left;font-size:6.5pt;letter-spacing:.06em;color:#555;
+  text-transform:uppercase;padding:2px 3px;border-bottom:.6pt solid #999;background:none}
+#canc-app table.pl-t td{padding:1.6px 3px;border-bottom:.4pt solid #ddd;color:#111}
+#canc-app table.pl-t td.pl-r{text-align:right;font-variant-numeric:tabular-nums}
+#canc-app table.pl-t td.pl-n{font-weight:800}
+#canc-app table.pl-t td.pl-ref{font-family:ui-monospace,Consolas,monospace;font-size:7pt}
+#canc-app table.pl-t td.pl-desc{color:#666;font-style:italic;font-size:7pt}
+#canc-app .pl-aviso{font-size:6.8pt;color:#666;margin-top:4mm;line-height:1.4}
+#canc-app .pl-pie{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8mm;align-items:end;
+  border-top:1pt solid #111;padding-top:3mm;margin-top:4mm}
+#canc-app .pl-firma{font-size:6.6pt;letter-spacing:.08em;color:#333}
+#canc-app .pl-linea{border-bottom:.8pt solid #111;height:9mm;margin-bottom:2px}
+#canc-app .pl-nota{font-size:6.6pt;color:#666;text-align:right}
+
+@media print{
+  /* sólo la hoja: se oculta la app entera */
+  body>*{display:none !important}
+  body{background:#fff !important;padding:0 !important}
+  #screen-costeo,#canc-app,#cv-importar,#planoWrap{display:block !important}
+  #canc-app>*:not(#cv-importar){display:none !important}
+  #cv-importar>*:not(#planoWrap){display:none !important}
+  #canc-app .pl-barra{display:none !important}
+  #canc-app .pl-hoja{box-shadow:none;width:auto;min-height:0;padding:0;margin:0}
+  @page{size:letter landscape;margin:8mm}
+}
 </style>
 <script>
 window.CANC = (function(){
