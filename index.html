@@ -6928,6 +6928,26 @@ var ORIGEN_TABLA = {
   accesorios: { familia:'MAT-003', unidad:'pza', etiqueta:'Accesorio por pieza' }
 };
 
+// Deja la pantalla como recién abierta. Sin esto, al cargar un DXF nuevo
+// quedaba colgando el presupuesto anterior: "Guardar" le pegaba el modelo
+// al folio viejo, aunque fuera de otra obra.
+function limpiarImport(){
+  if(PRE && MODELOS.length &&
+     !confirm('Se va a soltar el presupuesto '+PRE.folio+'. Lo guardado no se borra, '+
+              'pero el siguiente DXF creará un folio nuevo.\n\n¿Continuar?')) return;
+  IMP=null; PRE=null; MODELOS=[]; MODELO_ID=null;
+  ['dPreNom'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('dPreCli')) $('dPreCli').value='';
+  filtrarObrasDxf();
+  if($('dPreObra')) $('dPreObra').value='';
+  // hay que vaciarlo: si no, elegir el MISMO archivo no dispara el evento
+  if($('dArchivo')) $('dArchivo').value='';
+  planoCerrar();
+  pintarImport();
+  pintarModelos();
+  dpista('Listo para un DXF nuevo.');
+}
+
 function leerDxf(input){
   var file = input && input.files && input.files[0];
   if(!file) return;
@@ -7459,6 +7479,7 @@ return {
   zoom:zoom,
   filtrarObras:filtrarObras,
   leerDxf:leerDxf,
+  limpiarImport:limpiarImport,
   planoAbrir:planoAbrir,
   planoCerrar:planoCerrar,
   planoImprimir:planoImprimir,
