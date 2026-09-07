@@ -6370,6 +6370,7 @@ function money(n){
 // ── Estado ────────────────────────────────────────────────────────────
 var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null, ULT=null;
 var VISTA='alzado', REF_ACTUAL=null, EDIT_CLI=null, EDIT_OBRA=null, SUB='diseno';
+var SERIES=[], PERFILES=[], SERIE_ID=null, EDIT_SERIE=null, EDIT_PERF=null;
 // Posición en el modelo → [etiqueta, roles que puede ocupar]
 // El rol es lo que decide qué perfiles del catálogo aparecen en cada selector.
 var POSICIONES=[
@@ -6445,15 +6446,19 @@ function plantilla(){
         '</div>'+
         '<div class="card" style="margin-bottom:12px">'+
           '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Perfiles del modelo</div>'+
-          '<div class="item-sub" style="margin-bottom:6px">Elige qué perfil va en cada posición.</div>'+
-          '<label>Marco superior · cabezal</label><select class="form-input" id="cpf-cabezal"></select>'+
-          '<label>Marco inferior · zoclo</label><select class="form-input" id="cpf-zoclo"></select>'+
-          '<label>Marco izquierdo · jamba</label><select class="form-input" id="cpf-jambaIzq"></select>'+
-          '<label>Marco derecho · jamba</label><select class="form-input" id="cpf-jambaDer"></select>'+
-          '<label>Postes intermedios · montante</label><select class="form-input" id="cpf-montante"></select>'+
-          '<label>Travesaños intermedios</label><select class="form-input" id="cpf-travesano"></select>'+
-          '<label>Tapa vertical</label><select class="form-input" id="cpf-tapaV"></select>'+
-          '<label>Tapa horizontal</label><select class="form-input" id="cpf-tapaH"></select>'+
+          '<label>Serie</label>'+
+          '<select class="form-input" id="cSerie" onchange="CANC.cambiarSerie()"></select>'+
+          '<div class="item-sub" id="cSerieInfo" style="margin-top:4px"></div>'+
+          '<div style="border-top:1px solid var(--border);margin:12px 0 2px"></div>'+
+          '<div class="item-sub" style="margin-bottom:2px">Cada posición sólo ofrece los perfiles '+
+          'con el rol que le corresponde. Las que el diseño no usa quedan apagadas.</div>'+
+          POSICIONES.map(function(p){
+            return '<label>'+p[1]+'</label>'+
+                   '<select class="form-input pf" id="cpf-'+p[0]+'"></select>'+
+                   '<div class="item-sub" id="cwhy-'+p[0]+'"></div>';
+          }).join('')+
+          '<div style="margin-top:12px"><button class="btn-secondary" style="width:100%" '+
+          'onclick="CANC.sub(\'perfiles\')">Administrar catálogo de perfiles</button></div>'+
         '</div>'+
         '<div class="card" style="margin-bottom:12px">'+
           '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Corte y optimización</div>'+
