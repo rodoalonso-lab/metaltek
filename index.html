@@ -6676,12 +6676,26 @@ function limpiarModelo(){
   if($('cRef')) $('cRef').value='';
   REF_ACTUAL=null;
   MODELO_ID=null;                 // no pisar un modelo guardado con uno vacío
-  poblarPerfiles(true);           // perfiles de vuelta al primero de cada rol
+  poblarPerfiles(true);           // repuebla los selectores…
+  POSICIONES.forEach(function(par){ var e=$('cpf-'+par[0]); if(e) e.value=''; }); // …y los deja vacíos
   etiquetas();
-  repartir();                     // recalcula cotas, habilitados y despiece
+  repartir();                     // recalcula cotas, habilitados y estado
   pintarModelos();
   vista('alzado');
-  pista('Diseño limpio.');
+  pista('Diseño limpio. Elige los perfiles para calcular.');
+}
+
+// Posiciones que este diseño necesita y todavía no tienen perfil.
+// Las apagadas no cuentan, y las tapas son opcionales.
+function faltanPerfiles(){
+  var pf=perfilesElegidos(), falta=[];
+  POSICIONES.forEach(function(par){
+    var pos=par[0], sel=$('cpf-'+pos);
+    if(!sel || sel.disabled) return;
+    if(pos==='tapaV' || pos==='tapaH') return;
+    if(!pf[pos]) falta.push(par[1]);
+  });
+  return falta;
 }
 
 function repartir(){
@@ -6731,7 +6745,12 @@ function serieActual(){
         largoTramo:Number(p.largo_tramo)||6000 };
     });
     var prim=function(rol){ var r=lista2.filter(function(p){return p.rol===rol;}); return r.length?r[0].codigo:null; };
-    s.muro={ montante:prim('montante'), travesano:prim('travesano'),
+    // El montante/travesaño de referencia sale de lo que ESTÁ ELEGIDO en la
+    // pantalla. Antes caía al primero del rol, así que con los selectores
+    // vacíos el motor calculaba con un perfil que nadie había escogido.
+    var el=perfilesElegidos();
+    s.muro={ montante:  el.montante  || el.jambaIzq || prim('montante'),
+             travesano: el.travesano || el.cabezal  || prim('travesano'),
              tapaV:null, tapaH:null, empaque:'EN-1011', tornillo:'TORN-PB' };
   }
   s.muro.anclajeSup='ANCLAJE'; s.muro.anclajeInf='ANCLAJE';
