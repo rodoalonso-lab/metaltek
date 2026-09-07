@@ -6683,6 +6683,7 @@ function pintar(){
   var f={alzado:vAlzado,despiece:vDespiece,cortes:vCortes,vidrio:vVidrio,
          secciones:vSecciones,compara:vCompara,audit:vAudit}[VISTA];
   $('cSalida').innerHTML = f();
+  if(VISTA==='alzado') montarZoom();
 }
 
 // ── Vistas ────────────────────────────────────────────────────────────
@@ -7243,7 +7244,7 @@ function abrirPre(id){
 // ── API publica ───────────────────────────────────────────────────────
 return {
   abrir:abrir, sub:sub, vista:vista, repartir:repartir, calcular:calcular, cargarRef:cargarRef,
-  filtrarObras:filtrarObras,
+  zoom:zoom, filtrarObras:filtrarObras,
   guardarCliente:guardarCliente, editarCliente:editarCliente, limpiarCliente:limpiarCliente,
   guardarObra:guardarObra, editarObra:editarObra, limpiarObra:limpiarObra,
   nuevoPresupuesto:nuevoPresupuesto, guardarModelo:guardarModelo, nuevoModelo:nuevoModelo,
