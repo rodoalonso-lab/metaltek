@@ -8178,5 +8178,884 @@ aplicarTemaGuardado();
   });
 })();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     MODULO: DISEÑO Y PRESUPUESTO DE CANCELERIA
+     Todo vive dentro de un IIFE y sale al mundo por un solo objeto:
+     window.CANC. Asi ningun nombre de aqui puede pisar los ~246 que ya
+     tiene la app (habia choque real con fmt, opcion y abrirPresupuesto).
+     Reutiliza db() de procepal-lib y currentUser de la app.
+══════════════════════════════════════════════════════════════════════ -->
+<style>
+#canc-app .cstat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px}
+#canc-app .cstat-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+#canc-app .cstat-v{font-size:24px;font-weight:800;line-height:1.1;margin-top:2px}
+#canc-app .cstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+#canc-app .cgrid{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){#canc-app .cgrid{grid-template-columns:1fr}}
+#canc-app table{width:100%;border-collapse:collapse;font-size:13px}
+#canc-app th{text-align:left;color:var(--dim);font-weight:700;font-size:11px;letter-spacing:.04em;
+  text-transform:uppercase;padding:7px 8px;border-bottom:1px solid var(--border)}
+#canc-app td{padding:7px 8px;border-bottom:1px solid var(--border)}
+#canc-app td.n,#canc-app th.n{text-align:right;font-variant-numeric:tabular-nums}
+#canc-app .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+#canc-app .barra{height:18px;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  overflow:hidden;display:flex;margin:4px 0}
+#canc-app .barra i{display:block;height:100%}
+#canc-app svg{background:var(--bg);border:1px solid var(--border);border-radius:12px;width:100%;height:auto}
+#canc-app label{display:block;font-size:11px;color:var(--dim);margin:10px 0 4px}
+#canc-app .aviso{border:1px solid var(--warning);background:rgba(240,165,0,.10);border-radius:12px;
+  padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.6}
+</style>
+<script>
+window.CANC = (function(){
+'use strict';
+
+// ── Carga bajo demanda del motor ──────────────────────────────────────
+var ARCHIVOS = ['canc-motor.js','serie-mc450.js','referencias.js','secciones.js'];
+var _cargado = false, _cargando = null, _montado = false;
+
+function cargarMotor(){
+  if(_cargado) return Promise.resolve();
+  if(_cargando) return _cargando;
+  _cargando = ARCHIVOS.reduce(function(p, f){
+    return p.then(function(){
+      return new Promise(function(res, rej){
+        var s = document.createElement('script');
+        s.src = f; s.onload = res;
+        s.onerror = function(){ rej(new Error('No se pudo cargar ' + f)); };
+        document.head.appendChild(s);
+      });
+    });
+  }, Promise.resolve()).then(function(){ _cargado = true; });
+  return _cargando;
+}
+
+// ── Utilidades locales (nombres cortos, pero encerrados aqui) ─────────
+function $(id){ return document.getElementById(id); }
+function num(id){ var e=$(id); return e ? (Number(e.value)||0) : 0; }
+function val(id){ var e=$(id); return e ? e.value : ''; }
+function lista(id){ return val(id).split(',').map(function(x){return Number(x.trim())||1;}).filter(function(x){return x>0;}); }
+function mmf(n){ return Math.round(n).toLocaleString('es-MX'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function money(n){
+  var v = Number(n)||0;
+  return v ? v.toLocaleString('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}) : '—';
+}
+
+// ── Estado ────────────────────────────────────────────────────────────
+var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null, ULT=null;
+var VISTA='alzado', REF_ACTUAL=null, EDIT_CLI=null, EDIT_OBRA=null, SUB='diseno';
+var POSICIONES=[['cabezal','MC-TRA'],['zoclo','MC-TRA'],['jambaIzq','MC-MON'],['jambaDer','MC-MON'],
+                ['montante','MC-MON'],['travesano','MC-TRA'],['tapaV','MC-TPV'],['tapaH','MC-TPH']];
+
+// ── Plantilla ─────────────────────────────────────────────────────────
+function plantilla(){
+  return ''+
+  '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
+    '<button class="chip active" id="cs-diseno" onclick="CANC.sub(\'diseno\')">✏️ Diseño</button>'+
+    '<button class="chip" id="cs-guardados" onclick="CANC.sub(\'guardados\')">📁 Guardados</button>'+
+    '<button class="chip" id="cs-catalogo" onclick="CANC.sub(\'catalogo\')">👥 Clientes y obras</button>'+
+  '</div>'+
+
+  '<div id="cv-diseno">'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:10px">Presupuesto</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'+
+        '<div><label>Cliente</label><select class="form-input" id="cPreCli" onchange="CANC.filtrarObras()"></select></div>'+
+        '<div><label>Obra</label><select class="form-input" id="cPreObra"></select></div>'+
+        '<div><label>Nombre</label><input class="form-input" id="cPreNom" placeholder="Fachada poniente"></div>'+
+        '<div><label>Estado</label><select class="form-input" id="cPreEst">'+
+          '<option value="borrador">Borrador</option><option value="enviado">Enviado</option>'+
+          '<option value="aprobado">Aprobado</option><option value="rechazado">Rechazado</option>'+
+          '<option value="cancelado">Cancelado</option></select></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">'+
+        '<button class="btn-primary" onclick="CANC.guardarModelo()">Guardar modelo</button>'+
+        '<button class="btn-secondary" onclick="CANC.nuevoPresupuesto()">Nuevo presupuesto</button>'+
+        '<span id="cPista" class="item-sub" style="margin:0"></span>'+
+      '</div>'+
+      '<div id="cModelos" style="margin-top:12px"></div>'+
+    '</div>'+
+
+    '<div class="aviso"><b>Serie sin calibrar.</b> Los anchos vistos salen de la ficha comercial '+
+    'y los descuentos de corte están en cero porque Cuprum no los publica. La geometría es correcta, '+
+    'pero <b>estos largos no son de producción</b> hasta calibrar contra un muro fabricado.</div>'+
+
+    '<div class="cgrid">'+
+      '<div>'+
+        '<div class="card" style="margin-bottom:12px">'+
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Medidas</div>'+
+          '<label>Ancho del vano (mm)</label><input class="form-input" id="cW" type="number" value="6000" onchange="CANC.repartir()">'+
+          '<label>Alto del vano (mm)</label><input class="form-input" id="cH" type="number" value="3200" onchange="CANC.repartir()">'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">'+
+            '<div><label>Postes verticales</label><input class="form-input" id="cPV" type="number" value="2" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblV"></div></div>'+
+            '<div><label>Postes horizontales</label><input class="form-input" id="cPH" type="number" value="1" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblH"></div></div>'+
+          '</div>'+
+          '<label style="margin-top:12px">Cotas de columnas (mm)</label>'+
+          '<input class="form-input" id="cCols" value="2000,2000,2000" onchange="CANC.calcular()">'+
+          '<label>Cotas de filas (mm)</label>'+
+          '<input class="form-input" id="cRows" value="1100,2100" onchange="CANC.calcular()">'+
+          '<div class="item-sub">Se reparten iguales al cambiar los postes. Edítalas para módulos desiguales.</div>'+
+          '<label style="margin-top:12px">Piezas iguales</label><input class="form-input" id="cCant" type="number" value="1" min="1">'+
+          '<label style="margin-top:12px">Caso de referencia (DXF de WinPerfil)</label>'+
+          '<select class="form-input" id="cRef" onchange="CANC.cargarRef()"><option value="">— caso libre —</option></select>'+
+        '</div>'+
+        '<div class="card" style="margin-bottom:12px">'+
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Perfiles del modelo</div>'+
+          '<div class="item-sub" style="margin-bottom:6px">Elige qué perfil va en cada posición.</div>'+
+          '<label>Marco superior · cabezal</label><select class="form-input" id="cpf-cabezal"></select>'+
+          '<label>Marco inferior · zoclo</label><select class="form-input" id="cpf-zoclo"></select>'+
+          '<label>Marco izquierdo · jamba</label><select class="form-input" id="cpf-jambaIzq"></select>'+
+          '<label>Marco derecho · jamba</label><select class="form-input" id="cpf-jambaDer"></select>'+
+          '<label>Postes intermedios · montante</label><select class="form-input" id="cpf-montante"></select>'+
+          '<label>Travesaños intermedios</label><select class="form-input" id="cpf-travesano"></select>'+
+          '<label>Tapa vertical</label><select class="form-input" id="cpf-tapaV"></select>'+
+          '<label>Tapa horizontal</label><select class="form-input" id="cpf-tapaH"></select>'+
+        '</div>'+
+        '<div class="card" style="margin-bottom:12px">'+
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Corte y optimización</div>'+
+          '<label>Saneamiento (mm)</label><input class="form-input" id="cSan" type="number" value="10">'+
+          '<label>Ancho de cuchilla (mm)</label><input class="form-input" id="cKerf" type="number" value="5">'+
+          '<label>Mínimo trozo útil (mm)</label><input class="form-input" id="cTu" type="number" value="400">'+
+          '<label>Estrategia de retales</label><select class="form-input" id="cEstr">'+
+            '<option value="prioridad-retales">Prioridad a retales</option>'+
+            '<option value="prioridad-barra">Prioridad a barra entera</option>'+
+            '<option value="solo-retales">Sólo retales</option>'+
+            '<option value="no-usar">No usar retales</option></select>'+
+          '<label>Holgura del cristal por lado (mm)</label><input class="form-input" id="cHol" type="number" value="4">'+
+        '</div>'+
+        '<div class="card">'+
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Descuentos · calibración</div>'+
+          '<div class="item-sub" style="margin-bottom:6px">Ajusta y recalcula para ver el efecto en los cortes.</div>'+
+          '<label>Travesaño → Montante</label><input class="form-input" id="cDTM" type="number" value="0">'+
+          '<label>Montante → anclaje superior</label><input class="form-input" id="cDMS" type="number" value="0">'+
+          '<label>Montante → anclaje inferior</label><input class="form-input" id="cDMI" type="number" value="0">'+
+        '</div>'+
+      '</div>'+
+      '<div>'+
+        '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+          '<button class="chip active" id="cvw-alzado" onclick="CANC.vista(\'alzado\')">Alzado</button>'+
+          '<button class="chip" id="cvw-despiece" onclick="CANC.vista(\'despiece\')">Despiece</button>'+
+          '<button class="chip" id="cvw-cortes" onclick="CANC.vista(\'cortes\')">Optimización</button>'+
+          '<button class="chip" id="cvw-vidrio" onclick="CANC.vista(\'vidrio\')">Cristal</button>'+
+          '<button class="chip" id="cvw-secciones" onclick="CANC.vista(\'secciones\')">Secciones</button>'+
+          '<button class="chip" id="cvw-compara" onclick="CANC.vista(\'compara\')">vs WinPerfil</button>'+
+          '<button class="chip" id="cvw-audit" onclick="CANC.vista(\'audit\')">Auditoría</button>'+
+        '</div>'+
+        '<div id="cStats" class="cstats"></div>'+
+        '<div class="card"><div id="cSalida"></div></div>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+
+  '<div id="cv-guardados" style="display:none">'+
+    '<div class="card">'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px">'+
+        '<div><label>Filtrar por estado</label><select class="form-input" id="cFEst" style="width:auto;min-width:150px" onchange="CANC.listar()">'+
+          '<option value="">Todos</option><option value="borrador">Borrador</option>'+
+          '<option value="enviado">Enviado</option><option value="aprobado">Aprobado</option>'+
+          '<option value="rechazado">Rechazado</option><option value="cancelado">Cancelado</option>'+
+        '</select></div>'+
+        '<button class="btn-secondary" onclick="CANC.listar()">Actualizar</button>'+
+      '</div>'+
+      '<div id="cLista"></div>'+
+    '</div>'+
+  '</div>'+
+
+  '<div id="cv-catalogo" style="display:none">'+
+    '<div class="item-sub" style="margin-bottom:12px">Son las mismas tablas de Clientes y Obras que ya usa el resto de la app.</div>'+
+    '<div class="cgrid" style="grid-template-columns:1fr 1fr">'+
+      '<div class="card">'+
+        '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Clientes</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<div><label>Nombre</label><input class="form-input" id="cCNom"></div>'+
+          '<div><label>Contacto</label><input class="form-input" id="cCCon"></div>'+
+          '<div><label>Teléfono</label><input class="form-input" id="cCTel"></div>'+
+          '<div><label>Correo</label><input class="form-input" id="cCMail" type="email"></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:12px">'+
+          '<button class="btn-primary" onclick="CANC.guardarCliente()">Guardar cliente</button>'+
+          '<button class="btn-secondary" id="cCCancel" onclick="CANC.limpiarCliente()" style="display:none">Cancelar</button>'+
+        '</div>'+
+        '<div id="cTablaCli" style="margin-top:14px"></div>'+
+      '</div>'+
+      '<div class="card">'+
+        '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Obras</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<div><label>Nombre</label><input class="form-input" id="cONom"></div>'+
+          '<div><label>Cliente</label><select class="form-input" id="cOCli"></select></div>'+
+          '<div><label>Ubicación</label><input class="form-input" id="cOUbi"></div>'+
+          '<div><label>Estado</label><select class="form-input" id="cOEst">'+
+            '<option value="cotizacion">Cotización</option><option value="activa">Activa</option>'+
+            '<option value="pausada">Pausada</option><option value="terminada">Terminada</option></select></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:12px">'+
+          '<button class="btn-primary" onclick="CANC.guardarObra()">Guardar obra</button>'+
+          '<button class="btn-secondary" id="cOCancel" onclick="CANC.limpiarObra()" style="display:none">Cancelar</button>'+
+        '</div>'+
+        '<div id="cTablaObr" style="margin-top:14px"></div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+// ── Arranque del modulo ───────────────────────────────────────────────
+function abrir(){
+  if(_montado){ return; }
+  cargarMotor().then(function(){
+    $('canc-app').innerHTML = plantilla();
+    $('canc-cargando').style.display = 'none';
+    $('canc-app').style.display = '';
+    _montado = true;
+    poblarPerfiles();
+    poblarRefs();
+    etiquetas();
+    calcular();
+    pintarModelos();
+    datos();
+  }).catch(function(e){
+    $('canc-cargando').innerHTML =
+      '<div style="color:var(--danger);font-weight:600">'+esc(e.message)+'</div>'+
+      '<div class="item-sub" style="margin-top:8px">Si acabas de publicar, espera unos segundos y vuelve a entrar.</div>';
+  });
+}
+
+function sub(s){
+  SUB = s;
+  ['diseno','guardados','catalogo'].forEach(function(x){
+    var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
+    var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
+  });
+  if(s==='guardados') listar();
+}
+function vista(v){
+  VISTA=v;
+  ['alzado','despiece','cortes','vidrio','secciones','compara','audit'].forEach(function(x){
+    var b=$('cvw-'+x); if(b) b.classList.toggle('active', x===v);
+  });
+  pintar();
+}
+function pista(txt,tipo){
+  var e=$('cPista'); if(!e) return;
+  e.innerHTML = txt ? '<span style="color:var(--'+(tipo||'dim')+')">'+esc(txt)+'</span>' : '';
+}
+
+// ── Reparto de postes ─────────────────────────────────────────────────
+function repartirIgual(total,n){
+  n=Math.max(1,n|0);
+  var base=Math.floor(total/n), a=[];
+  for(var i=0;i<n;i++) a.push(base);
+  a[n-1]+=total-base*n;
+  return a;
+}
+function repartir(){
+  $('cCols').value = repartirIgual(num('cW'), num('cPV')+1).join(',');
+  $('cRows').value = repartirIgual(num('cH'), num('cPH')+1).join(',');
+  etiquetas(); calcular();
+}
+function etiquetas(){
+  var nv=num('cPV'), nh=num('cPH');
+  if($('cLblV')) $('cLblV').textContent=(nv+1)+' columna'+(nv?'s':'');
+  if($('cLblH')) $('cLblH').textContent=(nh+1)+' fila'+(nh?'s':'');
+}
+
+// ── Configuracion y serie ─────────────────────────────────────────────
+function cfgActual(){
+  return {largoTramo:6000,kerf:num('cKerf'),saneamiento:num('cSan'),trozoUtil:num('cTu'),
+    estrategiaRetales:val('cEstr'),barraSobreMedida:false,
+    barraMin:3000,barraMax:6500,barraPaso:100,iteraciones:40,
+    hojaVidrioW:3600,hojaVidrioH:2600,holguraVidrio:5,
+    holguraCristal:num('cHol'),rotarVidrio:true};
+}
+function serieActual(){
+  var s=JSON.parse(JSON.stringify(SERIE_MC450));
+  s.muro.anclajeSup='ANCLAJE'; s.muro.anclajeInf='ANCLAJE';
+  // La serie piloto no trae galce de catalogo; se usa el deducido del DXF.
+  var g=(GALCE_MENOS_HOLGURA/2)+num('cHol');
+  s.perfiles['MC-MON'].galce=g; s.perfiles['MC-TRA'].galce=g;
+  if(num('cDTM')) s.descuentos['MC-TRA|MC-MON|90i']=num('cDTM');
+  if(num('cDMS')) s.descuentos['MC-MON|ANCLAJE|90i']=num('cDMS');
+  return s;
+}
+function poblarPerfiles(){
+  POSICIONES.forEach(function(par){
+    var pos=par[0], def=par[1], sel=$('cpf-'+pos);
+    if(!sel || sel.options.length) return;
+    var o0=document.createElement('option'); o0.value=''; o0.textContent='— ninguno —'; sel.appendChild(o0);
+    Object.keys(SERIE_MC450.perfiles).forEach(function(cod){
+      var p=SERIE_MC450.perfiles[cod], o=document.createElement('option');
+      o.value=cod; o.textContent=cod+' · '+p.nombre+(p.av?'  ('+p.av+' mm)':'');
+      sel.appendChild(o);
+    });
+    sel.value=def;
+    sel.onchange=calcular;
+  });
+}
+function perfilesElegidos(){
+  var r={};
+  POSICIONES.forEach(function(par){ var e=$('cpf-'+par[0]); if(e && e.value) r[par[0]]=e.value; });
+  return r;
+}
+function poblarRefs(){
+  var sel=$('cRef'); if(!sel || typeof REFERENCIAS==='undefined') return;
+  Object.keys(REFERENCIAS).forEach(function(id){
+    var o=document.createElement('option');
+    o.value=id; o.textContent=id+' — '+REFERENCIAS[id].nombre.split('—')[0].trim();
+    sel.appendChild(o);
+  });
+}
+function cargarRef(){
+  var id=val('cRef');
+  REF_ACTUAL = id ? REFERENCIAS[id] : null;
+  if(!REF_ACTUAL){ calcular(); return; }
+  var R=REF_ACTUAL;
+  $('cW').value=R.W; $('cH').value=R.H;
+  $('cCols').value=R.cols.join(','); $('cRows').value=R.rows.join(',');
+  $('cPV').value=R.cols.length-1; $('cPH').value=R.rows.length-1;
+  $('cCant').value=1; $('cHol').value=4;
+  etiquetas(); calcular(); vista('compara');
+}
+
+// ── Calculo ───────────────────────────────────────────────────────────
+function calcular(){
+  if(!_cargado || !_montado) return;
+  try{
+    var s=serieActual(), cfg=cfgActual(), q=Math.max(1,num('cCant'));
+    var d=despiezarMuro({W:num('cW'),H:num('cH'),cols:lista('cCols'),rows:lista('cRows'),
+                         perfiles:perfilesElegidos()}, s, cfg);
+    var cortes=d.piezas.map(function(p){
+      return {perfil:p.perfil,largo:p.largo,cant:p.cant*q,marca:'MC-1',nombre:p.nombre,angulo:p.angulo}; });
+    var crist=d.cristales.map(function(c){
+      return {cod:'CL6',ancho:c.ancho,alto:c.alto,cant:c.cant*q,marca:'MC-1',nombre:c.nombre}; });
+    ULT={d:d,q:q,s:s,cfg:cfg,cortes:cortes,crist:crist,
+         opt:optimizar1Dv2(cortes,cfg,[]), vid:optimizarVidrio2(crist,cfg)};
+    pintar();
+  }catch(e){
+    if(typeof logError==='function') logError('canc:calcular',e,{silencioso:true});
+    else console.error('canc:calcular',e);
+    if($('cSalida')) $('cSalida').innerHTML='<div style="color:var(--danger)">No se pudo calcular: '+esc(e.message)+'</div>';
+  }
+}
+function cstat(l,v,s,col){
+  return '<div class="cstat"><div class="cstat-l">'+l+'</div><div class="cstat-v"'+
+    (col?' style="color:'+col+'"':'')+'>'+v+'</div>'+
+    (s?'<div class="item-sub">'+s+'</div>':'')+'</div>';
+}
+function pintar(){
+  if(!ULT || !$('cStats')) return;
+  var d=ULT.d, q=ULT.q, opt=ULT.opt, vid=ULT.vid;
+  var ml=ULT.cortes.reduce(function(a,c){return a+c.largo*c.cant;},0)/1000;
+  var tramos=0, hojas=0, merma=0, nperf=0;
+  for(var k in opt){ tramos+=opt[k].tramos||0; merma+=opt[k].merma||0; nperf++; }
+  for(var j in vid){ hojas+=vid[j].hojas||0; }
+  merma = merma/Math.max(1,nperf);
+  $('cStats').innerHTML =
+    cstat('Módulos', d.cristales.length*q, '')+
+    cstat('Metros lineales', ml.toFixed(1), 'de aluminio')+
+    cstat('Tramos a pedir', tramos, '')+
+    cstat('Hojas de cristal', hojas, '3600 × 2600')+
+    cstat('Merma aluminio', (merma*100).toFixed(1)+'%', '', merma>0.35?'var(--warning)':'var(--accent)');
+  var f={alzado:vAlzado,despiece:vDespiece,cortes:vCortes,vidrio:vVidrio,
+         secciones:vSecciones,compara:vCompara,audit:vAudit}[VISTA];
+  $('cSalida').innerHTML = f();
+}
+
+// ── Vistas ────────────────────────────────────────────────────────────
+function cotasNum(id, totId){
+  var v=lista(id), tot=num(totId), suma=v.reduce(function(a,b){return a+b;},0);
+  return (Math.abs(suma-tot)<=Math.max(2,tot*0.001)) ? v
+       : v.map(function(x){ return Math.round(tot*x/suma); });
+}
+function vAlzado(){
+  var d=ULT.d, s=ULT.s, q=ULT.q, W=d.W, H=d.H;
+  var e=640/Math.max(W,1), sw=W*e, sh=H*e, pf=d.perfiles||{};
+  var AV=function(c){ return ((s.perfiles[c]||{}).av||0)*e; };
+  var av=AV(pf.montante||'MC-MON'), at=AV(pf.travesano||'MC-TRA');
+  var avI=AV(pf.jambaIzq||pf.montante||'MC-MON'), avD=AV(pf.jambaDer||pf.montante||'MC-MON');
+  var atC=AV(pf.cabezal||pf.travesano||'MC-TRA'), atZ=AV(pf.zoclo||pf.travesano||'MC-TRA');
+  var cols=lista('cCols'), rows=lista('cRows');
+  var sC=cols.reduce(function(a,b){return a+b;},0), sR=rows.reduce(function(a,b){return a+b;},0);
+  var util=sw-avI-avD-(cols.length-1)*av, utilV=sh-atC-atZ-(rows.length-1)*at;
+  var g='<rect width="'+sw+'" height="'+sh+'" fill="#0A1628"/>', x=0;
+  cols.forEach(function(c,ci){
+    var avL=ci===0?avI:av;
+    g+='<rect x="'+x+'" y="0" width="'+avL+'" height="'+sh+'" fill="'+(ci===0?'#8BBFD4':'#5A8FA8')+'"/>';
+    var w=util*c/sC, y=0;
+    rows.forEach(function(r,ri){
+      var atT=ri===0?atC:at;
+      g+='<rect x="'+(x+avL)+'" y="'+y+'" width="'+w+'" height="'+atT+'" fill="'+(ri===0?'#5BC4C0':'#3B9EBF')+'"/>';
+      var h=utilV*r/sR;
+      g+='<rect x="'+(x+avL)+'" y="'+(y+atT)+'" width="'+w+'" height="'+h+'" fill="#5BC4C0" opacity=".16"/>';
+      y+=atT+h;
+    });
+    g+='<rect x="'+(x+avL)+'" y="'+y+'" width="'+w+'" height="'+atZ+'" fill="#5BC4C0"/>';
+    x+=avL+w;
+  });
+  g+='<rect x="'+x+'" y="0" width="'+avD+'" height="'+sh+'" fill="#8BBFD4"/>';
+  // Cotas encadenadas, como en WinPerfil: H1..Hn por modulo y el total.
+  var co=[], LC='#8BBFD4', FS=Math.max(11, sw/58);
+  var tick=function(x1,y1,x2,y2){ return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+LC+'" stroke-width="1"/>'; };
+  var cota=function(x1,x2,y,txt,et){
+    return tick(x1,y-6,x1,y+6)+tick(x2,y-6,x2,y+6)+tick(x1,y,x2,y)+
+      '<text x="'+((x1+x2)/2)+'" y="'+(y-9)+'" fill="'+LC+'" font-size="'+FS+'" text-anchor="middle">'+et+'='+txt+'</text>'; };
+  var cotaV=function(y1,y2,xx,txt,et){
+    return tick(xx-6,y1,xx+6,y1)+tick(xx-6,y2,xx+6,y2)+tick(xx,y1,xx,y2)+
+      '<text x="'+(xx+10)+'" y="'+((y1+y2)/2)+'" fill="'+LC+'" font-size="'+FS+
+      '" transform="rotate(90 '+(xx+10)+','+((y1+y2)/2)+')" text-anchor="middle">'+et+'='+txt+'</text>'; };
+  var cnC=cotasNum('cCols','cW'), cnR=cotasNum('cRows','cH');
+  var cx=0, i2=0, yC=sh+26;
+  cols.forEach(function(c,i){
+    var avL=i===0?avI:av, w2=util*c/sC;
+    co.push(cota(cx, cx+avL+w2+(i===cols.length-1?avD:av/2), yC, mmf(cnC[i]||0), 'H'+(++i2)));
+    cx+=avL+w2;
+  });
+  co.push(cota(0, sw, sh+52, mmf(W), 'H'+(i2+1)));
+  var cy=0, r2=0, xC=sw+26;
+  rows.forEach(function(r,i){
+    var atT=i===0?atC:at, h2=utilV*r/sR;
+    co.push(cotaV(cy, cy+atT+h2+(i===rows.length-1?atZ:at/2), xC, mmf(cnR[i]||0), 'V'+(++r2)));
+    cy+=atT+h2;
+  });
+  co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(r2+1)));
+  return '<svg viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'">'+g+co.join('')+'</svg>'+
+    '<div class="item-sub" style="margin-top:10px">'+mmf(W)+' × '+mmf(H)+' mm · '+
+    cols.length+' columnas × '+rows.length+' filas'+(q>1?' · '+q+' muros iguales':'')+'</div>';
+}
+function vDespiece(){
+  var d=ULT.d, q=ULT.q;
+  var h='<div class="section-title">Perfiles</div><table><tr><th>Perfil</th><th>Pieza</th>'+
+        '<th class="n">Cant.</th><th class="n">Largo</th><th class="n">Total ml</th></tr>';
+  d.piezas.forEach(function(p){
+    h+='<tr><td class="mono">'+esc(p.perfil)+'</td><td>'+esc(p.nombre)+'</td><td class="n">'+
+      (p.cant*q)+'</td><td class="n">'+mmf(p.largo)+'</td><td class="n">'+
+      (p.largo*p.cant*q/1000).toFixed(2)+'</td></tr>'; });
+  h+='</table><div class="section-title" style="margin-top:18px">Cristales</div><table>'+
+     '<tr><th>Módulo</th><th class="n">Ancho</th><th class="n">Alto</th><th class="n">Cant.</th></tr>';
+  d.cristales.forEach(function(c){
+    h+='<tr><td>'+esc(c.nombre)+'</td><td class="n">'+mmf(c.ancho)+'</td><td class="n">'+
+      mmf(c.alto)+'</td><td class="n">'+(c.cant*q)+'</td></tr>'; });
+  return h+'</table>';
+}
+function vCortes(){
+  var opt=ULT.opt, h='', col=['#5BC4C0','#3B9EBF','#F0A500','#8BBFD4'];
+  for(var perfil in opt){
+    var r=opt[perfil];
+    h+='<div class="section-title" style="margin-top:14px"><span class="mono">'+esc(perfil)+'</span> ';
+    if(r.error){ h+='<span style="color:var(--danger);font-weight:400">'+esc(r.error)+'</span></div>'; continue; }
+    h+='<span style="font-weight:400;color:var(--dim)">· '+r.tramos+' tramo(s) de '+mmf(r.largoBarra)+
+       ' mm · merma '+(r.merma*100).toFixed(1)+'%</span></div>';
+    if(r.nuevosRetales && r.nuevosRetales.length)
+      h+='<div class="item-sub">Retales reutilizables: '+r.nuevosRetales.map(mmf).join(', ')+' mm</div>';
+    r.barras.forEach(function(b){
+      h+='<div class="item-sub" style="margin-top:6px">'+(b.tipo==='barra'?'Barra ':'Retal ')+b.n+
+         ' · sobra '+mmf(b.sobrante)+' mm'+(b.esRetal?' <span style="color:var(--accent)">reutilizable</span>':'')+
+         '</div><div class="barra">';
+      b.piezas.forEach(function(p,i){
+        h+='<i style="width:'+(p.largo/b.capacidad*100)+'%;background:'+col[i%4]+
+           '" title="'+esc(p.nombre)+' — '+mmf(p.largo)+' mm"></i>'; });
+      h+='</div>';
+    });
+  }
+  return h;
+}
+function vVidrio(){
+  var vid=ULT.vid, h='';
+  for(var cod in vid){
+    var r=vid[cod];
+    h+='<div class="section-title"><span class="mono">'+esc(cod)+'</span> <span style="font-weight:400;color:var(--dim)">· '+
+       r.hojas+' hoja(s) · neto '+r.m2Neto.toFixed(2)+' m² de '+r.m2Comprado.toFixed(2)+' m² · merma '+
+       (r.merma*100).toFixed(1)+'%</span></div>';
+    if(r.fueraDeMedida && r.fueraDeMedida.length)
+      h+='<div style="color:var(--danger);font-size:12px">'+r.fueraDeMedida.length+
+         ' cristal(es) exceden la hoja: hay que dividir el módulo o pedir medida especial.</div>';
+  }
+  return h;
+}
+function svgSeccion(cod, alto){
+  if(typeof SECCIONES==='undefined') return '';
+  var S=SECCIONES[cod]||SECCIONES[cod+'@1']||SECCIONES[cod+'@2'];
+  if(!S) return '<div class="item-sub">sin sección en la biblioteca</div>';
+  var H=alto||150, e=Math.min((H*1.9)/Math.max(S.w,1), H/Math.max(S.h,1));
+  var w=S.w*e+16, h=S.h*e+16;
+  var d='M '+S.pts.map(function(p){ return (8+p[0]*e).toFixed(1)+','+(h-8-p[1]*e).toFixed(1); }).join(' L ')+' Z';
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="max-width:'+w+'px">'+
+    '<path d="'+d+'" fill="rgba(91,196,192,.18)" stroke="#5BC4C0" stroke-width="1"/></svg>'+
+    '<div class="item-sub">'+S.w.toFixed(1)+' × '+S.h.toFixed(1)+' mm · '+S.vertices+' vértices</div>';
+}
+function vSecciones(){
+  var s=ULT.s, pf=ULT.d.perfiles||{};
+  var ETQ={cabezal:'Marco superior · cabezal',zoclo:'Marco inferior · zoclo',
+           jambaIzq:'Marco izquierdo · jamba',jambaDer:'Marco derecho · jamba',
+           montante:'Postes intermedios',travesano:'Travesaños intermedios',
+           tapaV:'Tapa vertical',tapaH:'Tapa horizontal'};
+  var h='<div class="section-title">Perfiles elegidos en el modelo</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">';
+  Object.keys(ETQ).forEach(function(k){
+    var cod=pf[k]; if(!cod) return;
+    var p=s.perfiles[cod]||{};
+    h+='<div class="card" style="margin:0"><div class="item-sub">'+ETQ[k]+'</div>'+
+       '<div style="font-weight:700;font-size:13px;margin-bottom:6px">'+esc(cod)+' · '+esc(p.nombre||'')+'</div>'+
+       svgSeccion(cod,140)+'</div>';
+  });
+  h+='</div>';
+  var n=(typeof SECCIONES!=='undefined')?Object.keys(SECCIONES).length:0;
+  h+='<div class="section-title" style="margin-top:20px">Biblioteca de secciones ('+n+')</div>'+
+     '<div class="item-sub" style="margin-bottom:10px">Extraídas de los DXF de WinPerfil, a escala 1:1. '+
+     'Sirven para cualquier serie, no sólo la MC-450.</div>'+
+     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">';
+  if(n) Object.keys(SECCIONES).sort().forEach(function(cod){
+    h+='<div class="card" style="margin:0;padding:10px"><div class="mono" style="font-weight:700">'+esc(cod)+'</div>'+
+       svgSeccion(cod,90)+'</div>'; });
+  return h+'</div>';
+}
+function vCompara(){
+  if(!REF_ACTUAL) return '<div class="item-sub">Elige un caso de referencia en el panel izquierdo para comparar contra WinPerfil.</div>';
+  var R=REF_ACTUAL, d=ULT.d;
+  var agr=function(cod){ var r={};
+    d.piezas.filter(function(p){return p.perfil===cod;}).forEach(function(p){ r[p.largo]=(r[p.largo]||0)+p.cant; });
+    return r; };
+  var fila=function(et,a,b){
+    var ig=a.replace(/\s+/g,'')===b.replace(/\s+/g,'');
+    return '<tr><td>'+et+'</td><td class="mono">'+esc(a)+'</td><td class="mono">'+esc(b)+'</td>'+
+      '<td style="color:'+(ig?'var(--accent)':'var(--warning)')+';font-weight:700">'+(ig?'igual':'difiere')+'</td></tr>'; };
+  var h='<div class="section-title">'+esc(val('cRef'))+' — '+esc(R.nombre)+'</div>';
+  if(R.irregular) h+='<div class="aviso"><b>Retícula irregular.</b> '+esc(R.notaIrregular)+'</div>';
+  h+='<table><tr><th>Concepto</th><th>Nuestro motor</th><th>WinPerfil</th><th></th></tr>';
+  var mon=agr('MC-MON'), tra=agr('MC-TRA');
+  h+=fila('Montantes', Object.keys(mon).map(function(l){return mon[l]+'×'+l;}).join('  '),
+                       R.perfiles.montante.cortes.map(function(c){return c[1]+'×'+c[0];}).join('  '));
+  h+=fila('Travesaños', Object.keys(tra).map(function(l){return tra[l]+'×'+l;}).join('  '),
+                        R.perfiles.travesano.cortes.map(function(c){return c[1]+'×'+c[0];}).join('  '));
+  var cr={}; d.cristales.forEach(function(c){ var k=c.ancho+'×'+c.alto; cr[k]=(cr[k]||0)+c.cant; });
+  h+=fila('Cristales', Object.keys(cr).map(function(k){return cr[k]+'×'+k;}).join('  '),
+                       R.vidrios.map(function(v){return v[2]+'×'+v[0]+'×'+v[1];}).join('  '));
+  var nTra=Object.keys(tra).reduce(function(a,k){return a+tra[k];},0);
+  h+=fila('Conectores', (nTra*2)+'×60', R.perfiles.conector.cortes.map(function(c){return c[1]+'×'+c[0];}).join('  '));
+  h+='</table>';
+  if(R.tolerancias && Object.keys(R.tolerancias).length)
+    h+='<div class="item-sub" style="margin-top:10px">Diferencia conocida de 1 mm en el módulo central: WinPerfil reporta '+
+       Object.keys(R.tolerancias).join(', ')+' y este cálculo da uno más. Origen no identificado.</div>';
+  return h;
+}
+function vAudit(){
+  var s=ULT.s, falt=descuentosFaltantesMuro(s);
+  var h='<div class="section-title">'+esc(s.nombre)+' '+
+    (s.calibrada?'<span class="badge" style="color:var(--accent);border-color:var(--accent)">calibrada</span>'
+                :'<span class="badge" style="color:var(--danger);border-color:var(--danger)">sin calibrar</span>')+'</div>';
+  if(!falt.length) h+='<div style="color:var(--accent);font-size:13px">Todos los contactos tienen descuento definido.</div>';
+  else{
+    h+='<div class="item-sub" style="color:var(--warning);margin-bottom:8px">Faltan '+falt.length+' descuento(s) por definir</div>'+
+       '<table><tr><th>Interior</th><th>Exterior</th><th>Contacto</th></tr>';
+    falt.forEach(function(f){ h+='<tr><td class="mono">'+esc(f.interior)+'</td><td class="mono">'+
+      esc(f.exterior)+'</td><td>'+esc(f.contacto)+'</td></tr>'; });
+    h+='</table>';
+  }
+  h+='<div class="section-title" style="margin-top:20px">Perfiles de la serie</div><table>'+
+     '<tr><th>Código</th><th>Nombre</th><th class="n">Ancho visto</th><th class="n">Galce</th>'+
+     '<th class="n">Tramo</th><th class="n">Precio</th></tr>';
+  for(var k in s.perfiles){ var p=s.perfiles[k];
+    h+='<tr><td class="mono">'+esc(k)+'</td><td>'+esc(p.nombre)+'</td><td class="n">'+p.av+
+       '</td><td class="n">'+p.galce+'</td><td class="n">'+mmf(p.largoTramo)+'</td><td class="n">'+
+       (p.precioTramo?money(p.precioTramo):'<span style="color:var(--warning)">falta</span>')+'</td></tr>'; }
+  return h+'</table>';
+}
+
+// ── Datos: clientes, obras ────────────────────────────────────────────
+function opt(sel,v,t){ var o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); }
+function datos(){
+  return Promise.all([
+    db('GET','clientes?select=*&order=nombre'),
+    db('GET','obras?select=id,nombre,cliente,cliente_id,ubicacion,estado&order=nombre')
+  ]).then(function(r){
+    CLIENTES=r[0]||[]; OBRAS=r[1]||[];
+    poblarSelects(); pintarClientes(); pintarObras(); listar();
+  }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
+}
+function poblarSelects(){
+  [['cPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
+    var s=$(par[0]); if(!s) return;
+    var v=s.value; s.innerHTML=''; opt(s,'',par[1]);
+    CLIENTES.forEach(function(c){ opt(s,c.id,c.nombre); });
+    s.value=v;
+  });
+  filtrarObras();
+}
+// Solo las obras del cliente elegido; las que no tienen cliente ligado se
+// muestran siempre, para poder asignarlas sin salir de aqui.
+function filtrarObras(){
+  var s=$('cPreObra'); if(!s) return;
+  var cli=val('cPreCli'), v=s.value;
+  s.innerHTML=''; opt(s,'','— sin obra —');
+  OBRAS.filter(function(o){ return !cli || o.cliente_id===cli || !o.cliente_id; })
+       .forEach(function(o){ opt(s,o.id,o.nombre+(o.cliente_id?'':'  (sin cliente)')); });
+  s.value=v;
+}
+function guardarCliente(){
+  var nombre=val('cCNom').trim();
+  if(!nombre){ alert('El cliente necesita nombre.'); return; }
+  var cuerpo={nombre:nombre, contacto:val('cCCon').trim()||null,
+              telefono:val('cCTel').trim()||null, email:val('cCMail').trim()||null};
+  var p = EDIT_CLI ? db('PATCH','clientes?id=eq.'+EDIT_CLI,cuerpo) : db('POST','clientes',cuerpo);
+  p.then(function(){ limpiarCliente(); return datos(); })
+   .catch(function(e){ alert('No se guardó: '+e.message); });
+}
+function editarCliente(id){
+  var c=CLIENTES.filter(function(x){return x.id===id;})[0]; if(!c) return;
+  EDIT_CLI=id;
+  $('cCNom').value=c.nombre||''; $('cCCon').value=c.contacto||'';
+  $('cCTel').value=c.telefono||''; $('cCMail').value=c.email||'';
+  $('cCCancel').style.display=''; $('cCNom').focus();
+}
+function limpiarCliente(){
+  EDIT_CLI=null;
+  ['cCNom','cCCon','cCTel','cCMail'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('cCCancel')) $('cCCancel').style.display='none';
+}
+function pintarClientes(){
+  var c=$('cTablaCli'); if(!c) return;
+  if(!CLIENTES.length){ c.innerHTML='<div class="item-sub">Todavía no hay clientes.</div>'; return; }
+  var h='<table><tr><th>Cliente</th><th>Contacto</th><th class="n">Obras</th><th></th></tr>';
+  CLIENTES.forEach(function(x){
+    var n=OBRAS.filter(function(o){return o.cliente_id===x.id;}).length;
+    h+='<tr><td><b>'+esc(x.nombre)+'</b></td><td>'+esc(x.contacto||x.telefono||x.email||'—')+'</td>'+
+       '<td class="n">'+n+'</td><td style="text-align:right">'+
+       '<button class="chip" onclick="CANC.editarCliente(\''+x.id+'\')">Editar</button></td></tr>';
+  });
+  c.innerHTML=h+'</table>';
+}
+// Se escribe cliente_id Y el texto 'cliente', porque el resto de la app
+// todavia lee el texto. Mantenerlos en sincronia evita romper lo que sirve.
+function guardarObra(){
+  var nombre=val('cONom').trim();
+  if(!nombre){ alert('La obra necesita nombre.'); return; }
+  var cid=val('cOCli')||null;
+  var cli=CLIENTES.filter(function(c){return c.id===cid;})[0];
+  var cuerpo={nombre:nombre, cliente_id:cid, cliente:cli?cli.nombre:'',
+              ubicacion:val('cOUbi').trim()||null, estado:val('cOEst')};
+  var p = EDIT_OBRA ? db('PATCH','obras?id=eq.'+EDIT_OBRA,cuerpo) : db('POST','obras',cuerpo);
+  p.then(function(){ limpiarObra(); return datos(); })
+   .catch(function(e){ alert('No se guardó: '+e.message); });
+}
+function editarObra(id){
+  var o=OBRAS.filter(function(x){return x.id===id;})[0]; if(!o) return;
+  EDIT_OBRA=id;
+  $('cONom').value=o.nombre||''; $('cOCli').value=o.cliente_id||'';
+  $('cOUbi').value=o.ubicacion||''; $('cOEst').value=o.estado||'cotizacion';
+  $('cOCancel').style.display=''; $('cONom').focus();
+}
+function limpiarObra(){
+  EDIT_OBRA=null;
+  ['cONom','cOUbi'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('cOCli')) $('cOCli').value='';
+  if($('cOEst')) $('cOEst').value='cotizacion';
+  if($('cOCancel')) $('cOCancel').style.display='none';
+}
+function pintarObras(){
+  var c=$('cTablaObr'); if(!c) return;
+  if(!OBRAS.length){ c.innerHTML='<div class="item-sub">Todavía no hay obras.</div>'; return; }
+  var huerf=OBRAS.filter(function(o){return !o.cliente_id;}).length, h='';
+  if(huerf) h+='<div class="item-sub" style="color:var(--warning);margin-bottom:8px">'+huerf+
+    ' obra(s) sin cliente ligado. Edítalas para asignarlo.</div>';
+  h+='<table><tr><th>Obra</th><th>Cliente</th><th></th></tr>';
+  OBRAS.forEach(function(o){
+    var c2=CLIENTES.filter(function(x){return x.id===o.cliente_id;})[0];
+    h+='<tr><td><b>'+esc(o.nombre)+'</b><div class="item-sub">'+esc(o.ubicacion||'')+'</div></td>'+
+       '<td>'+(c2?esc(c2.nombre):'<span style="color:var(--warning)">sin ligar</span>')+'</td>'+
+       '<td style="text-align:right"><button class="chip" onclick="CANC.editarObra(\''+o.id+'\')">Editar</button></td></tr>';
+  });
+  c.innerHTML=h+'</table>';
+}
+
+// ── Serializacion del diseño ──────────────────────────────────────────
+function estadoDiseno(){
+  return {W:num('cW'), H:num('cH'), postesV:num('cPV'), postesH:num('cPH'),
+          cols:val('cCols'), rows:val('cRows'), cant:Math.max(1,num('cCant')),
+          perfiles:perfilesElegidos(),
+          descuentos:{traMon:num('cDTM'), monSup:num('cDMS'), monInf:num('cDMI')},
+          corte:{san:num('cSan'), kerf:num('cKerf'), tu:num('cTu'), estr:val('cEstr'), hol:num('cHol')},
+          serie:'MC-450'};
+}
+function aplicarDiseno(m){
+  if(!m) return;
+  $('cW').value=m.W; $('cH').value=m.H;
+  $('cPV').value=m.postesV; $('cPH').value=m.postesH;
+  $('cCols').value=m.cols; $('cRows').value=m.rows; $('cCant').value=m.cant||1;
+  var d=m.descuentos||{}, c=m.corte||{};
+  $('cDTM').value=d.traMon||0; $('cDMS').value=d.monSup||0; $('cDMI').value=d.monInf||0;
+  if(c.san!=null) $('cSan').value=c.san;
+  if(c.kerf!=null) $('cKerf').value=c.kerf;
+  if(c.tu!=null) $('cTu').value=c.tu;
+  if(c.estr) $('cEstr').value=c.estr;
+  if(c.hol!=null) $('cHol').value=c.hol;
+  POSICIONES.forEach(function(par){
+    var s=$('cpf-'+par[0]); if(s) s.value=(m.perfiles&&m.perfiles[par[0]])||''; });
+  $('cRef').value=''; REF_ACTUAL=null;
+  etiquetas(); calcular();
+}
+// Foto del despiece al momento de guardar. Un presupuesto ya enviado no
+// debe moverse porque despues se corrija la serie o suba un precio.
+function snapshotDespiece(){
+  if(!ULT) return null;
+  var d=ULT.d, q=ULT.q, r1={}, r2={}, k;
+  for(k in ULT.opt) r1[k]={tramos:ULT.opt[k].tramos||0,largoBarra:ULT.opt[k].largoBarra||0,merma:ULT.opt[k].merma||0};
+  for(k in ULT.vid) r2[k]={hojas:ULT.vid[k].hojas||0,m2Neto:ULT.vid[k].m2Neto||0,m2Comprado:ULT.vid[k].m2Comprado||0};
+  return {
+    piezas: d.piezas.map(function(p){ return {perfil:p.perfil,nombre:p.nombre,cant:p.cant*q,largo:p.largo,angulo:p.angulo}; }),
+    cristales: d.cristales.map(function(c){ return {nombre:c.nombre,ancho:c.ancho,alto:c.alto,cant:c.cant*q}; }),
+    tramos:r1, hojas:r2, calculado:new Date().toISOString()
+  };
+}
+// Precio = tramos a pedir x precio de tramo del catalogo. La serie piloto
+// trae los precios en cero, asi que hoy esto da 0 y se avisa cuales faltan.
+function costoDelModelo(){
+  if(!ULT) return {costo:0, sinPrecio:[]};
+  var costo=0, sinPrecio=[];
+  for(var cod in ULT.opt){
+    var p=ULT.s.perfiles[cod]||{}, r=ULT.opt[cod];
+    if(!p.precioTramo){ sinPrecio.push(cod); continue; }
+    costo += (r.tramos||0)*p.precioTramo;
+  }
+  return {costo:costo, sinPrecio:sinPrecio};
+}
+
+// ── Presupuestos ──────────────────────────────────────────────────────
+function nuevoPresupuesto(){
+  PRE=null; MODELOS=[]; MODELO_ID=null;
+  $('cPreNom').value=''; $('cPreEst').value='borrador';
+  pintarModelos(); pista('Presupuesto nuevo: se crea al guardar el primer modelo.');
+}
+function guardarModelo(){
+  if(!ULT) calcular();
+  if(!ULT){ pista('No hay nada calculado.','danger'); return; }
+  var cli=val('cPreCli');
+  if(!cli){ pista('Elige el cliente.','danger'); sub('diseno'); return; }
+  var nom=val('cPreNom').trim();
+  if(!nom){ pista('Ponle nombre al presupuesto.','danger'); return; }
+  pista('Guardando…');
+  var cab={cliente_id:cli, obra_id:val('cPreObra')||null, nombre:nom,
+           estado:val('cPreEst'), serie_cod:'MC-450', cfg:cfgActual(),
+           creado_por:(currentUser&&currentUser.email)||null};
+  var pCab = PRE ? db('PATCH','canc_presupuestos?id=eq.'+PRE.id,cab)
+                 : db('POST','canc_presupuestos',cab);
+  pCab.then(function(r){
+    PRE=r[0];
+    var c=costoDelModelo();
+    var actual = MODELOS.filter(function(m){return m.id===MODELO_ID;})[0];
+    var orden = actual ? actual.orden : MODELOS.length+1;
+    var cuerpo={presupuesto_id:PRE.id, orden:orden,
+      clave:'M-'+String(orden).length<2?'M-0'+orden:'M-'+orden,
+      descripcion: mmf(num('cW'))+' × '+mmf(num('cH'))+' mm · '+
+                   (num('cPV')+1)+'×'+(num('cPH')+1)+' módulos',
+      cantidad:Math.max(1,num('cCant')), tipo:'muro',
+      vano_w:num('cW'), vano_h:num('cH'),
+      modelo:estadoDiseno(), despiece:snapshotDespiece(),
+      costo:c.costo, precio:c.costo};
+    cuerpo.clave = 'M-'+(orden<10?'0':'')+orden;
+    var pMod = MODELO_ID ? db('PATCH','canc_modelos?id=eq.'+MODELO_ID,cuerpo)
+                         : db('POST','canc_modelos',cuerpo);
+    return pMod.then(function(rm){
+      MODELO_ID = rm[0].id;
+      return recargarModelos().then(function(){
+        pista('Guardado en '+PRE.folio+' · '+rm[0].clave+
+          (c.sinPrecio.length?' · sin precio: '+c.sinPrecio.join(', '):''),
+          c.sinPrecio.length?'warning':'accent');
+      });
+    });
+  }).catch(function(e){ pista('No se guardó: '+e.message,'danger'); });
+}
+function recargarModelos(){
+  if(!PRE) return Promise.resolve();
+  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=*&order=orden')
+    .then(function(r){
+      MODELOS=r||[];
+      var costo=MODELOS.reduce(function(a,m){ return a+Number(m.costo||0)*Number(m.cantidad||1); },0);
+      var precio=MODELOS.reduce(function(a,m){ return a+Number(m.precio||0)*Number(m.cantidad||1); },0);
+      return db('PATCH','canc_presupuestos?id=eq.'+PRE.id,{costo_total:costo,precio_total:precio});
+    }).then(function(r){ if(r&&r[0]) PRE=r[0]; pintarModelos(); });
+}
+function pintarModelos(){
+  var c=$('cModelos'); if(!c) return;
+  if(!PRE){ c.innerHTML='<div class="item-sub">Sin presupuesto abierto. Al guardar el primer modelo se genera el folio.</div>'; return; }
+  var h='<div class="section-title">'+esc(PRE.folio)+' · '+esc(PRE.nombre)+
+        ' <span class="badge" style="color:var(--dim);border-color:var(--border)">'+esc(PRE.estado)+'</span></div>';
+  if(!MODELOS.length){ c.innerHTML=h+'<div class="item-sub">Todavía sin modelos.</div>'; return; }
+  h+='<table><tr><th>Clave</th><th>Modelo</th><th class="n">Cant.</th><th class="n">Costo</th><th></th></tr>';
+  MODELOS.forEach(function(m){
+    var ed=m.id===MODELO_ID;
+    h+='<tr'+(ed?' style="background:rgba(91,196,192,.07)"':'')+'>'+
+       '<td class="mono">'+esc(m.clave)+(ed?' <span style="color:var(--accent)">◄ editando</span>':'')+'</td>'+
+       '<td>'+esc(m.descripcion||'')+'</td><td class="n">'+m.cantidad+'</td>'+
+       '<td class="n">'+money(m.costo)+'</td>'+
+       '<td style="text-align:right;white-space:nowrap">'+
+       '<button class="chip" onclick="CANC.abrirModelo(\''+m.id+'\')">Abrir</button> '+
+       '<button class="chip" onclick="CANC.borrarModelo(\''+m.id+'\')">Borrar</button></td></tr>';
+  });
+  h+='</table><div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">'+
+     '<button class="btn-secondary" onclick="CANC.nuevoModelo()">+ Nuevo modelo</button>'+
+     '<span class="item-sub" style="margin:0">Total: '+
+     (Number(PRE.costo_total)?money(PRE.costo_total):'sin precios cargados')+'</span></div>';
+  c.innerHTML=h;
+}
+function nuevoModelo(){ MODELO_ID=null; pintarModelos(); pista('El siguiente guardado crea un modelo nuevo.'); }
+function abrirModelo(id){
+  var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
+  MODELO_ID=id; aplicarDiseno(m.modelo); pintarModelos();
+  pista('Editando '+m.clave+'.'); sub('diseno');
+}
+function borrarModelo(id){
+  var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
+  if(!confirm('¿Borrar el modelo '+m.clave+'?')) return;
+  db('DELETE','canc_modelos?id=eq.'+id).then(function(){
+    if(MODELO_ID===id) MODELO_ID=null;
+    return recargarModelos();
+  }).catch(function(e){ pista('No se borró: '+e.message,'danger'); });
+}
+function listar(){
+  var c=$('cLista'); if(!c) return;
+  var f=val('cFEst');
+  db('GET','v_canc_presupuestos?select=*'+(f?'&estado=eq.'+f:'')+'&order=created_at.desc')
+  .then(function(r){
+    if(!r || !r.length){ c.innerHTML='<div class="item-sub">Todavía no hay presupuestos guardados.</div>'; return; }
+    var h='<table><tr><th>Folio</th><th>Presupuesto</th><th>Cliente / obra</th><th>Estado</th>'+
+          '<th class="n">Modelos</th><th class="n">Total</th><th></th></tr>';
+    r.forEach(function(p){
+      h+='<tr><td class="mono">'+esc(p.folio)+'</td>'+
+         '<td><b>'+esc(p.nombre)+'</b><div class="item-sub">'+esc(p.fecha)+
+         (p.vencido?' · <span style="color:var(--warning)">vencido</span>':'')+'</div></td>'+
+         '<td>'+esc(p.cliente_nombre||'—')+'<div class="item-sub">'+esc(p.obra_nombre||'sin obra')+'</div></td>'+
+         '<td>'+esc(p.estado)+'</td><td class="n">'+p.modelos+'</td>'+
+         '<td class="n">'+money(p.precio_total)+'</td>'+
+         '<td style="text-align:right"><button class="chip" onclick="CANC.abrirPre(\''+p.id+'\')">Abrir</button></td></tr>';
+    });
+    c.innerHTML=h+'</table>';
+  }).catch(function(e){ c.innerHTML='<div style="color:var(--danger)">No se pudo leer: '+esc(e.message)+'</div>'; });
+}
+function abrirPre(id){
+  Promise.all([
+    db('GET','canc_presupuestos?id=eq.'+id+'&select=*'),
+    db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=*&order=orden')
+  ]).then(function(r){
+    PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
+    $('cPreCli').value=PRE.cliente_id||''; filtrarObras();
+    $('cPreObra').value=PRE.obra_id||'';
+    $('cPreNom').value=PRE.nombre||''; $('cPreEst').value=PRE.estado||'borrador';
+    if(MODELOS.length){ MODELO_ID=MODELOS[0].id; aplicarDiseno(MODELOS[0].modelo); }
+    pintarModelos(); pista('Abierto '+PRE.folio+'.'); sub('diseno');
+  }).catch(function(e){ alert('No se pudo abrir: '+e.message); });
+}
+
+// ── API publica ───────────────────────────────────────────────────────
+return {
+  abrir:abrir, sub:sub, vista:vista, repartir:repartir, calcular:calcular, cargarRef:cargarRef,
+  filtrarObras:filtrarObras,
+  guardarCliente:guardarCliente, editarCliente:editarCliente, limpiarCliente:limpiarCliente,
+  guardarObra:guardarObra, editarObra:editarObra, limpiarObra:limpiarObra,
+  nuevoPresupuesto:nuevoPresupuesto, guardarModelo:guardarModelo, nuevoModelo:nuevoModelo,
+  abrirModelo:abrirModelo, borrarModelo:borrarModelo, listar:listar, abrirPre:abrirPre
+};
+})();
+</script>
 </body>
 </html>
