@@ -6742,9 +6742,81 @@ function vAlzado(){
     cy+=atT+h2;
   });
   co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(r2+1)));
-  return '<svg viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'">'+g+co.join('')+'</svg>'+
+  // El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
+  // el lienzo conserva su alto y la pantalla no se mueve.
+  return '<div class="lienzo" id="cLienzo">'+
+      '<svg id="cSvg" viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'" preserveAspectRatio="xMidYMid meet">'+
+        '<g id="cZoom">'+g+co.join('')+'</g>'+
+      '</svg>'+
+      '<div class="zbar">'+
+        '<button title="Alejar" onclick="CANC.zoom(-1)">−</button>'+
+        '<span class="pct" id="cPct">100%</span>'+
+        '<button title="Acercar" onclick="CANC.zoom(1)">+</button>'+
+        '<button class="ancho" title="Volver al encuadre original" onclick="CANC.zoom(0)">Ajustar</button>'+
+      '</div>'+
+    '</div>'+
     '<div class="item-sub" style="margin-top:10px">'+mmf(W)+' × '+mmf(H)+' mm · '+
-    cols.length+' columnas × '+rows.length+' filas'+(q>1?' · '+q+' muros iguales':'')+'</div>';
+    cols.length+' columnas × '+rows.length+' filas'+(q>1?' · '+q+' muros iguales':'')+
+    ' · rueda del ratón para acercar, arrastra para mover</div>';
+}
+
+// ── Zoom del alzado ───────────────────────────────────────────────────
+// Estado en coordenadas del viewBox: el grupo se dibuja como
+//   u = t + k·m   (u = viewBox, m = modelo)
+// Para acercar sobre el cursor se despeja t manteniendo fijo el punto u.
+var Z={k:1,tx:0,ty:0};
+function zAplica(){
+  var g=$('cZoom'); if(!g) return;
+  g.setAttribute('transform','translate('+Z.tx+','+Z.ty+') scale('+Z.k+')');
+  var p=$('cPct'); if(p) p.textContent=Math.round(Z.k*100)+'%';
+}
+function zPunto(svg, ev){
+  var p=svg.createSVGPoint();
+  p.x=ev.clientX; p.y=ev.clientY;
+  var m=svg.getScreenCTM();
+  return m ? p.matrixTransform(m.inverse()) : {x:0,y:0};
+}
+function zEscala(k2, u){
+  k2=Math.min(12, Math.max(0.2, k2));
+  Z.tx = u.x - k2*(u.x - Z.tx)/Z.k;
+  Z.ty = u.y - k2*(u.y - Z.ty)/Z.k;
+  Z.k  = k2;
+  zAplica();
+}
+// 0 = ajustar, ±1 = un paso desde el centro del lienzo
+function zoom(dir){
+  var svg=$('cSvg'); if(!svg) return;
+  if(!dir){ Z={k:1,tx:0,ty:0}; zAplica(); return; }
+  var r=svg.getBoundingClientRect();
+  zEscala(Z.k*(dir>0?1.25:1/1.25),
+          zPunto(svg,{clientX:r.left+r.width/2, clientY:r.top+r.height/2}));
+}
+function montarZoom(){
+  var svg=$('cSvg'); if(!svg) return;
+  Z={k:1,tx:0,ty:0}; zAplica();
+  svg.addEventListener('wheel', function(ev){
+    ev.preventDefault();   // que no se scrollee la página al acercar
+    zEscala(Z.k*(ev.deltaY<0?1.12:1/1.12), zPunto(svg,ev));
+  }, {passive:false});
+  var arr=null;
+  svg.addEventListener('pointerdown', function(ev){
+    arr=zPunto(svg,ev); svg.classList.add('agarrando');
+    try{ svg.setPointerCapture(ev.pointerId); }catch(e){}
+  });
+  svg.addEventListener('pointermove', function(ev){
+    if(!arr) return;
+    var u=zPunto(svg,ev);
+    Z.tx+=u.x-arr.x; Z.ty+=u.y-arr.y;
+    zAplica();
+    // el punto agarrado se queda bajo el cursor
+    arr=zPunto(svg,ev);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(e){
+    svg.addEventListener(e, function(){ arr=null; svg.classList.remove('agarrando'); });
+  });
+  svg.addEventListener('dblclick', function(ev){
+    zEscala(Z.k*1.6, zPunto(svg,ev));
+  });
 }
 function vDespiece(){
   var d=ULT.d, q=ULT.q;
