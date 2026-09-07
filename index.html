@@ -6717,7 +6717,11 @@ function procesarDxf(texto, nombre){
     : (['perfiles','vidrios','longitud','accesorios'].indexOf(a.seccion)
      - ['perfiles','vidrios','longitud','accesorios'].indexOf(b.seccion)); });
 
-  IMP = { archivo:nombre, datos:d, items:items, avisos:d.avisos||[], resuelto:false };
+  var alz=null;
+  try { alz = CANC_DXF.alzado(texto, d); } catch(e){ alz=null; }
+
+  IMP = { archivo:nombre, datos:d, items:items, alzado:alz,
+          avisos:d.avisos||[], resuelto:false };
   dpista('Leídas '+items.length+' referencias. Buscándolas en el catálogo…');
   pintarImport();
   resolverInsumos();
