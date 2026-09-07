@@ -6397,7 +6397,11 @@ function cargarMotor(){
       return new Promise(function(res, rej){
         var s = document.createElement('script');
         s.src = f; s.onload = res;
-        s.onerror = function(){ rej(new Error('No se pudo cargar ' + f)); };
+        s.onerror = function(){
+          var e = new Error('No se pudo cargar ' + f);
+          e.archivo = f;
+          rej(e);
+        };
         document.head.appendChild(s);
       });
     });
