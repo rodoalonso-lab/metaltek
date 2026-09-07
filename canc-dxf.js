@@ -269,6 +269,67 @@
     return { H: h.partes, totalH: h.total, V: v.partes, totalV: v.total };
   }
 
+  // ── 1d. Miniaturas: el corte de cada perfil ─────────────────────────
+  // WinPerfil dibuja, junto a cada renglón de la tabla de perfiles, el corte
+  // seccional del perfil. Está en el DXF a la izquierda de la columna "Ref."
+  // y a la misma altura que su renglón, así que se emparejan por Y.
+  //
+  // El filtro clave es la altura: una miniatura cabe en un renglón. Sin eso
+  // se cuelan los cortes grandes de la hoja, que ocupan el alto de veinte
+  // renglones y caen en la misma franja de X.
+  function miniaturas(contenido) {
+    var textos = leerTextos(contenido);
+    var refs = textos.filter(function (t) {
+      var s = t.texto.replace('@', '');
+      return /^\d+$/.test(s) && t.texto.split('@')[0].length >= 5;
+    });
+    if (!refs.length) return {};
+
+    var xref = Math.min.apply(null, refs.map(function (r) { return r.x; }));
+    var ys = refs.map(function (r) { return r.y; }).sort(function (a, b) { return b - a; });
+    var paso = 105;
+    for (var i = 0; i < ys.length - 1; i++) {
+      var d = ys[i] - ys[i + 1];
+      if (d > 1 && d < paso) paso = d;
+    }
+
+    var cand = [];
+    leerFormas(contenido).forEach(function (f) {
+      if (f.pts.length < 6) return;
+      var c = caja(f.pts), w = c.x1 - c.x0, h = c.y1 - c.y0;
+      if (h > paso * 0.9 || w > paso * 2.2) return;      // no cabe en un renglón
+      if (c.x1 >= xref || c.x1 < xref - 700) return;     // fuera de la franja
+      cand.push({ c: c, pts: f.pts, color: colorACI(f.color), cerrada: f.cerrada !== false });
+    });
+
+    var out = {};
+    refs.forEach(function (r) {
+      var base = r.texto.split('@')[0];
+      if (out[base]) return;                              // el primero que aparezca
+      var trozos = cand.filter(function (p) {
+        return r.y >= p.c.y0 - paso * 0.45 && r.y <= p.c.y1 + paso * 0.45;
+      });
+      if (!trozos.length) return;
+      var x0 = Math.min.apply(null, trozos.map(function (p) { return p.c.x0; }));
+      var y0 = Math.min.apply(null, trozos.map(function (p) { return p.c.y0; }));
+      var x1 = Math.max.apply(null, trozos.map(function (p) { return p.c.x1; }));
+      var y1 = Math.max.apply(null, trozos.map(function (p) { return p.c.y1; }));
+      out[base] = {
+        ref: base,
+        w: Math.round((x1 - x0) * 10) / 10,
+        h: Math.round((y1 - y0) * 10) / 10,
+        formas: trozos.map(function (p) {
+          return { cerrada: p.cerrada, color: p.color,
+                   pts: p.pts.map(function (q) {
+                     return [Math.round((q[0] - x0) * 10) / 10,
+                             Math.round((y1 - q[1]) * 10) / 10];
+                   }) };
+        })
+      };
+    });
+    return out;
+  }
+
   // ── 2. Reconstrucción de las tablas ─────────────────────────────────
   var SECCIONES = [
     { clave: 'perfiles',   titulo: /^perfiles$/i },
