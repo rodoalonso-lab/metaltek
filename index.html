@@ -7511,9 +7511,12 @@ function abrirPre(id){
   ]).then(function(r){
     PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
     sincronizarCabecera();
+    // Se queda en Guardados mostrando TODOS los modelos. Antes saltaba al
+    // primero y los demás quedaban sin manera de alcanzarse.
     pintarModelos();
-    if(MODELOS.length) verModeloDxf(MODELOS[0]); else sub('importar');
-    dpista('Abierto '+PRE.folio+'.');
+    listar();
+    var card=$('cCardModelos');
+    if(card) window.scrollTo(0, card.offsetTop-20);
   }).catch(function(e){ alert('No se pudo abrir: '+e.message); });
 }
 
