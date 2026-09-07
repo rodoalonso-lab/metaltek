@@ -6758,44 +6758,27 @@ function vAlzado(){
     return tick(xx-6,y1,xx+6,y1)+tick(xx-6,y2,xx+6,y2)+tick(xx,y1,xx,y2)+
       '<text x="'+(xx+10)+'" y="'+((y1+y2)/2)+'" fill="'+LC+'" font-size="'+FS+
       '" transform="rotate(90 '+(xx+10)+','+((y1+y2)/2)+')" text-anchor="middle">'+et+'='+txt+'</text>'; };
-  var cnC=cotasNum('cCols','cW'), cnR=cotasNum('cRows','cH');
+  // Puntos de cota: paño → eje → eje → … → paño.
+  var xs=[0].concat(ejX, [sw]);
+  var ys=[0].concat(ejY, [sh]);
 
-  // Puntos de cota, igual que WinPerfil:
-  //   la primera va de PAÑO exterior a EJE del primer poste,
-  //   las intermedias de EJE a EJE,
-  //   la última de EJE del último poste a PAÑO exterior.
-  // Por eso el módulo del centro sale más ancho que los de orilla: se lleva
-  // medio poste de cada lado, y los de orilla sólo medio.
-  function ejes(total, medidas, avIni, avMed, avFin){
-    var xs=[0], acc=0, util2=total-avIni-avFin-(medidas.length-1)*avMed;
-    var suma=medidas.reduce(function(a,b){return a+b;},0);
-    medidas.forEach(function(m,i){
-      acc += (i===0?avIni:avMed) + util2*m/suma;   // cara del siguiente poste
-      if(i<medidas.length-1) xs.push(acc + avMed/2);  // su eje
-    });
-    xs.push(total);
-    return xs;
-  }
-  var xs=ejes(sw, cols, avI, av, avD);
-  var ys=ejes(sh, rows, atC, at, atZ);
-
-  // Marca del eje sobre cada poste intermedio, para que se vea de dónde a dónde mide
-  for(var e=1;e<xs.length-1;e++)
-    co.push('<line x1="'+xs[e]+'" y1="0" x2="'+xs[e]+'" y2="'+(sh+14)+'" stroke="'+LC+
-            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".55"/>');
-  for(var e2=1;e2<ys.length-1;e2++)
-    co.push('<line x1="0" y1="'+ys[e2]+'" x2="'+(sw+14)+'" y2="'+ys[e2]+'" stroke="'+LC+
-            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".55"/>');
+  // Línea de eje punteada sobre cada poste, para que se vea de dónde mide
+  ejX.forEach(function(x){
+    co.push('<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(sh+14)+'" stroke="'+LC+
+            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
+  ejY.forEach(function(y){
+    co.push('<line x1="0" y1="'+y+'" x2="'+(sw+14)+'" y2="'+y+'" stroke="'+LC+
+            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
 
   var yC=sh+26;
-  for(var i2=0;i2<cols.length;i2++)
+  for(var i2=0;i2<cnC.length;i2++)
     co.push(cota(xs[i2], xs[i2+1], yC, mmf(cnC[i2]||0), 'H'+(i2+1)));
-  co.push(cota(0, sw, sh+52, mmf(W), 'H'+(cols.length+1)));
+  co.push(cota(0, sw, sh+52, mmf(W), 'H'+(cnC.length+1)));
 
   var xC=sw+26;
-  for(var r2=0;r2<rows.length;r2++)
+  for(var r2=0;r2<cnR.length;r2++)
     co.push(cotaV(ys[r2], ys[r2+1], xC, mmf(cnR[r2]||0), 'V'+(r2+1)));
-  co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(rows.length+1)));
+  co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(cnR.length+1)));
   // El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
   // el lienzo conserva su alto y la pantalla no se mueve.
   return '<div class="lienzo" id="cLienzo">'+
