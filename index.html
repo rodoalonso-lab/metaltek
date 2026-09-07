@@ -6833,7 +6833,12 @@ function planoTablas(vidrios, perfiles){
   });
   h+='</table>';
   h+='<div class="pl-aviso">La lista de corte optimizada la genera WinPerfil. '+
-     'Este plano es para montaje.</div>';
+     'Este plano es para montaje.';
+  if(IMP && IMP.alzado && !(IMP.alzado.formas && IMP.alzado.formas.length))
+    h+='<br><br><b>Dibujo simplificado.</b> Este modelo se guardó antes de que '+
+       'se leyera la geometría completa. Vuelve a importar el DXF para recuperar '+
+       'el detalle de perfiles y herrajes.';
+  h+='</div>';
   return h;
 }
 
