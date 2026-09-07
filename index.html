@@ -8027,6 +8027,23 @@ function guardarModelo(){
     });
   }).catch(function(e){ pista('No se guardó: '+e.message,'danger'); });
 }
+// Cliente, obra y nombre viven en dos tarjetas (Importar y Diseño). Si se
+// dejan sueltas, cada una guarda una cosa distinta en el mismo presupuesto.
+function sincronizarCabecera(){
+  if(!PRE) return;
+  [['cPreCli','dPreCli'],['cPreObra','dPreObra'],['cPreNom','dPreNom']].forEach(function(p){
+    var a=$(p[0]), b=$(p[1]); if(!a||!b) return;
+    var v = p[0]==='cPreNom' ? (PRE.nombre||'')
+          : p[0]==='cPreCli' ? (PRE.cliente_id||'')
+          : (PRE.obra_id||'');
+    a.value=v; b.value=v;
+  });
+  filtrarObras(); filtrarObrasDxf();
+  if($('cPreObra')) $('cPreObra').value=PRE.obra_id||'';
+  if($('dPreObra')) $('dPreObra').value=PRE.obra_id||'';
+  if($('cPreEst')) $('cPreEst').value=PRE.estado||'borrador';
+}
+
 function recargarModelos(){
   if(!PRE) return Promise.resolve();
   return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=*&order=orden')
@@ -8035,7 +8052,7 @@ function recargarModelos(){
       var costo=MODELOS.reduce(function(a,m){ return a+Number(m.costo||0)*Number(m.cantidad||1); },0);
       var precio=MODELOS.reduce(function(a,m){ return a+Number(m.precio||0)*Number(m.cantidad||1); },0);
       return db('PATCH','canc_presupuestos?id=eq.'+PRE.id,{costo_total:costo,precio_total:precio});
-    }).then(function(r){ if(r&&r[0]) PRE=r[0]; pintarModelos(); });
+    }).then(function(r){ if(r&&r[0]) PRE=r[0]; sincronizarCabecera(); pintarModelos(); });
 }
 function pintarModelos(){
   var c=$('cModelos'); if(!c) return;
@@ -8045,10 +8062,13 @@ function pintarModelos(){
   if(!MODELOS.length){ c.innerHTML=h+'<div class="item-sub">Todavía sin modelos.</div>'; return; }
   h+='<table><tr><th>Clave</th><th>Modelo</th><th class="n">Cant.</th><th class="n">Costo</th><th></th></tr>';
   MODELOS.forEach(function(m){
-    var ed=m.id===MODELO_ID;
+    var ed=m.id===MODELO_ID, dxf=(m.tipo==='dxf');
     h+='<tr'+(ed?' style="background:rgba(91,196,192,.07)"':'')+'>'+
        '<td class="mono">'+esc(m.clave)+(ed?' <span style="color:var(--accent)">◄ editando</span>':'')+'</td>'+
-       '<td>'+esc(m.descripcion||'')+'</td><td class="n">'+m.cantidad+'</td>'+
+       '<td>'+esc(m.descripcion||'')+
+       '<div class="item-sub">'+(dxf
+          ? '<span style="color:var(--info)">importado de WinPerfil</span>'
+          : 'diseñado en la app')+'</div></td><td class="n">'+m.cantidad+'</td>'+
        '<td class="n">'+money(m.costo)+'</td>'+
        '<td style="text-align:right;white-space:nowrap">'+
        '<button class="chip" onclick="CANC.abrirModelo(\''+m.id+'\')">Abrir</button> '+
