@@ -7358,6 +7358,100 @@ function datos(){
   }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
+// ── Catálogo: insumos ─────────────────────────────────────────────────
+// Es la "TablaInsumos" del Excel: la fuente única de precios.
+function familiaSugerida(){
+  if(EDIT_INS) return;
+  var pre={material:'MAT-003', mano_obra:'MO-001', herramienta:'HERR-001',
+           equipo:'EQ-001', subcontrato:'SUB-001'}[val('iTip')];
+  if(pre && !val('iFam')) $('iFam').value=pre;
+}
+function ipista(t,c){
+  var e=$('iPista'); if(e) e.innerHTML = t ? '<span style="color:var(--'+(c||'dim')+')">'+esc(t)+'</span>' : '';
+}
+function guardarInsumo(){
+  var cl=val('iCla').trim(), de=val('iDes').trim();
+  if(!cl || !de){ alert('El insumo necesita clave y descripción.'); return; }
+  var cuerpo={clave:cl, descripcion:de, unidad:val('iUni').trim()||null,
+              tipo:val('iTip'), familia:val('iFam').trim()||cl.split('.')[0],
+              precio:num('iPre'), proveedor:val('iProv').trim()||null,
+              fecha_precio:val('iFec')||null};
+  var p = EDIT_INS ? db('PATCH','canc_insumos?id=eq.'+EDIT_INS,cuerpo)
+                   : db('POST','canc_insumos',cuerpo);
+  p.then(function(){ limpiarInsumo(); ipista('Guardado.','accent'); return datos(); })
+   .catch(function(e){
+      ipista(/duplicate|unique/i.test(e.message)
+        ? 'Ya existe un insumo con la clave '+cl+'.'
+        : 'No se guardó: '+e.message, 'danger');
+   });
+}
+function editarInsumo(id){
+  var i=INSUMOS.filter(function(x){return x.id===id;})[0]; if(!i) return;
+  EDIT_INS=id;
+  $('iCla').value=i.clave||''; $('iDes').value=i.descripcion||'';
+  $('iUni').value=i.unidad||''; $('iTip').value=i.tipo||'material';
+  $('iFam').value=i.familia||''; $('iPre').value=i.precio||0;
+  $('iProv').value=i.proveedor||''; $('iFec').value=i.fecha_precio||'';
+  $('iCancel').style.display=''; $('iCla').focus();
+  ipista('Editando '+i.clave+'.');
+}
+function limpiarInsumo(){
+  EDIT_INS=null;
+  ['iCla','iDes','iUni','iFam','iProv','iFec'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('iPre')) $('iPre').value=0;
+  if($('iCancel')) $('iCancel').style.display='none';
+  ipista('');
+}
+function activarInsumo(id, on){
+  db('PATCH','canc_insumos?id=eq.'+id, {activo:!!on})
+    .then(datos).catch(function(e){ ipista('No se pudo: '+e.message,'danger'); });
+}
+function pintarInsumos(){
+  var c=$('cTablaIns'); if(!c) return;
+  var ft=val('iFTipo'), q=(val('iBusca')||'').toLowerCase().trim();
+  var soloFalta=$('iSoloFalta') && $('iSoloFalta').checked;
+  var arr=INSUMOS.filter(function(i){
+    if(ft && i.tipo!==ft) return false;
+    if(soloFalta && Number(i.precio)>0) return false;
+    if(q && (i.clave+' '+i.descripcion).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  // resumen: siempre sobre el catálogo completo, no sobre el filtro
+  var tot=INSUMOS.length, act=INSUMOS.filter(function(i){return i.activo;}).length;
+  var falta=INSUMOS.filter(function(i){return !Number(i.precio);}).length;
+  var fam={}; INSUMOS.forEach(function(i){ fam[i.familia]=1; });
+  var res=$('cInsResumen');
+  if(res) res.innerHTML=
+    cstat('Insumos', tot, act+' activos')+
+    cstat('Familias', Object.keys(fam).length, '')+
+    cstat('Sin precio', falta, falta?'hay que capturarlos':'catálogo completo',
+          falta?'var(--warning)':'var(--accent)')+
+    cstat('Mostrando', arr.length, 'con el filtro actual');
+
+  if(!arr.length){ c.innerHTML='<div class="item-sub">Ningún insumo con ese filtro.</div>'; return; }
+  var h='<table><tr><th>Clave</th><th>Descripción</th><th>Tipo</th><th>Unidad</th>'+
+        '<th class="n">Precio</th><th></th></tr>';
+  var famAct=null;
+  arr.forEach(function(i){
+    if(i.familia!==famAct){
+      famAct=i.familia;
+      h+='<tr><td colspan="6" style="padding-top:12px;color:var(--dim);font-size:11px;'+
+         'font-weight:700;letter-spacing:.05em;border-bottom:none">'+esc(famAct||'—')+'</td></tr>';
+    }
+    var pr=Number(i.precio)||0, off=!i.activo;
+    h+='<tr'+(off?' style="opacity:.45"':'')+'>'+
+       '<td class="mono">'+esc(i.clave)+'</td>'+
+       '<td>'+esc(i.descripcion)+(off?' <span class="badge" style="color:var(--dim);border-color:var(--border)">fuera de uso</span>':'')+'</td>'+
+       '<td>'+esc(tipoLabel(i.tipo))+'</td><td>'+esc(i.unidad||'—')+'</td>'+
+       '<td class="n">'+(pr?money(pr):'<span style="color:var(--warning)">falta</span>')+'</td>'+
+       '<td style="text-align:right;white-space:nowrap">'+
+       '<button class="chip" onclick="CANC.editarInsumo(\''+i.id+'\')">Editar</button> '+
+       '<button class="chip" onclick="CANC.activarInsumo(\''+i.id+'\','+(off?'true':'false')+')">'+
+       (off?'Reactivar':'Retirar')+'</button></td></tr>';
+  });
+  c.innerHTML=h+'</table>';
+}
+
 // ── Catálogo: series ──────────────────────────────────────────────────
 function poblarSeries(){
   [['cSerie',true],['pSerie',false]].forEach(function(par){
