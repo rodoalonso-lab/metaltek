@@ -7440,7 +7440,7 @@ function aplicarDiseno(m){
   POSICIONES.forEach(function(par){
     var s=$('cpf-'+par[0]); if(s) s.value=(m.perfiles&&m.perfiles[par[0]])||''; });
   $('cRef').value=''; REF_ACTUAL=null;
-  etiquetas(); calcular();
+  etiquetas(); habilitarPorDiseno(); calcular();
 }
 // Foto del despiece al momento de guardar. Un presupuesto ya enviado no
 // debe moverse porque despues se corrija la serie o suba un precio.
@@ -7597,6 +7597,10 @@ function abrirPre(id){
 return {
   abrir:abrir, sub:sub, vista:vista, repartir:repartir, calcular:calcular, cargarRef:cargarRef,
   zoom:zoom, filtrarObras:filtrarObras,
+  cambiarSerie:cambiarSerie, guardarSerie:guardarSerie, editarSerie:editarSerie,
+  limpiarSerie:limpiarSerie, pintarPerfiles:pintarPerfiles,
+  guardarPerfil:guardarPerfil, editarPerfil:editarPerfil,
+  limpiarPerfil:limpiarPerfil, borrarPerfil:borrarPerfil,
   guardarCliente:guardarCliente, editarCliente:editarCliente, limpiarCliente:limpiarCliente,
   guardarObra:guardarObra, editarObra:editarObra, limpiarObra:limpiarObra,
   nuevoPresupuesto:nuevoPresupuesto, guardarModelo:guardarModelo, nuevoModelo:nuevoModelo,
