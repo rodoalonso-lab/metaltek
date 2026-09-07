@@ -6384,9 +6384,7 @@ function plantilla(){
   return ''+
   '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
     '<button class="chip active" id="cs-importar" onclick="CANC.sub(\'importar\')">📥 Importar DXF</button>'+
-    '<button class="chip" id="cs-diseno" onclick="CANC.sub(\'diseno\')">✏️ Diseño</button>'+
     '<button class="chip" id="cs-guardados" onclick="CANC.sub(\'guardados\')">📁 Guardados</button>'+
-    '<button class="chip" id="cs-perfiles" onclick="CANC.sub(\'perfiles\')">🔩 Perfiles</button>'+
     '<button class="chip" id="cs-insumos" onclick="CANC.sub(\'insumos\')">📦 Insumos</button>'+
     '<button class="chip" id="cs-catalogo" onclick="CANC.sub(\'catalogo\')">👥 Clientes y obras</button>'+
   '</div>'+
@@ -6529,7 +6527,7 @@ function sub(s){
   if(s==='guardados') listar();
   if(s==='insumos') pintarInsumos();
 }
-function pista(txt,tipo){
+function dpista(txt,tipo){
   var e=$('cPista'); if(!e) return;
   e.innerHTML = txt ? '<span style="color:var(--'+(tipo||'dim')+')">'+esc(txt)+'</span>' : '';
 }
@@ -6632,7 +6630,7 @@ function datos(){
     INSUMOS=(r[2]||[]).filter(function(i){ return !i.es_grupo; });
     poblarSelects(); pintarClientes(); pintarObras();
     pintarInsumos(); listar();
-  }).catch(function(e){ pista('No se pudo leer el catálogo: '+e.message,'danger'); });
+  }).catch(function(e){ dpista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
 // ── Importación de DXF ────────────────────────────────────────────────
@@ -7053,7 +7051,7 @@ function pintarObras(){
 function nuevoPresupuesto(){
   PRE=null; MODELOS=[]; MODELO_ID=null;
   $('cPreNom').value=''; $('cPreEst').value='borrador';
-  pintarModelos(); pista('Presupuesto nuevo: se crea al guardar el primer modelo.');
+  pintarModelos(); dpista('Presupuesto nuevo: se crea al guardar el primer modelo.');
 }
 // Cliente, obra y nombre viven en dos tarjetas (Importar y Diseño). Si se
 // dejan sueltas, cada una guarda una cosa distinta en el mismo presupuesto.
@@ -7139,7 +7137,7 @@ function borrarModelo(id){
   db('DELETE','canc_modelos?id=eq.'+id).then(function(){
     if(MODELO_ID===id) MODELO_ID=null;
     return recargarModelos();
-  }).catch(function(e){ pista('No se borró: '+e.message,'danger'); });
+  }).catch(function(e){ dpista('No se borró: '+e.message,'danger'); });
 }
 function listar(){
   var c=$('cLista'); if(!c) return;
@@ -7187,6 +7185,7 @@ return {
   editarInsumo:editarInsumo,
   limpiarInsumo:limpiarInsumo,
   activarInsumo:activarInsumo,
+  familiaSugerida:familiaSugerida,
   pintarInsumos:pintarInsumos,
   guardarCliente:guardarCliente,
   editarCliente:editarCliente,
