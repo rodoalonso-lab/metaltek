@@ -6861,6 +6861,19 @@ function cargarRef(){
 // ── Calculo ───────────────────────────────────────────────────────────
 function calcular(){
   if(!_cargado || !_montado) return;
+  var falta=faltanPerfiles();
+  if(falta.length){
+    ULT=null;
+    if($('cStats')) $('cStats').innerHTML='';
+    if($('cSalida')) $('cSalida').innerHTML=
+      '<div style="text-align:center;padding:44px 20px;color:var(--dim)">'+
+      '<div style="font-size:34px;margin-bottom:10px">🔩</div>'+
+      '<div style="font-weight:600;color:var(--text);margin-bottom:6px">Faltan perfiles por elegir</div>'+
+      '<div class="item-sub">'+falta.map(esc).join('<br>')+'</div>'+
+      '<div class="item-sub" style="margin-top:10px">Se eligen en «Perfiles del modelo», '+
+      'en el panel de la izquierda.</div></div>';
+    return;
+  }
   try{
     var s=serieActual(), cfg=cfgActual(), q=Math.max(1,num('cCant'));
     var d=despiezarMuro({W:num('cW'),H:num('cH'),cols:lista('cCols'),rows:lista('cRows'),
