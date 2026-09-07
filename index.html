@@ -6922,7 +6922,110 @@ function cotasNum(id, totId){
   return (Math.abs(suma-tot)<=Math.max(2,tot*0.001)) ? v
        : v.map(function(x){ return Math.round(tot*x/suma); });
 }
+// ── REGLA DEL EJE ─────────────────────────────────────────────────────
+// Las cotas NO miden módulos: miden de paño a eje, de eje a eje, y de eje
+// a paño. Los ejes son la suma acumulada de las cotas. De ahí sale que el
+// módulo del centro quede más ancho: se lleva medio poste de cada lado, y
+// los de orilla sólo medio. Es la misma regla que aplica el motor, así que
+// el dibujo y el despiece dicen lo mismo.
+function ejesDe(cn){
+  var a=[], acc=0;
+  for(var i=0;i<cn.length-1;i++){ acc+=cn[i]; a.push(acc); }
+  return a;
+}
+// bordes libres de cada módulo, en mm
+function bordesDe(cn, ej, total, aIni, aMed, aFin){
+  var b=[];
+  for(var i=0;i<cn.length;i++)
+    b.push([ (i===0) ? aIni : ej[i-1]+aMed/2,
+             (i===cn.length-1) ? total-aFin : ej[i]-aMed/2 ]);
+  return b;
+}
+
+// Cotas encadenadas, como en WinPerfil: H1..Hn y el total.
+// Las comparte el alzado y el croquis, para que no se separen.
+function cotasSVG(sw, sh, W, H, cnC, cnR, ejX, ejY){
+  var co=[], LC='#8BBFD4', FS=Math.max(11, sw/58);
+  var tick=function(x1,y1,x2,y2){ return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+
+    '" stroke="'+LC+'" stroke-width="1"/>'; };
+  var cota=function(x1,x2,y,txt,et){
+    return tick(x1,y-6,x1,y+6)+tick(x2,y-6,x2,y+6)+tick(x1,y,x2,y)+
+      '<text x="'+((x1+x2)/2)+'" y="'+(y-9)+'" fill="'+LC+'" font-size="'+FS+
+      '" text-anchor="middle">'+et+'='+txt+'</text>'; };
+  var cotaV=function(y1,y2,xx,txt,et){
+    return tick(xx-6,y1,xx+6,y1)+tick(xx-6,y2,xx+6,y2)+tick(xx,y1,xx,y2)+
+      '<text x="'+(xx+10)+'" y="'+((y1+y2)/2)+'" fill="'+LC+'" font-size="'+FS+
+      '" transform="rotate(90 '+(xx+10)+','+((y1+y2)/2)+')" text-anchor="middle">'+et+'='+txt+'</text>'; };
+  var xs=[0].concat(ejX,[sw]), ys=[0].concat(ejY,[sh]);
+  // Línea de eje punteada sobre cada poste: se ve de dónde a dónde mide
+  ejX.forEach(function(x){ co.push('<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(sh+14)+
+    '" stroke="'+LC+'" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
+  ejY.forEach(function(y){ co.push('<line x1="0" y1="'+y+'" x2="'+(sw+14)+'" y2="'+y+
+    '" stroke="'+LC+'" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
+  for(var i=0;i<cnC.length;i++) co.push(cota(xs[i], xs[i+1], sh+26, mmf(cnC[i]||0), 'H'+(i+1)));
+  co.push(cota(0, sw, sh+52, mmf(W), 'H'+(cnC.length+1)));
+  for(var j=0;j<cnR.length;j++) co.push(cotaV(ys[j], ys[j+1], sw+26, mmf(cnR[j]||0), 'V'+(j+1)));
+  co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(cnR.length+1)));
+  return co.join('');
+}
+
+// El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
+// el lienzo conserva su alto y la pantalla no se mueve.
+function lienzoSVG(sw, sh, contenido, pie){
+  return '<div class="lienzo" id="cLienzo">'+
+      '<svg id="cSvg" viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'" preserveAspectRatio="xMidYMid meet">'+
+        '<g id="cZoom">'+contenido+'</g>'+
+      '</svg>'+
+      '<div class="zbar">'+
+        '<button title="Alejar" onclick="CANC.zoom(-1)">−</button>'+
+        '<span class="pct" id="cPct">100%</span>'+
+        '<button title="Acercar" onclick="CANC.zoom(1)">+</button>'+
+        '<button class="ancho" title="Volver al encuadre original" onclick="CANC.zoom(0)">Ajustar</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="item-sub" style="margin-top:10px">'+pie+
+    ' · rueda del ratón para acercar, arrastra para mover</div>';
+}
+
+// ── CROQUIS ───────────────────────────────────────────────────────────
+// Sin perfiles todavía no hay espesores, así que el vano va con línea
+// perimetral y los postes punteados, sobre su eje exacto. Sirve para
+// cuadrar la retícula antes de asignar los perfiles.
+function vCroquis(){
+  var W=num('cW'), H=num('cH');
+  if(W<=0 || H<=0) return '<div class="item-sub">Captura el ancho y el alto del vano.</div>';
+  var e=640/Math.max(W,1), sw=W*e, sh=H*e;
+  var cnC=cotasNum('cCols','cW'), cnR=cotasNum('cRows','cH');
+  var ejX=ejesDe(cnC).map(function(v){return v*e;});
+  var ejY=ejesDe(cnR).map(function(v){return v*e;});
+
+  var g='<rect width="'+sw+'" height="'+sh+'" fill="#0A1628"/>';
+  // módulos, apenas insinuados
+  var xs=[0].concat(ejX,[sw]), ys=[0].concat(ejY,[sh]);
+  for(var i=0;i<xs.length-1;i++) for(var j=0;j<ys.length-1;j++)
+    g+='<rect x="'+xs[i]+'" y="'+ys[j]+'" width="'+(xs[i+1]-xs[i])+'" height="'+
+       (ys[j+1]-ys[j])+'" fill="#5BC4C0" opacity=".05"/>';
+  // perímetro del vano: línea continua
+  g+='<rect x="0" y="0" width="'+sw+'" height="'+sh+
+     '" fill="none" stroke="#8BBFD4" stroke-width="2.5"/>';
+  // postes: punteados, sobre el eje
+  ejX.forEach(function(x){
+    g+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+sh+
+       '" stroke="#5A8FA8" stroke-width="2" stroke-dasharray="10 6"/>'; });
+  ejY.forEach(function(y){
+    g+='<line x1="0" y1="'+y+'" x2="'+sw+'" y2="'+y+
+       '" stroke="#3B9EBF" stroke-width="2" stroke-dasharray="10 6"/>'; });
+
+  var falta=faltanPerfiles();
+  return lienzoSVG(sw, sh, g+cotasSVG(sw,sh,W,H,cnC,cnR,ejX,ejY),
+    '<span style="color:var(--warning)">Croquis · sin perfiles asignados</span> · '+
+    mmf(W)+' × '+mmf(H)+' mm · '+cnC.length+' columnas × '+cnR.length+' filas')+
+    '<div class="item-sub" style="margin-top:8px">Los postes van punteados porque todavía '+
+    'no tienen espesor. Falta elegir: <b>'+falta.map(esc).join('</b>, <b>')+'</b>.</div>';
+}
+
 function vAlzado(){
+  if(!ULT) return vCroquis();
   var d=ULT.d, s=ULT.s, q=ULT.q, W=d.W, H=d.H;
   var e=640/Math.max(W,1), sw=W*e, sh=H*e, pf=d.perfiles||{};
   var AV=function(c){ return ((s.perfiles[c]||{}).av||0)*e; };
@@ -6932,30 +7035,10 @@ function vAlzado(){
   var cols=lista('cCols'), rows=lista('cRows');
   var cnC=cotasNum('cCols','cW'), cnR=cotasNum('cRows','cH');
 
-  // ── REGLA DEL EJE ───────────────────────────────────────────────────
-  // Las cotas NO miden módulos: miden de paño a eje, de eje a eje, y de
-  // eje a paño. Los ejes son la suma acumulada de las cotas.
-  // De ahí sale que el módulo del centro quede más ancho: se lleva medio
-  // poste de cada lado, y los de orilla sólo medio.
-  // Es la misma regla que aplica el motor al calcular los cortes, así que
-  // el dibujo y el despiece dicen lo mismo.
-  function ejesDe(cn){
-    var a=[], acc=0;
-    for(var i=0;i<cn.length-1;i++){ acc+=cn[i]; a.push(acc); }
-    return a;
-  }
-  // bordes libres de cada módulo, en mm
-  function bordes(cn, ej, total, aIni, aMed, aFin){
-    var b=[];
-    for(var i=0;i<cn.length;i++)
-      b.push([ (i===0) ? aIni : ej[i-1]+aMed/2,
-               (i===cn.length-1) ? total-aFin : ej[i]-aMed/2 ]);
-    return b;
-  }
   var ejX=ejesDe(cnC).map(function(v){return v*e;});
   var ejY=ejesDe(cnR).map(function(v){return v*e;});
-  var bx=bordes(cnC, ejesDe(cnC), W, avI/e, av/e, avD/e).map(function(p){return [p[0]*e,p[1]*e];});
-  var by=bordes(cnR, ejesDe(cnR), H, atC/e, at/e, atZ/e).map(function(p){return [p[0]*e,p[1]*e];});
+  var bx=bordesDe(cnC, ejesDe(cnC), W, avI/e, av/e, avD/e).map(function(p){return [p[0]*e,p[1]*e];});
+  var by=bordesDe(cnR, ejesDe(cnR), H, atC/e, at/e, atZ/e).map(function(p){return [p[0]*e,p[1]*e];});
 
   var g='<rect width="'+sw+'" height="'+sh+'" fill="#0A1628"/>';
   // cristales
