@@ -6668,6 +6668,15 @@ var INICIO={cW:1000, cH:1000, cPV:0, cPH:0, cCant:1,
             cSan:10, cKerf:5, cTu:400, cEstr:'prioridad-retales', cHol:4,
             cDTM:0, cDMS:0, cDMI:0};
 
+// Deja sólo los perfiles en blanco. El vano, los postes y las cotas se
+// quedan: sirve para recotizar la misma retícula en otra serie.
+function limpiarPerfilesModelo(){
+  POSICIONES.forEach(function(par){ var e=$('cpf-'+par[0]); if(e) e.value=''; });
+  calcular();          // sin perfiles, cae al croquis
+  vista('alzado');
+  pista('Perfiles en blanco. El diseño se conserva.');
+}
+
 function limpiarModelo(){
   // Si viene de un modelo guardado, avisar: al limpiar se suelta.
   if(MODELO_ID){
@@ -7714,6 +7723,7 @@ function abrirPre(id){
 return {
   abrir:abrir, sub:sub, vista:vista, repartir:repartir, calcular:calcular, cargarRef:cargarRef,
   zoom:zoom, filtrarObras:filtrarObras, limpiarModelo:limpiarModelo,
+  limpiarPerfilesModelo:limpiarPerfilesModelo,
   cambiarSerie:cambiarSerie, guardarSerie:guardarSerie, editarSerie:editarSerie,
   limpiarSerie:limpiarSerie, pintarPerfiles:pintarPerfiles,
   guardarPerfil:guardarPerfil, editarPerfil:editarPerfil,
