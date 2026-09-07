@@ -7034,9 +7034,11 @@ function pintarImport(){
     h+='<div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">'+
        '<button class="btn-primary" onclick="CANC.guardarImport()">Guardar en el presupuesto</button>'+
        '<button class="btn-secondary" onclick="CANC.sub(\'insumos\')">Capturar precios faltantes</button>'+
+       (IMP.alzado?'<button class="btn-secondary" onclick="CANC.planoAbrir()">Plano de montaje</button>':'')+
        '<span id="dGuardado" class="item-sub" style="margin:0"></span></div>';
   else if(IMP.guardado)
     h+='<div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">'+
+       (IMP.alzado?'<button class="btn-primary" onclick="CANC.planoAbrir()">Plano de montaje</button>':'')+
        '<button class="btn-secondary" onclick="CANC.sub(\'guardados\')">Volver a la lista</button>'+
        '<span class="item-sub" style="margin:0">Para actualizar precios, vuelve a importar el archivo.</span></div>';
   c.innerHTML=h;
@@ -7404,6 +7406,9 @@ return {
   zoom:zoom,
   filtrarObras:filtrarObras,
   leerDxf:leerDxf,
+  planoAbrir:planoAbrir,
+  planoCerrar:planoCerrar,
+  planoImprimir:planoImprimir,
   guardarImport:guardarImport,
   filtrarObrasDxf:filtrarObrasDxf,
   guardarInsumo:guardarInsumo,
