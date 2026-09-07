@@ -6700,24 +6700,54 @@ function vAlzado(){
   var avI=AV(pf.jambaIzq||pf.montante||'MC-MON'), avD=AV(pf.jambaDer||pf.montante||'MC-MON');
   var atC=AV(pf.cabezal||pf.travesano||'MC-TRA'), atZ=AV(pf.zoclo||pf.travesano||'MC-TRA');
   var cols=lista('cCols'), rows=lista('cRows');
-  var sC=cols.reduce(function(a,b){return a+b;},0), sR=rows.reduce(function(a,b){return a+b;},0);
-  var util=sw-avI-avD-(cols.length-1)*av, utilV=sh-atC-atZ-(rows.length-1)*at;
-  var g='<rect width="'+sw+'" height="'+sh+'" fill="#0A1628"/>', x=0;
-  cols.forEach(function(c,ci){
-    var avL=ci===0?avI:av;
-    g+='<rect x="'+x+'" y="0" width="'+avL+'" height="'+sh+'" fill="'+(ci===0?'#8BBFD4':'#5A8FA8')+'"/>';
-    var w=util*c/sC, y=0;
-    rows.forEach(function(r,ri){
-      var atT=ri===0?atC:at;
-      g+='<rect x="'+(x+avL)+'" y="'+y+'" width="'+w+'" height="'+atT+'" fill="'+(ri===0?'#5BC4C0':'#3B9EBF')+'"/>';
-      var h=utilV*r/sR;
-      g+='<rect x="'+(x+avL)+'" y="'+(y+atT)+'" width="'+w+'" height="'+h+'" fill="#5BC4C0" opacity=".16"/>';
-      y+=atT+h;
+  var cnC=cotasNum('cCols','cW'), cnR=cotasNum('cRows','cH');
+
+  // ── REGLA DEL EJE ───────────────────────────────────────────────────
+  // Las cotas NO miden módulos: miden de paño a eje, de eje a eje, y de
+  // eje a paño. Los ejes son la suma acumulada de las cotas.
+  // De ahí sale que el módulo del centro quede más ancho: se lleva medio
+  // poste de cada lado, y los de orilla sólo medio.
+  // Es la misma regla que aplica el motor al calcular los cortes, así que
+  // el dibujo y el despiece dicen lo mismo.
+  function ejesDe(cn){
+    var a=[], acc=0;
+    for(var i=0;i<cn.length-1;i++){ acc+=cn[i]; a.push(acc); }
+    return a;
+  }
+  // bordes libres de cada módulo, en mm
+  function bordes(cn, ej, total, aIni, aMed, aFin){
+    var b=[];
+    for(var i=0;i<cn.length;i++)
+      b.push([ (i===0) ? aIni : ej[i-1]+aMed/2,
+               (i===cn.length-1) ? total-aFin : ej[i]-aMed/2 ]);
+    return b;
+  }
+  var ejX=ejesDe(cnC).map(function(v){return v*e;});
+  var ejY=ejesDe(cnR).map(function(v){return v*e;});
+  var bx=bordes(cnC, ejesDe(cnC), W, avI/e, av/e, avD/e).map(function(p){return [p[0]*e,p[1]*e];});
+  var by=bordes(cnR, ejesDe(cnR), H, atC/e, at/e, atZ/e).map(function(p){return [p[0]*e,p[1]*e];});
+
+  var g='<rect width="'+sw+'" height="'+sh+'" fill="#0A1628"/>';
+  // cristales
+  bx.forEach(function(px){ by.forEach(function(py){
+    g+='<rect x="'+px[0]+'" y="'+py[0]+'" width="'+(px[1]-px[0])+'" height="'+(py[1]-py[0])+
+       '" fill="#5BC4C0" opacity=".16"/>';
+  });});
+  // travesaños: van ENTRE montantes, no de lado a lado
+  bx.forEach(function(px){
+    var w=px[1]-px[0];
+    g+='<rect x="'+px[0]+'" y="0" width="'+w+'" height="'+atC+'" fill="#5BC4C0"/>';
+    g+='<rect x="'+px[0]+'" y="'+(sh-atZ)+'" width="'+w+'" height="'+atZ+'" fill="#5BC4C0"/>';
+    ejY.forEach(function(y){
+      g+='<rect x="'+px[0]+'" y="'+(y-at/2)+'" width="'+w+'" height="'+at+'" fill="#3B9EBF"/>';
     });
-    g+='<rect x="'+(x+avL)+'" y="'+y+'" width="'+w+'" height="'+atZ+'" fill="#5BC4C0"/>';
-    x+=avL+w;
   });
-  g+='<rect x="'+x+'" y="0" width="'+avD+'" height="'+sh+'" fill="#8BBFD4"/>';
+  // montantes: corridos de arriba abajo
+  g+='<rect x="0" y="0" width="'+avI+'" height="'+sh+'" fill="#8BBFD4"/>';
+  g+='<rect x="'+(sw-avD)+'" y="0" width="'+avD+'" height="'+sh+'" fill="#8BBFD4"/>';
+  ejX.forEach(function(x){
+    g+='<rect x="'+(x-av/2)+'" y="0" width="'+av+'" height="'+sh+'" fill="#5A8FA8"/>';
+  });
   // Cotas encadenadas, como en WinPerfil: H1..Hn por modulo y el total.
   var co=[], LC='#8BBFD4', FS=Math.max(11, sw/58);
   var tick=function(x1,y1,x2,y2){ return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+LC+'" stroke-width="1"/>'; };
