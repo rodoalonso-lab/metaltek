@@ -6430,16 +6430,16 @@ function plantilla(){
       '<div>'+
         '<div class="card" style="margin-bottom:12px">'+
           '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Medidas</div>'+
-          '<label>Ancho del vano (mm)</label><input class="form-input" id="cW" type="number" value="6000" onchange="CANC.repartir()">'+
-          '<label>Alto del vano (mm)</label><input class="form-input" id="cH" type="number" value="3200" onchange="CANC.repartir()">'+
+          '<label>Ancho del vano (mm)</label><input class="form-input" id="cW" type="number" value="1000" onchange="CANC.repartir()">'+
+          '<label>Alto del vano (mm)</label><input class="form-input" id="cH" type="number" value="1000" onchange="CANC.repartir()">'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">'+
-            '<div><label>Postes verticales</label><input class="form-input" id="cPV" type="number" value="2" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblV"></div></div>'+
-            '<div><label>Postes horizontales</label><input class="form-input" id="cPH" type="number" value="1" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblH"></div></div>'+
+            '<div><label>Postes verticales</label><input class="form-input" id="cPV" type="number" value="0" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblV"></div></div>'+
+            '<div><label>Postes horizontales</label><input class="form-input" id="cPH" type="number" value="0" min="0" onchange="CANC.repartir()"><div class="item-sub" id="cLblH"></div></div>'+
           '</div>'+
           '<label style="margin-top:12px">Cotas de columnas (mm)</label>'+
-          '<input class="form-input" id="cCols" value="2000,2000,2000" onchange="CANC.calcular()">'+
+          '<input class="form-input" id="cCols" value="1000" onchange="CANC.calcular()">'+
           '<label>Cotas de filas (mm)</label>'+
-          '<input class="form-input" id="cRows" value="1100,2100" onchange="CANC.calcular()">'+
+          '<input class="form-input" id="cRows" value="1000" onchange="CANC.calcular()">'+
           '<div class="item-sub">Se reparten iguales al cambiar los postes. Edítalas para módulos desiguales.</div>'+
           '<label style="margin-top:12px">Piezas iguales</label><input class="form-input" id="cCant" type="number" value="1" min="1">'+
           '<label style="margin-top:12px">Caso de referencia (DXF de WinPerfil)</label>'+
@@ -6660,7 +6660,7 @@ function repartirIgual(total,n){
 }
 // Valores de arranque del diseño, en un solo lugar para que "Limpiar"
 // y el estado inicial del formulario no se separen con el tiempo.
-var INICIO={cW:6000, cH:3200, cPV:2, cPH:1, cCant:1,
+var INICIO={cW:1000, cH:1000, cPV:0, cPH:0, cCant:1,
             cSan:10, cKerf:5, cTu:400, cEstr:'prioridad-retales', cHol:4,
             cDTM:0, cDMS:0, cDMI:0};
 
