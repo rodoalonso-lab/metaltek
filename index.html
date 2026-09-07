@@ -6844,7 +6844,8 @@ function guardarImport(){
       descripcion: IMP.archivo.replace(/\.dxf$/i,'') + ' · ' + IMP.items.length + ' referencias',
       cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
       // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
-      modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString() },
+      modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString(),
+                  alzado:IMP.alzado },
       despiece: { items:IMP.items.map(function(i){
                     return {ref:i.ref, descripcion:i.descripcion, seccion:i.seccion,
                             clave:i.clave, cantidad:i.cantidad, unidad:i.unidad,
@@ -7127,6 +7128,7 @@ function verModeloDxf(m){
              piezas:0, cortes:i.cortes||[], creado:false };
   });
   IMP = { archivo:(m.modelo&&m.modelo.archivo)||m.clave, datos:null, items:items,
+          alzado:(m.modelo&&m.modelo.alzado)||null, clave:m.clave,
           avisos:[], resuelto:false, guardado:true,
           total:Number(d.total)||Number(m.costo)||0,
           creados:0,
