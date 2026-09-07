@@ -6708,49 +6708,36 @@ function planoDibujo(a, vidrios){
   a.marcas=marcas;
 
   // ── cotas ──
-  // Se miden de PAÑO a EJE y de EJE a EJE, como en obra. Medir de cristal a
-  // cristal era el error de la primera versión: las parciales no sumaban el
-  // total porque se comían el espesor de los postes.
+  // Se usan LAS DE WINPERFIL, leídas del propio DXF ("H1=2000", "V3=3200").
+  // Deducirlas de la geometría fue un error: en un muro cortina salía bien,
+  // pero en una puerta cada bastidor de hoja se tomaba por poste y salían
+  // once cotas inservibles. WinPerfil acota la puerta sólo por fuera porque
+  // el detalle va en las secciones, no en el alzado.
   var D=Math.max(W,H);
-  var ejeX=ejesDeBarras(a, 'v'), ejeY=ejesDeBarras(a, 'h');
+  var ct=IMP.cotas||{};
+  var cH=(ct.H||[]).slice(), cV=(ct.V||[]).slice();
+  var tH=ct.totalH||W, tV=ct.totalV||H;
 
   var n1=H+D*0.055, n2=H+D*0.135;          // dos niveles, sin encimarse
   var m1=W+D*0.055, m2=W+D*0.135;
-  var i;
-  for(i=0;i<=ejeX.length;i++){
-    var xa=(i===0?0:ejeX[i-1]), xb=(i===ejeX.length?W:ejeX[i]);
-    g+=cotaH(xa, xb, n1, D, false, H);
+
+  // Las parciales se acomodan proporcionalmente sobre el ancho dibujado:
+  // así siempre cierran contra el total aunque el marco medido difiera un
+  // par de milímetros del que declara WinPerfil.
+  var acc=0, i;
+  for(i=0;i<cH.length;i++){
+    var xa=acc/tH*W; acc+=cH[i];
+    g+=cotaH(xa, acc/tH*W, n1, D, false, H, cH[i]);
   }
-  g+=cotaH(0, W, n2, D, true, H);
-  for(i=0;i<=ejeY.length;i++){
-    var ya=(i===0?0:ejeY[i-1]), yb=(i===ejeY.length?H:ejeY[i]);
-    g+=cotaV(ya, yb, m1, D, false, W);
+  g+=cotaH(0, W, cH.length?n2:n1, D, true, H, tH);
+  acc=0;
+  for(i=0;i<cV.length;i++){
+    var ya=acc/tV*H; acc+=cV[i];
+    g+=cotaV(ya, acc/tV*H, m1, D, false, W, cV[i]);
   }
-  g+=cotaV(0, H, m2, D, true, W);
+  g+=cotaV(0, H, cV.length?m2:m1, D, true, W, tV);
 
   return '<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
-}
-
-// Ejes de los postes: el centro de cada barra que cruza el modelo.
-// Se descartan las barras muy delgadas — hay líneas decorativas de 14 mm que
-// no son travesaños y metían un eje falso.
-function ejesDeBarras(a, dir){
-  var W=a.W, H=a.H;
-  var barras = a.piezas.filter(function(p){
-    if(p.cristal) return false;
-    return dir==='v' ? (p.w<W*0.06 && p.w>=20 && p.h>H*0.8)
-                     : (p.h<H*0.06 && p.h>=20 && p.w>W*0.05);
-  });
-  var ejes=[];
-  barras.forEach(function(p){
-    var c = dir==='v' ? p.x+p.w/2 : p.y+p.h/2;
-    // juntar los que caen casi en el mismo sitio
-    for(var i=0;i<ejes.length;i++) if(Math.abs(ejes[i]-c)<40) return;
-    ejes.push(c);
-  });
-  var tot = dir==='v' ? W : H;
-  return ejes.filter(function(c){ return c>tot*0.02 && c<tot*0.98; })
-             .sort(function(x,y){ return x-y; });
 }
 
 function flecha(x,y,dx,dy){
