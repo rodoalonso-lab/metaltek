@@ -6520,6 +6520,48 @@ function plantilla(){
     '</div>'+
   '</div>'+
 
+  '<div id="cv-insumos" style="display:none">'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Insumo</div>'+
+      '<div class="item-sub" style="margin-bottom:8px">De aquí jalan el precio todas las tarjetas APU. '+
+      'Se captura una sola vez: cambias el precio aquí y se actualizan todos los presupuestos nuevos.</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">'+
+        '<div><label>Clave</label><input class="form-input" id="iCla" placeholder="MAT-003.21"></div>'+
+        '<div><label>Descripción</label><input class="form-input" id="iDes"></div>'+
+        '<div><label>Unidad</label><input class="form-input" id="iUni" placeholder="ml, m2, pza, jor"></div>'+
+        '<div><label>Tipo</label><select class="form-input" id="iTip" onchange="CANC.familiaSugerida()">'+
+          '<option value="material">Material</option><option value="mano_obra">Mano de obra</option>'+
+          '<option value="herramienta">Herramienta</option><option value="equipo">Equipo</option>'+
+          '<option value="subcontrato">Subcontrato</option></select></div>'+
+        '<div><label>Familia</label><input class="form-input" id="iFam" placeholder="MAT-003"></div>'+
+        '<div><label>Precio unitario</label><input class="form-input" id="iPre" type="number" step="0.0001" value="0"></div>'+
+        '<div><label>Proveedor</label><input class="form-input" id="iProv"></div>'+
+        '<div><label>Fecha del precio</label><input class="form-input" id="iFec" type="date"></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">'+
+        '<button class="btn-primary" onclick="CANC.guardarInsumo()">Guardar insumo</button>'+
+        '<button class="btn-secondary" id="iCancel" onclick="CANC.limpiarInsumo()" style="display:none">Cancelar</button>'+
+        '<span id="iPista" class="item-sub" style="margin:0"></span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card">'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px">'+
+        '<div><label>Tipo</label><select class="form-input" id="iFTipo" style="width:auto;min-width:150px" onchange="CANC.pintarInsumos()">'+
+          '<option value="">Todos</option><option value="material">Material</option>'+
+          '<option value="mano_obra">Mano de obra</option><option value="herramienta">Herramienta</option>'+
+          '<option value="equipo">Equipo</option><option value="subcontrato">Subcontrato</option>'+
+        '</select></div>'+
+        '<div style="flex:1;min-width:180px"><label>Buscar</label>'+
+          '<input class="form-input" id="iBusca" placeholder="clave o descripción" oninput="CANC.pintarInsumos()"></div>'+
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px">'+
+          '<input type="checkbox" id="iSoloFalta" style="width:16px;height:16px;accent-color:var(--accent)" onchange="CANC.pintarInsumos()">'+
+          '<span style="font-size:12px;color:var(--muted)">Sólo los que no tienen precio</span></label>'+
+      '</div>'+
+      '<div id="cInsResumen" class="cstats" style="margin-bottom:12px"></div>'+
+      '<div id="cTablaIns"></div>'+
+    '</div>'+
+  '</div>'+
+
   '<div id="cv-perfiles" style="display:none">'+
     '<div class="cgrid" style="grid-template-columns:340px 1fr">'+
       '<div>'+
