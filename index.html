@@ -6361,6 +6361,8 @@ aplicarTemaGuardado();
 #canc-app table.pl-t td.pl-r{text-align:right;font-variant-numeric:tabular-nums}
 #canc-app table.pl-t td.pl-n{font-weight:800}
 #canc-app table.pl-t td.pl-ref{font-family:ui-monospace,Consolas,monospace;font-size:7pt}
+#canc-app table.pl-t td.pl-mini{width:11mm;padding:1px 2px}
+#canc-app table.pl-t td.pl-mini svg{width:10mm;height:7mm;display:block;background:none;border:none}
 #canc-app table.pl-t td.pl-desc{color:#666;font-style:italic;font-size:7pt}
 #canc-app .pl-aviso{font-size:6.8pt;color:#666;margin-top:4mm;line-height:1.4}
 #canc-app .pl-pie{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8mm;align-items:end;
@@ -7078,11 +7080,12 @@ function procesarDxf(texto, nombre){
     : (['perfiles','vidrios','longitud','accesorios'].indexOf(a.seccion)
      - ['perfiles','vidrios','longitud','accesorios'].indexOf(b.seccion)); });
 
-  var alz=null, cot=null;
+  var alz=null, cot=null, minis={};
   try { alz = CANC_DXF.alzado(texto, d); } catch(e){ alz=null; }
   try { cot = CANC_DXF.cotas(texto); } catch(e){ cot=null; }
+  try { minis = CANC_DXF.miniaturas(texto)||{}; } catch(e){ minis={}; }
 
-  IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot,
+  IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot, minis:minis,
           avisos:d.avisos||[], resuelto:false };
   dpista('Leídas '+items.length+' referencias. Buscándolas en el catálogo…');
   pintarImport();
@@ -7209,7 +7212,7 @@ function guardarImport(){
       cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
       // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
       modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString(),
-                  alzado:IMP.alzado, cotas:IMP.cotas },
+                  alzado:IMP.alzado, cotas:IMP.cotas, minis:IMP.minis },
       despiece: { items:IMP.items.map(function(i){
                     return {ref:i.ref, descripcion:i.descripcion, seccion:i.seccion,
                             clave:i.clave, cantidad:i.cantidad, unidad:i.unidad,
@@ -7533,6 +7536,7 @@ function verModeloDxf(m){
   });
   IMP = { archivo:(m.modelo&&m.modelo.archivo)||m.clave, datos:null, items:items,
           alzado:(m.modelo&&m.modelo.alzado)||null, cotas:(m.modelo&&m.modelo.cotas)||null,
+          minis:(m.modelo&&m.modelo.minis)||{},
           clave:m.clave,
           avisos:[], resuelto:false, guardado:true,
           total:Number(d.total)||Number(m.costo)||0,
