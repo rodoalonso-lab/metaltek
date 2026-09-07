@@ -7061,53 +7061,9 @@ function vAlzado(){
   ejX.forEach(function(x){
     g+='<rect x="'+(x-av/2)+'" y="0" width="'+av+'" height="'+sh+'" fill="#5A8FA8"/>';
   });
-  // Cotas encadenadas, como en WinPerfil: H1..Hn por modulo y el total.
-  var co=[], LC='#8BBFD4', FS=Math.max(11, sw/58);
-  var tick=function(x1,y1,x2,y2){ return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+LC+'" stroke-width="1"/>'; };
-  var cota=function(x1,x2,y,txt,et){
-    return tick(x1,y-6,x1,y+6)+tick(x2,y-6,x2,y+6)+tick(x1,y,x2,y)+
-      '<text x="'+((x1+x2)/2)+'" y="'+(y-9)+'" fill="'+LC+'" font-size="'+FS+'" text-anchor="middle">'+et+'='+txt+'</text>'; };
-  var cotaV=function(y1,y2,xx,txt,et){
-    return tick(xx-6,y1,xx+6,y1)+tick(xx-6,y2,xx+6,y2)+tick(xx,y1,xx,y2)+
-      '<text x="'+(xx+10)+'" y="'+((y1+y2)/2)+'" fill="'+LC+'" font-size="'+FS+
-      '" transform="rotate(90 '+(xx+10)+','+((y1+y2)/2)+')" text-anchor="middle">'+et+'='+txt+'</text>'; };
-  // Puntos de cota: paño → eje → eje → … → paño.
-  var xs=[0].concat(ejX, [sw]);
-  var ys=[0].concat(ejY, [sh]);
-
-  // Línea de eje punteada sobre cada poste, para que se vea de dónde mide
-  ejX.forEach(function(x){
-    co.push('<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(sh+14)+'" stroke="'+LC+
-            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
-  ejY.forEach(function(y){
-    co.push('<line x1="0" y1="'+y+'" x2="'+(sw+14)+'" y2="'+y+'" stroke="'+LC+
-            '" stroke-width="0.8" stroke-dasharray="6 4" opacity=".6"/>'); });
-
-  var yC=sh+26;
-  for(var i2=0;i2<cnC.length;i2++)
-    co.push(cota(xs[i2], xs[i2+1], yC, mmf(cnC[i2]||0), 'H'+(i2+1)));
-  co.push(cota(0, sw, sh+52, mmf(W), 'H'+(cnC.length+1)));
-
-  var xC=sw+26;
-  for(var r2=0;r2<cnR.length;r2++)
-    co.push(cotaV(ys[r2], ys[r2+1], xC, mmf(cnR[r2]||0), 'V'+(r2+1)));
-  co.push(cotaV(0, sh, sw+56, mmf(H), 'V'+(cnR.length+1)));
-  // El dibujo va dentro de <g id="cZoom">: acercar sólo cambia ese transform,
-  // el lienzo conserva su alto y la pantalla no se mueve.
-  return '<div class="lienzo" id="cLienzo">'+
-      '<svg id="cSvg" viewBox="-6 -14 '+(sw+90)+' '+(sh+64)+'" preserveAspectRatio="xMidYMid meet">'+
-        '<g id="cZoom">'+g+co.join('')+'</g>'+
-      '</svg>'+
-      '<div class="zbar">'+
-        '<button title="Alejar" onclick="CANC.zoom(-1)">−</button>'+
-        '<span class="pct" id="cPct">100%</span>'+
-        '<button title="Acercar" onclick="CANC.zoom(1)">+</button>'+
-        '<button class="ancho" title="Volver al encuadre original" onclick="CANC.zoom(0)">Ajustar</button>'+
-      '</div>'+
-    '</div>'+
-    '<div class="item-sub" style="margin-top:10px">'+mmf(W)+' × '+mmf(H)+' mm · '+
-    cols.length+' columnas × '+rows.length+' filas'+(q>1?' · '+q+' muros iguales':'')+
-    ' · rueda del ratón para acercar, arrastra para mover</div>';
+  return lienzoSVG(sw, sh, g+cotasSVG(sw,sh,W,H,cnC,cnR,ejX,ejY),
+    mmf(W)+' × '+mmf(H)+' mm · '+cols.length+' columnas × '+rows.length+' filas'+
+    (q>1?' · '+q+' muros iguales':''));
 }
 
 // ── Zoom del alzado ───────────────────────────────────────────────────
