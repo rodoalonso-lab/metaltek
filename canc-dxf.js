@@ -185,8 +185,32 @@
     });
     piezas.sort(function (a, b) { return a.y - b.y || a.x - b.x; });
 
+    // ── La geometría COMPLETA, no la caja envolvente ──────────────────
+    // Reducir cada polilínea a su rectángulo perdía todo el detalle: en una
+    // puerta hay manijas, herrajes y junquillos con decenas de vértices que
+    // así quedaban convertidos en cuadros. Para que el plano se parezca al
+    // DXF abierto en AutoCAD hay que dibujar los vértices tal cual.
+    var formas = [];
+    todas.forEach(function (f) {
+      var c = caja(f.pts);
+      if (c.x0 < mx0 - 1 || c.y0 < my0 - 1 || c.x1 > mx1 + 1 || c.y1 > my1 + 1) return;
+      var w = c.x1 - c.x0, h = c.y1 - c.y0;
+      formas.push({
+        pts: f.pts.map(function (p) {
+          return [Math.round((p[0] - mx0) * 10) / 10,
+                  Math.round((my1 - p[1]) * 10) / 10];
+        }),
+        cerrada: f.cerrada !== false,
+        cristal: esCristal({ x: c.x0, y: c.y0, w: w, h: h }),
+        area: w * h
+      });
+    });
+    // los grandes al fondo, el detalle encima
+    formas.sort(function (a, b) { return b.area - a.area; });
+
     return { W: Math.round(mx1 - mx0), H: Math.round(my1 - my0),
-             piezas: piezas, cristales: panes.length, total: piezas.length };
+             piezas: piezas, formas: formas,
+             cristales: panes.length, total: piezas.length };
   }
 
   // ── 1c. Las cotas que WinPerfil ya escribió ─────────────────────────
