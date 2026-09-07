@@ -252,15 +252,29 @@
     });
     if (!H.length && !V.length) return null;
 
-    // El total es la etiqueta de número más alto; se separa del resto.
+    // ¿Cuál es el total? No es el de número más alto: WinPerfil no numera
+    // igual en todos los dibujos. En MC-01 el total es V3 y las parciales
+    // V1 y V2; en PT-BCO el total es V1 y las parciales V2 y V3. Tomar el
+    // número mayor daba "total = 8 mm" en esa puerta.
+    //
+    // El total es el que vale lo que suman los demás. Eso sí es invariante.
     function partir(arr, ejeX) {
       if (!arr.length) return { partes: [], total: null };
-      var max = arr.reduce(function (a, b) { return b.n > a.n ? b : a; });
-      var partes = arr.filter(function (r) { return r !== max; })
+      if (arr.length === 1) return { partes: [], total: { n: arr[0].n, valor: arr[0].valor } };
+
+      var suma = arr.reduce(function (a, b) { return a + b.valor; }, 0);
+      var total = null;
+      for (var i = 0; i < arr.length; i++) {
+        // si éste fuera el total, el resto debería sumar su valor
+        if (Math.abs((suma - arr[i].valor) - arr[i].valor) <= 2) { total = arr[i]; break; }
+      }
+      // sin candidato claro, el de valor más grande
+      if (!total) total = arr.reduce(function (a, b) { return b.valor > a.valor ? b : a; });
+
+      var partes = arr.filter(function (r) { return r !== total; })
                       .sort(function (a, b) { return ejeX ? a.x - b.x : b.y - a.y; });
-      // con una sola cota, ésa es el total y no hay parciales
       return { partes: partes.map(function (r) { return { n: r.n, valor: r.valor }; }),
-               total: { n: max.n, valor: max.valor } };
+               total: { n: total.n, valor: total.valor } };
     }
     var h = partir(H, true), v = partir(V, false);
     // Se conserva el número de etiqueta original: WinPerfil numera por orden
