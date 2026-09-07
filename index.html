@@ -7559,6 +7559,10 @@ function pintarImport(){
        '<button class="btn-primary" onclick="CANC.guardarImport()">Guardar en el presupuesto</button>'+
        '<button class="btn-secondary" onclick="CANC.sub(\'insumos\')">Capturar precios faltantes</button>'+
        '<span id="dGuardado" class="item-sub" style="margin:0"></span></div>';
+  else if(IMP.guardado)
+    h+='<div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">'+
+       '<button class="btn-secondary" onclick="CANC.sub(\'guardados\')">Volver a la lista</button>'+
+       '<span class="item-sub" style="margin:0">Para actualizar precios, vuelve a importar el archivo.</span></div>';
   c.innerHTML=h;
 }
 
@@ -8144,11 +8148,15 @@ function abrirPre(id){
     db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=*&order=orden')
   ]).then(function(r){
     PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
-    $('cPreCli').value=PRE.cliente_id||''; filtrarObras();
-    $('cPreObra').value=PRE.obra_id||'';
-    $('cPreNom').value=PRE.nombre||''; $('cPreEst').value=PRE.estado||'borrador';
-    if(MODELOS.length){ MODELO_ID=MODELOS[0].id; aplicarDiseno(MODELOS[0].modelo); }
-    pintarModelos(); pista('Abierto '+PRE.folio+'.'); sub('diseno');
+    sincronizarCabecera();
+    // Se abre en la pantalla del primer modelo: importado o diseñado.
+    var primero=MODELOS[0];
+    if(primero && primero.tipo==='dxf'){ pintarModelos(); verModeloDxf(primero); }
+    else {
+      if(primero){ MODELO_ID=primero.id; aplicarDiseno(primero.modelo); }
+      pintarModelos(); sub('diseno');
+    }
+    pista('Abierto '+PRE.folio+'.');
   }).catch(function(e){ alert('No se pudo abrir: '+e.message); });
 }
 
