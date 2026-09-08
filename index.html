@@ -6886,9 +6886,13 @@ function planoCortes(){
          (f.cerrada?' Z':'')+'" fill="'+(f.color||'#d2dae1')+'" fill-opacity="'+(f.color?0.22:0.85)+
          '" stroke="'+(f.color||'#39434d')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
     });
-    h+='<div class="pl-ct"><svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>'+
-       '<div class="pl-ctlbl">'+(c.orientacion==='vertical'?'Corte vertical':'Corte horizontal')+
-       (cs.length>1?' '+(i+1):'')+'</div></div>';
+    var vert = c.orientacion==='vertical';
+    // Con un corte de cada orientación el número sobra y estorba; sólo se
+    // numera cuando hay dos del mismo tipo (puerta de dos hojas).
+    var mismos = cs.filter(function(x){ return x.orientacion===c.orientacion; });
+    var num = mismos.length>1 ? ' '+(mismos.indexOf(c)+1) : '';
+    h+='<div class="pl-ct'+(vert?' v':'')+'"><svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+
+       g+'</svg><div class="pl-ctlbl">'+(vert?'Corte vertical':'Corte horizontal')+num+'</div></div>';
   });
   return h+'</div></div>';
 }
