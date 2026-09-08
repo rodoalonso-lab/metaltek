@@ -6671,7 +6671,10 @@ function planoHTML(){
       dato('Folio', folio)+dato('Medida del vano', mmf(a.W)+' × '+mmf(a.H)+' mm')+dato('Fecha', hoy)+
     '</div>'+
     '<div class="pl-cuerpo">'+
-      '<div class="pl-dib">'+planoDibujo(a, vidrios)+'</div>'+
+      '<div class="pl-izq">'+
+        '<div class="pl-dib">'+planoDibujo(a, vidrios)+'</div>'+
+        planoCortes()+
+      '</div>'+
       '<div class="pl-tab">'+planoTablas(vidrios, perfiles)+'</div>'+
     '</div>'+
     '<div class="pl-pie">'+
