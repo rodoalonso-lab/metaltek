@@ -6878,8 +6878,9 @@ function texto(x,y,txt,fs,fuerte,rot){
 }
 
 
-// Los cortes seccionales del conjunto, debajo del alzado. Es lo que le da
-// al plano el nivel de detalle de taller: se ve cómo ensamblan los perfiles.
+// Los cortes seccionales del conjunto. Se piden por orientación porque cada
+// uno va en su propia casilla: el vertical al costado derecho del alzado, el
+// horizontal debajo. Es lo que le da al plano el nivel de detalle de taller.
 function planoCortes(orientacion){
   var todos=(IMP && IMP.cortes) || [];
   var cs=todos.filter(function(c){ return c.orientacion===orientacion; });
@@ -6897,15 +6898,14 @@ function planoCortes(orientacion){
          (f.cerrada?' Z':'')+'" fill="'+(f.color||'#d2dae1')+'" fill-opacity="'+(f.color?0.22:0.85)+
          '" stroke="'+(f.color||'#39434d')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
     });
-    var vert = c.orientacion==='vertical';
-    // Con un corte de cada orientación el número sobra y estorba; sólo se
-    // numera cuando hay dos del mismo tipo (puerta de dos hojas).
-    var mismos = cs.filter(function(x){ return x.orientacion===c.orientacion; });
-    var num = mismos.length>1 ? ' '+(mismos.indexOf(c)+1) : '';
-    h+='<div class="pl-ct'+(vert?' v':'')+'"><svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+
-       g+'</svg><div class="pl-ctlbl">'+(vert?'Corte vertical':'Corte horizontal')+num+'</div></div>';
+    // Con uno solo de su tipo el número sobra y estorba; se numera nada más
+    // cuando hay dos del mismo (puerta de dos hojas).
+    var num = cs.length>1 ? ' '+(i+1) : '';
+    h+='<div class="pl-ct"><svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+
+       g+'</svg><div class="pl-ctlbl">'+
+       (orientacion==='vertical'?'Corte vertical':'Corte horizontal')+num+'</div></div>';
   });
-  return h+'</div></div>';
+  return h;
 }
 
 // El corte seccional del perfil, en miniatura, junto a su renglón. Es lo
