@@ -320,7 +320,14 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:20px;margin-bottom:4px;padding-right:96px">
       <div class="page-title" style="padding:0">Diseño y Presupuesto</div>
     </div>
-    <div class="page-sub">Cancelería de aluminio · muro cortina</div>
+    <div class="page-sub">Cancelería de aluminio · muro cortina
+      <!-- Marca de versión. GitHub Pages sirve el HTML desde caché y más de
+           una vez perdimos tiempo buscando una función que sí estaba
+           publicada pero el navegador no había vuelto a bajar. document.lastModified
+           es la fecha del archivo que el navegador TIENE cargado, así que si
+           esto no coincide con la última publicación, es caché. -->
+      <span id="canc-version" style="opacity:.55;font-size:11px;margin-left:8px"></span>
+    </div>
 
     <!-- El motor (canc-motor.js, secciones.js, etc.) se carga bajo demanda la
          primera vez que se abre esta pantalla: son 145 KB que no tienen por
