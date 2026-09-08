@@ -6349,8 +6349,15 @@ aplicarTemaGuardado();
 #canc-app .pl-datos span{display:block;font-size:6.5pt;letter-spacing:.09em;color:#666;text-transform:uppercase}
 #canc-app .pl-datos b{font-size:9.5pt;line-height:1.25;display:block}
 #canc-app .pl-cuerpo{display:grid;grid-template-columns:1fr 74mm;gap:6mm;flex:1;min-height:0}
-#canc-app .pl-dib{display:flex;align-items:center;justify-content:center;min-height:0}
-#canc-app .pl-dib svg{width:100%;height:100%;max-height:140mm;background:none;border:none;border-radius:0}
+#canc-app .pl-izq{display:flex;flex-direction:column;min-height:0;gap:3mm}
+#canc-app .pl-dib{display:flex;align-items:center;justify-content:center;min-height:0;flex:1}
+#canc-app .pl-dib svg{width:100%;height:100%;max-height:112mm;background:none;border:none;border-radius:0}
+#canc-app .pl-cortes{border-top:.6pt solid #999;padding-top:2mm}
+#canc-app .pl-cth{font-size:6.5pt;font-weight:800;letter-spacing:.12em;color:#555;margin-bottom:1mm}
+#canc-app .pl-ctrow{display:flex;gap:6mm;align-items:flex-end;justify-content:center}
+#canc-app .pl-ct{text-align:center}
+#canc-app .pl-ct svg{height:26mm;max-width:78mm;background:none;border:none;border-radius:0;display:block}
+#canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em}
 #canc-app .pl-th{font-size:7.5pt;font-weight:800;letter-spacing:.12em;color:#111;
   border-bottom:1.4pt solid #111;padding-bottom:2px;margin:0 0 3px}
 #canc-app .pl-th:not(:first-child){margin-top:5mm}
@@ -7108,12 +7115,13 @@ function procesarDxf(texto, nombre){
     : (['perfiles','vidrios','longitud','accesorios'].indexOf(a.seccion)
      - ['perfiles','vidrios','longitud','accesorios'].indexOf(b.seccion)); });
 
-  var alz=null, cot=null, minis={};
+  var alz=null, cot=null, minis={}, cort=[];
   try { alz = CANC_DXF.alzado(texto, d); } catch(e){ alz=null; }
   try { cot = CANC_DXF.cotas(texto); } catch(e){ cot=null; }
   try { minis = CANC_DXF.miniaturas(texto)||{}; } catch(e){ minis={}; }
+  try { cort = CANC_DXF.cortes(texto,2)||[]; } catch(e){ cort=[]; }
 
-  IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot, minis:minis,
+  IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot, minis:minis, cortes:cort,
           avisos:d.avisos||[], resuelto:false };
   dpista('Leídas '+items.length+' referencias. Buscándolas en el catálogo…');
   pintarImport();
@@ -7240,7 +7248,7 @@ function guardarImport(){
       cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
       // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
       modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString(),
-                  alzado:IMP.alzado, cotas:IMP.cotas, minis:IMP.minis },
+                  alzado:IMP.alzado, cotas:IMP.cotas, minis:IMP.minis, cortes:IMP.cortes },
       despiece: { items:IMP.items.map(function(i){
                     return {ref:i.ref, descripcion:i.descripcion, seccion:i.seccion,
                             clave:i.clave, cantidad:i.cantidad, unidad:i.unidad,
@@ -7564,7 +7572,7 @@ function verModeloDxf(m){
   });
   IMP = { archivo:(m.modelo&&m.modelo.archivo)||m.clave, datos:null, items:items,
           alzado:(m.modelo&&m.modelo.alzado)||null, cotas:(m.modelo&&m.modelo.cotas)||null,
-          minis:(m.modelo&&m.modelo.minis)||{},
+          minis:(m.modelo&&m.modelo.minis)||{}, cortes:(m.modelo&&m.modelo.cortes)||[],
           clave:m.clave,
           avisos:[], resuelto:false, guardado:true,
           total:Number(d.total)||Number(m.costo)||0,
