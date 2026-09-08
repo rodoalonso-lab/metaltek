@@ -6364,14 +6364,12 @@ aplicarTemaGuardado();
   display:flex;align-items:center;justify-content:center;gap:6mm;min-height:0}
 #canc-app .pl-ct{text-align:center;display:flex;flex-direction:column;
   align-items:center;justify-content:center;min-height:0;min-width:0}
-#canc-app .pl-ct svg{background:none;border:none;border-radius:0;display:block;flex:1;min-height:0}
-/* Cada corte se estira en su propio eje: el de abajo por ancho, el del
-   costado por alto. Con un tamaño fijo para los dos, el vertical salía como
-   una tira de 7 mm. */
-#canc-app .pl-ch .pl-ct{height:100%}
-#canc-app .pl-ch .pl-ct svg{width:auto;max-width:100%;height:100%}
-#canc-app .pl-cv .pl-ct{width:100%;flex:1}
-#canc-app .pl-cv .pl-ct svg{width:100%;height:auto;max-height:100%;flex:none}
+/* El svg llena su casilla y preserveAspectRatio="meet" hace el encaje: se
+   escala al eje que le quede corto y centra en el otro. Calcular altos a mano
+   era lo que dejaba el corte vertical como una tira. */
+#canc-app .pl-ct svg{background:none;border:none;border-radius:0;display:block;
+  width:100%;height:100%;flex:1;min-height:0;min-width:0}
+#canc-app .pl-ch .pl-ct,#canc-app .pl-cv .pl-ct{flex:1;height:100%;width:100%}
 #canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em;flex:none}
 #canc-app .pl-th{font-size:7.5pt;font-weight:800;letter-spacing:.12em;color:#111;
   border-bottom:1.4pt solid #111;padding-bottom:2px;margin:0 0 3px}
