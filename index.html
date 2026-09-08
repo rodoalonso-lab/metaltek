@@ -6354,8 +6354,12 @@ aplicarTemaGuardado();
    horizontal abajo, alineado con su ancho. Así cada corte queda del lado del
    plano por el que se cortó y se lee sin pensarlo. Apilarlos los dos abajo
    obligaba a adivinar cuál correspondía a qué. */
+/* El min-height no es adorno: al imprimir, .pl-hoja suelta su min-height y la
+   fila 1fr se queda sin altura de referencia. Antes la sostenía el max-height
+   del dibujo. En carta horizontal quedan ~150 mm libres entre cabecera y pie,
+   así que 120 mm cabe con holgura y garantiza que el alzado no colapse. */
 #canc-app .pl-izq{display:grid;grid-template-columns:1fr 34mm;grid-template-rows:1fr 34mm;
-  gap:3mm 4mm;min-height:0}
+  gap:3mm 4mm;min-height:120mm}
 #canc-app .pl-dib{grid-area:1/1/2/2;display:flex;align-items:center;justify-content:center;min-height:0}
 #canc-app .pl-dib svg{width:100%;height:100%;background:none;border:none;border-radius:0}
 #canc-app .pl-cv{grid-area:1/2/2/3;border-left:.6pt solid #999;padding-left:3mm;
