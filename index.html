@@ -6357,6 +6357,9 @@ aplicarTemaGuardado();
 #canc-app .pl-ctrow{display:flex;gap:6mm;align-items:flex-end;justify-content:center}
 #canc-app .pl-ct{text-align:center}
 #canc-app .pl-ct svg{height:26mm;max-width:78mm;background:none;border:none;border-radius:0;display:block}
+/* El corte vertical es 3 veces más alto que ancho. Con el mismo alto que el
+   horizontal salía como una tira de 7 mm, ilegible. Va más alto y más angosto. */
+#canc-app .pl-ct.v svg{height:44mm;max-width:32mm}
 #canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em}
 /* Pieza vertical y angosta (puertas, fijos altos). Centrada en una columna
    ancha deja media hoja en blanco a los lados y aplasta los cortes contra el
