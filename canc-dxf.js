@@ -370,16 +370,23 @@
     var za = zonaAlzado;
     if (za === undefined) { var al = alzado(contenido); za = al && al.caja; }
 
-    var comp = [];
+    // Dos listas: 'comp' son las formas complejas, que son las que definen
+    // dónde hay una sección y sirven para agrupar. 'sueltas' es TODO lo demás
+    // que también vive fuera del alzado — líneas de 2 puntos, rectángulos
+    // simples. Antes se tiraban, y con ellas se iba el CRISTAL: en el corte
+    // horizontal de una corrediza el vidrio entre montantes son dos líneas
+    // largas, así que la sección salía como islas de perfil separadas por
+    // huecos. Se recuperan al final, ya sabiendo la caja de cada corte.
+    var comp = [], sueltas = [];
     leerFormas(contenido).forEach(function (f) {
-      if (f.pts.length < 8) return;
       var c = caja(f.pts);
       // fuera de la franja de miniaturas
       if (c.x1 < xref && c.x1 > xref - 700 && (c.y1 - c.y0) < 95) return;
       // dentro del alzado: es parte del dibujo, no una sección
       if (za && c.x0 >= za.x0 - 1 && c.y0 >= za.y0 - 1 &&
                 c.x1 <= za.x1 + 1 && c.y1 <= za.y1 + 1) return;
-      comp.push({ c: c, pts: f.pts, color: colorACI(f.color), cerrada: f.cerrada !== false });
+      var e = { c: c, pts: f.pts, color: colorACI(f.color), cerrada: f.cerrada !== false };
+      if (f.pts.length >= 8) comp.push(e); else sueltas.push(e);
     });
     if (!comp.length) return [];
 
