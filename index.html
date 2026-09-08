@@ -7156,6 +7156,10 @@ function procesarDxf(texto, nombre){
   if(typeof CANC_DXF==='undefined'){ dpista('El lector de DXF no cargó.','danger'); return; }
   planoCerrar();          // si estaba abierto, mostraba el modelo anterior
   IMP=null;               // nada del archivo previo sobrevive a éste
+  // el "Guardado en …" es del archivo anterior; dejarlo hace creer que éste
+  // ya se guardó
+  var _g=$('dGuardado'); if(_g) _g.innerHTML='';
+  pintarDestino();
   var d = CANC_DXF.parsear(texto);
   var piezas = d.perfiles.length + d.vidrios.length + d.accesorios.length + d.longitud.length;
   if(!piezas){
@@ -7557,6 +7561,7 @@ function sincronizarCabecera(){
   if($('cPreObra')) $('cPreObra').value=PRE.obra_id||'';
   if($('dPreObra')) $('dPreObra').value=PRE.obra_id||'';
   if($('cPreEst')) $('cPreEst').value=PRE.estado||'borrador';
+  pintarDestino();
 }
 
 function recargarModelos(){
@@ -7629,7 +7634,7 @@ function pintarModelos(){
 // Cierra el presupuesto abierto sin borrar nada
 function cerrarPre(){
   PRE=null; MODELOS=[]; MODELO_ID=null; IMP=null;
-  pintarModelos(); pintarImport(); listar();
+  pintarModelos(); pintarImport(); pintarDestino(); listar();
 }
 
 // Abre el plano de un modelo guardado, directo desde la lista
@@ -7775,6 +7780,7 @@ return {
   filtrarObras:filtrarObras,
   leerDxf:leerDxf,
   limpiarImport:limpiarImport,
+  nuevaCotizacion:nuevaCotizacion,
   cerrarPre:cerrarPre,
   verPlano:verPlano,
   planoAbrir:planoAbrir,
