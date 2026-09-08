@@ -6651,8 +6651,12 @@ function sub(s){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
-  if(s==='guardados') listar();
+  // pintarModelos: al volver de importar, la tarjeta de la cotización debe
+  // traer ya el modelo recién guardado. listar() sólo repinta la tabla de
+  // cotizaciones, no sus modelos.
+  if(s==='guardados'){ listar(); pintarModelos(); }
   if(s==='insumos') pintarInsumos();
+  if(s==='importar') pintarDestino();
 }
 
 
@@ -7429,8 +7433,17 @@ function guardarImport(){
     return recargarModelos();
   }).then(function(){
     dpista('Guardado en '+PRE.folio+'.','accent');
+    // Sin esto el modelo se guardaba y la pantalla se quedaba igual: no había
+    // manera visible de volver a la lista de la cotización, y el único camino
+    // era acordarse de la pestaña Guardados.
     var g=$('dGuardado');
-    if(g) g.innerHTML='<span style="color:var(--accent)">Guardado en '+esc(PRE.folio)+'</span>';
+    if(g) g.innerHTML=
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+      '<span style="color:var(--accent);font-weight:700">Guardado en '+esc(PRE.folio)+
+      ' — '+MODELOS.length+' modelo'+(MODELOS.length===1?'':'s')+'</span>'+
+      '<button class="btn-secondary" onclick="CANC.sub(\'guardados\')">Ver la cotización</button>'+
+      '<button class="chip" onclick="CANC.limpiarImport()">Importar otro DXF</button>'+
+      '</div>';
   }).catch(function(e){ dpista('No se guardó: '+e.message,'danger'); });
 }
 
