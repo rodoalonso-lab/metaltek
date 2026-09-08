@@ -7085,21 +7085,54 @@ var ORIGEN_TABLA = {
 // Deja la pantalla como recién abierta. Sin esto, al cargar un DXF nuevo
 // quedaba colgando el presupuesto anterior: "Guardar" le pegaba el modelo
 // al folio viejo, aunque fuera de otra obra.
+// Quita el DXF cargado y NADA más. Cliente, obra, nombre y la cotización
+// abierta se quedan: una cotización normalmente lleva varios modelos, y
+// volver a elegir cliente y obra en cada archivo era el estorbo real.
+// Para soltar la cotización está nuevaCotizacion(), que es explícita.
 function limpiarImport(){
-  if(PRE && MODELOS.length &&
-     !confirm('Se va a soltar el presupuesto '+PRE.folio+'. Lo guardado no se borra, '+
-              'pero el siguiente DXF creará un folio nuevo.\n\n¿Continuar?')) return;
+  IMP=null;
+  // hay que vaciarlo: si no, elegir el MISMO archivo no dispara el evento
+  if($('dArchivo')) $('dArchivo').value='';
+  var g=$('dGuardado'); if(g) g.innerHTML='';
+  planoCerrar();
+  pintarImport();
+  pintarDestino();
+  dpista(PRE ? 'Listo para otro DXF. Se seguirá guardando en '+PRE.folio+'.'
+             : 'Listo para otro DXF.');
+}
+
+// El corte de verdad: suelta la cotización y limpia la cabecera. Antes esto
+// vivía dentro de "Limpiar" y por eso cliente y obra se perdían en cada
+// importación.
+function nuevaCotizacion(){
+  if(PRE && !confirm('Se va a soltar la cotización '+PRE.folio+'. Lo guardado no se borra, '+
+                     'pero el siguiente DXF creará un folio nuevo.\n\n¿Continuar?')) return;
   IMP=null; PRE=null; MODELOS=[]; MODELO_ID=null;
-  ['dPreNom'].forEach(function(k){ if($(k)) $(k).value=''; });
+  if($('dPreNom')) $('dPreNom').value='';
   if($('dPreCli')) $('dPreCli').value='';
   filtrarObrasDxf();
   if($('dPreObra')) $('dPreObra').value='';
-  // hay que vaciarlo: si no, elegir el MISMO archivo no dispara el evento
   if($('dArchivo')) $('dArchivo').value='';
+  var g=$('dGuardado'); if(g) g.innerHTML='';
   planoCerrar();
   pintarImport();
   pintarModelos();
-  dpista('Listo para un DXF nuevo.');
+  pintarDestino();
+  dpista('Cotización nueva. Elige cliente, obra y archivo.');
+}
+
+// Dice a dónde va a caer el siguiente DXF. Sin esto, "cliente y obra se
+// quedan puestos" es una promesa que hay que creer en lugar de verla.
+function pintarDestino(){
+  var c=$('dDestino'); if(!c) return;
+  if(!PRE){ c.innerHTML=''; return; }
+  var cli=(CLIENTES.filter(function(x){return x.id===PRE.cliente_id;})[0]||{}).nombre||'—';
+  var obr=(OBRAS.filter(function(x){return x.id===PRE.obra_id;})[0]||{}).nombre||'sin obra';
+  c.innerHTML='<div class="aviso" style="border-color:var(--accent);'+
+    'background:rgba(91,196,192,.09);margin:0">'+
+    'El siguiente DXF se guarda en <b class="mono">'+esc(PRE.folio)+'</b> — '+
+    esc(PRE.nombre)+' · '+esc(cli)+' · '+esc(obr)+
+    ' <span style="color:var(--dim)">(modelos: '+MODELOS.length+')</span></div>';
 }
 
 function leerDxf(input){
