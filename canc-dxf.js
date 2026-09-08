@@ -344,6 +344,71 @@
     return out;
   }
 
+  // ── 1e. Los cortes seccionales grandes ──────────────────────────────
+  // Además de las miniaturas de la tabla, WinPerfil dibuja uno o dos cortes
+  // completos del conjunto — el horizontal y el vertical. Son los grupos de
+  // formas complejas que quedan fuera del alzado y fuera de la franja de
+  // miniaturas. Se devuelven ordenados por tamaño; el plano toma los
+  // primeros.
+  function cortes(contenido, max) {
+    var textos = leerTextos(contenido);
+    var refs = textos.filter(function (t) {
+      var s = t.texto.replace('@', '');
+      return /^\d+$/.test(s) && t.texto.split('@')[0].length >= 5;
+    });
+    var xref = refs.length ? Math.min.apply(null, refs.map(function (r) { return r.x; })) : 1e9;
+
+    var comp = [];
+    leerFormas(contenido).forEach(function (f) {
+      if (f.pts.length < 8) return;
+      var c = caja(f.pts);
+      // fuera de la franja de miniaturas
+      if (c.x1 < xref && c.x1 > xref - 700 && (c.y1 - c.y0) < 95) return;
+      comp.push({ c: c, pts: f.pts, color: colorACI(f.color), cerrada: f.cerrada !== false });
+    });
+    if (!comp.length) return [];
+
+    // agrupar por cercanía
+    var padre = comp.map(function (_, i) { return i; });
+    function raiz(a) { while (padre[a] !== a) { padre[a] = padre[padre[a]]; a = padre[a]; } return a; }
+    var pad = 120;
+    for (var i = 0; i < comp.length; i++)
+      for (var j = i + 1; j < comp.length; j++) {
+        var A = comp[i].c, B = comp[j].c;
+        if (A.x0 - pad <= B.x1 && B.x0 - pad <= A.x1 && A.y0 - pad <= B.y1 && B.y0 - pad <= A.y1) {
+          var ra = raiz(i), rb = raiz(j);
+          if (ra !== rb) padre[rb] = ra;
+        }
+      }
+    var g = {};
+    for (var k = 0; k < comp.length; k++) { var r = raiz(k); (g[r] = g[r] || []).push(k); }
+
+    var grupos = Object.keys(g).map(function (kk) {
+      var idx = g[kk];
+      var x0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.x0; }));
+      var y0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.y0; }));
+      var x1 = Math.max.apply(null, idx.map(function (n) { return comp[n].c.x1; }));
+      var y1 = Math.max.apply(null, idx.map(function (n) { return comp[n].c.y1; }));
+      var vert = idx.reduce(function (a, n) { return a + comp[n].pts.length; }, 0);
+      return {
+        w: Math.round((x1 - x0) * 10) / 10,
+        h: Math.round((y1 - y0) * 10) / 10,
+        vertices: vert,
+        // horizontal si es más ancho que alto: así se rotula en el plano
+        orientacion: (x1 - x0) >= (y1 - y0) ? 'horizontal' : 'vertical',
+        formas: idx.map(function (n) {
+          return { cerrada: comp[n].cerrada, color: comp[n].color,
+                   pts: comp[n].pts.map(function (q) {
+                     return [Math.round((q[0] - x0) * 10) / 10,
+                             Math.round((y1 - q[1]) * 10) / 10];
+                   }) };
+        })
+      };
+    });
+    grupos.sort(function (a, b) { return b.vertices - a.vertices; });
+    return grupos.slice(0, max || 3);
+  }
+
   // ── 2. Reconstrucción de las tablas ─────────────────────────────────
   var SECCIONES = [
     { clave: 'perfiles',   titulo: /^perfiles$/i },
