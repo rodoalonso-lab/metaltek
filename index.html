@@ -7604,15 +7604,33 @@ function guardarParams(){
 // La lista de modelos con su receta y su precio. Necesita el despiece de
 // cada uno, que no viene en la lista: se piden todos de una vez, sin la
 // geometría, que es lo pesado.
+// Un solo viaje a la base y un solo orden de cálculo. El orden importa: el
+// personal sale de las tarjetas, los indirectos del personal, y el % de cada
+// tarjeta del reparto de los indirectos. Al revés no cierra.
+function refrescarCosteo(){
+  var c=$('cApuLista');
+  if(!PRE){ pintarIndirectos(); if(c) c.innerHTML='<div class="item-sub">Sin cotización abierta.</div>'; return; }
+  if(c) c.innerHTML='<div class="item-sub">Calculando…</div>';
+  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,clave,descripcion,cantidad,'+
+           'vano_w,vano_h,receta_id,despiece&order=orden')
+    .then(function(ms){
+      MODELOS_CD=ms||[];
+      return cargarIndirectos();
+    })
+    .then(function(){
+      pintarIndirectos();     // deja PERSONAL, IND_CALC e IND_REPARTO listos
+      pintarApuLista();       // ya usa los porcentajes repartidos
+    })
+    .catch(function(e){
+      if(c) c.innerHTML='<div style="color:var(--danger)">No se pudo calcular: '+esc(e.message)+'</div>';
+    });
+}
+
 function pintarApuLista(){
   var c=$('cApuLista'); if(!c) return;
   if(!PRE){ c.innerHTML='<div class="item-sub">Sin cotización abierta.</div>'; return; }
-  if(!MODELOS.length){ c.innerHTML='<div class="item-sub">Esta cotización no tiene modelos.</div>'; return; }
-  c.innerHTML='<div class="item-sub">Calculando…</div>';
-
-  db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,clave,descripcion,cantidad,'+
-           'vano_w,vano_h,receta_id,despiece&order=orden')
-  .then(function(ms){
+  if(!MODELOS_CD.length){ c.innerHTML='<div class="item-sub">Esta cotización no tiene modelos.</div>'; return; }
+  (function(ms){
     var h='<table><tr><th>Clave</th><th>Modelo</th><th>Receta</th><th class="n">m²</th>'+
           '<th class="n">Jornadas</th><th class="n">Costo directo</th><th class="n">P.U.</th>'+
           '<th class="n">Importe</th><th></th></tr>';
