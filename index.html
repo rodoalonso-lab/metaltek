@@ -6756,7 +6756,16 @@ function planoAbrir(){
   window.scrollTo(0, $('planoWrap').offsetTop - 20);
 }
 function planoCerrar(){ var w=$('planoWrap'); if(w) w.style.display='none'; }
-function planoImprimir(){ window.print(); }
+// La clase en <body> es lo que le dice al CSS cuál de las dos hojas imprimir
+// y con qué orientación. Se quita al terminar para no dejar la app marcada.
+function imprimirHoja(clase){
+  document.body.classList.add(clase);
+  var quitar=function(){ document.body.classList.remove(clase); };
+  window.addEventListener('afterprint', quitar, {once:true});
+  setTimeout(quitar, 60000);            // por si el navegador no dispara el evento
+  window.print();
+}
+function planoImprimir(){ imprimirHoja('imp-plano'); }
 
 function planoHTML(){
   var a=IMP.alzado;
