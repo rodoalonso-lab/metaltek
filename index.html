@@ -6473,6 +6473,7 @@ function plantilla(){
   '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
     '<button class="chip active" id="cs-importar" onclick="CANC.sub(\'importar\')">📥 Importar DXF</button>'+
     '<button class="chip" id="cs-guardados" onclick="CANC.sub(\'guardados\')">📁 Guardados</button>'+
+    '<button class="chip" id="cs-costeo" onclick="CANC.sub(\'costeo\')">💰 Costeo y APU</button>'+
     '<button class="chip" id="cs-insumos" onclick="CANC.sub(\'insumos\')">📦 Insumos</button>'+
     '<button class="chip" id="cs-catalogo" onclick="CANC.sub(\'catalogo\')">👥 Clientes y obras</button>'+
   '</div>'+
@@ -6533,6 +6534,28 @@ function plantilla(){
     '</div>'+
     '<div class="card" id="cCardModelos" style="display:none">'+
       '<div id="cModelos"></div>'+
+    '</div>'+
+  '</div>'+
+
+  // ── Costeo y APU ────────────────────────────────────────────────────
+  '<div id="cv-costeo" style="display:none">'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Parámetros de costeo</div>'+
+      '<div class="item-sub" style="margin-bottom:10px">La cascada de sobrecostos de la tarjeta. '+
+        'Cada porcentaje se aplica sobre el acumulado anterior, no sobre el costo directo.</div>'+
+      '<div id="cParams"></div>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">Tarjetas del presupuesto</div>'+
+      '<div id="cApuLista"></div>'+
+    '</div>'+
+    '<div id="apuWrap" style="display:none">'+
+      '<div class="pl-barra">'+
+        '<button class="btn-primary" onclick="CANC.apuImprimir()">Imprimir / Guardar PDF</button>'+
+        '<button class="btn-secondary" onclick="CANC.apuCerrar()">Cerrar</button>'+
+        '<span class="item-sub" style="margin:0">Se imprime en vertical, una tarjeta por hoja.</span>'+
+      '</div>'+
+      '<div id="apuHoja"></div>'+
     '</div>'+
   '</div>'+
 
