@@ -7054,7 +7054,60 @@ function datos(){
     INSUMOS=(r[2]||[]).filter(function(i){ return !i.es_grupo; });
     poblarSelects(); pintarClientes(); pintarObras();
     pintarInsumos(); listar();
+    return restaurarDestino();
   }).catch(function(e){ dpista('No se pudo leer el catálogo: '+e.message,'danger'); });
+}
+
+// ── Dónde me quedé ────────────────────────────────────────────────────
+// Una cotización lleva varios modelos y se arma a lo largo del día, con
+// recargas de por medio. Si al entrar la pantalla arranca en blanco, hay que
+// volver a elegir cliente y obra en cada DXF. Eso se guarda aquí.
+// Sólo el destino: ni geometría ni precios, que viven en la base.
+var LLAVE_DESTINO='canc_destino';
+function guardarDestino(){
+  try {
+    localStorage.setItem(LLAVE_DESTINO, JSON.stringify({
+      cli: val('dPreCli')||'', obra: val('dPreObra')||'',
+      nom: val('dPreNom')||'', pre: PRE?PRE.id:''
+    }));
+  } catch(e){}   // modo privado o cuota llena: no es motivo para romper nada
+}
+function olvidarDestino(){ try{ localStorage.removeItem(LLAVE_DESTINO); }catch(e){} }
+
+function restaurarDestino(){
+  if(PRE) return Promise.resolve();          // ya hay algo abierto, no lo pises
+  var d=null;
+  try { d=JSON.parse(localStorage.getItem(LLAVE_DESTINO)||'null'); } catch(e){}
+  if(!d) return Promise.resolve();
+
+  // El cliente o la obra pudieron borrarse desde la última vez: sólo se
+  // reponen los que siguen existiendo, si no el select queda en un id fantasma.
+  if(d.cli && CLIENTES.some(function(c){return c.id===d.cli;}) && $('dPreCli')){
+    $('dPreCli').value=d.cli; filtrarObrasDxf();
+  }
+  if(d.obra && OBRAS.some(function(o){return o.id===d.obra;}) && $('dPreObra')){
+    $('dPreObra').value=d.obra;
+  }
+  if(d.nom && $('dPreNom')) $('dPreNom').value=d.nom;
+
+  if(!d.pre){ pintarDestino(); return Promise.resolve(); }
+
+  // Reabrir la cotización en la que se estaba trabajando. Sólo si sigue en
+  // borrador: una ya enviada o cerrada no debe recibir modelos por inercia.
+  return db('GET','canc_presupuestos?id=eq.'+d.pre+'&select=*')
+    .then(function(r){
+      var p=r&&r[0];
+      if(!p || p.estado!=='borrador'){ olvidarDestino(); pintarDestino(); return; }
+      PRE=p;
+      return db('GET','canc_modelos?presupuesto_id=eq.'+p.id+
+                '&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
+        .then(function(m){
+          MODELOS=m||[]; MODELO_ID=null;
+          sincronizarCabecera(); pintarModelos(); listar();
+          dpista('Seguimos en '+PRE.folio+'. Elige el siguiente DXF.');
+        });
+    })
+    .catch(function(){ olvidarDestino(); pintarDestino(); });
 }
 
 // ── Importación de DXF ────────────────────────────────────────────────
