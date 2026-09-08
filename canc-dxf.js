@@ -406,7 +406,38 @@
       };
     });
     grupos.sort(function (a, b) { return b.vertices - a.vertices; });
-    return grupos.slice(0, max || 3);
+
+    // Quitar repetidos. WinPerfil dibuja un corte por cada montante, y en un
+    // muro cortina eso son cuatro dibujos idénticos. Ocupan la hoja sin
+    // decir nada nuevo. La firma es el tamaño más los primeros puntos de la
+    // forma más compleja, ya normalizados al origen del grupo: dos cortes
+    // que coinciden ahí son el mismo dibujo. Ojo: en una puerta de dos hojas
+    // los dos cortes horizontales son espejo, NO idénticos, y sí se conservan.
+    var vistos = {}, unicos = [];
+    grupos.forEach(function (gr) {
+      var f = gr.formas.slice().sort(function (a, b) { return b.pts.length - a.pts.length; })[0];
+      var firma = gr.w + '|' + gr.h + '|' + gr.vertices + '|' +
+                  (f ? f.pts.slice(0, 6).map(function (p) { return p[0] + ',' + p[1]; }).join(';') : '');
+      if (vistos[firma]) return;
+      vistos[firma] = 1;
+      unicos.push(gr);
+    });
+
+    // Escoger con las dos orientaciones representadas. Antes se tomaban los
+    // primeros por número de vértices y en el muro cortina salían dos cortes
+    // horizontales y ningún vertical: media información de taller.
+    var n = max || 3;
+    var hor = unicos.filter(function (x) { return x.orientacion === 'horizontal'; });
+    var ver = unicos.filter(function (x) { return x.orientacion === 'vertical'; });
+    var sel = [];
+    if (n >= 2 && hor.length && ver.length) { sel.push(hor[0], ver[0]); }
+    unicos.forEach(function (x) { if (sel.length < n && sel.indexOf(x) < 0) sel.push(x); });
+    // devolver en orden de lectura: primero los horizontales
+    sel.sort(function (a, b) {
+      if (a.orientacion !== b.orientacion) return a.orientacion === 'horizontal' ? -1 : 1;
+      return b.vertices - a.vertices;
+    });
+    return sel;
   }
 
   // ── 2. Reconstrucción de las tablas ─────────────────────────────────
