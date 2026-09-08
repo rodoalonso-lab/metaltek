@@ -7347,7 +7347,9 @@ function procesarDxf(texto, nombre){
   try { alz = CANC_DXF.alzado(texto, d); } catch(e){ alz=null; }
   try { cot = CANC_DXF.cotas(texto); } catch(e){ cot=null; }
   try { minis = CANC_DXF.miniaturas(texto)||{}; } catch(e){ minis={}; }
-  try { cort = CANC_DXF.cortes(texto,2)||[]; } catch(e){ cort=[]; }
+  // se le pasa la caja del alzado ya calculada: así no lo recalcula y, sobre
+  // todo, no confunde con secciones lo que es parte del dibujo
+  try { cort = CANC_DXF.cortes(texto,2,alz&&alz.caja)||[]; } catch(e){ cort=[]; }
 
   IMP = { archivo:nombre, datos:d, items:items, alzado:alz, cotas:cot, minis:minis, cortes:cort,
           avisos:d.avisos||[], resuelto:false };
