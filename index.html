@@ -6705,7 +6705,17 @@ function plantilla(){
 }
 
 // ── Arranque del modulo ───────────────────────────────────────────────
+// Fecha del archivo que el navegador tiene cargado. Si al recargar no
+// cambia, es caché: Ctrl+F5.
+function sellarVersion(){
+  var e=$('canc-version'); if(!e) return;
+  var d=new Date(document.lastModified);
+  e.textContent='versión '+(isNaN(d)?'—':
+    d.toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
+}
+
 function abrir(){
+  sellarVersion();
   if(_montado){ return; }
   cargarMotor().then(function(){
     $('canc-app').innerHTML = plantilla();
