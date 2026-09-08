@@ -7646,6 +7646,113 @@ function pintarApuLista(){
     esc(e.message)+'</div>'; });
 }
 
+// ── Pantalla de indirectos ────────────────────────────────────────────
+var MODELOS_CD=[];      // modelos con despiece, para no repedirlos
+
+function pintarIndirectos(){
+  var c=$('cIndResumen'); if(!c) return;
+  if(!PRE){ c.innerHTML='<div class="item-sub">Sin cotización abierta.</div>'; return; }
+  if(!INDIRECTOS.length){ c.innerHTML='<div class="item-sub">Cargando…</div>'; return; }
+
+  PERSONAL=personalDe(MODELOS_CD, PRE, INDIRECTOS);
+  IND_CALC=calcIndirectos(INDIRECTOS, PERSONAL, PRE);
+  var rep=repartirIndirectos(MODELOS_CD, PRE, IND_CALC.total);
+  var cdTotal=MODELOS_CD.reduce(function(a,m){
+    return a+apuCalcular(m,PRE).cd*(Number(m.cantidad)||1); },0);
+  var pctGlobal = cdTotal? IND_CALC.total/cdTotal*100 : 0;
+
+  var p=PERSONAL;
+  var h='<div class="cstats">'+
+    cstat('Personal en obra', p.obra.toFixed(2), p.jornadasObra.toFixed(0)+' jornadas ÷ '+p.dias+' días')+
+    cstat('Personal en taller', p.taller.toFixed(2), p.jornadasTaller.toFixed(0)+' jornadas ÷ '+p.dias+' días')+
+    cstat('Estructura de campo', p.estructura.toFixed(0), 'suma del grupo 1')+
+    cstat('Operativos por supervisor', p.porSupervisor.toFixed(2), '')+
+  '</div>'+
+  '<table style="margin-top:6px"><tr><th>Grupo</th><th class="n">Importe</th><th class="n">% del indirecto</th></tr>';
+  for(var g=1;g<=5;g++){
+    var v=IND_CALC.grupos[g]||0;
+    h+='<tr><td>'+GRUPOS_IND[g]+'</td><td class="n">'+money(v)+'</td>'+
+       '<td class="n">'+(IND_CALC.suma? (v/IND_CALC.suma*100).toFixed(1):'0.0')+' %</td></tr>';
+  }
+  h+='<tr><td style="font-weight:700">Suma de indirectos</td><td class="n" style="font-weight:700">'+
+       money(IND_CALC.suma)+'</td><td></td></tr>'+
+     '<tr><td>Imprevistos '+(Number(PRE.imprevistos_pct)||0)+' %</td><td class="n">'+
+       money(IND_CALC.imprevistos)+'</td><td></td></tr>'+
+     '<tr style="font-weight:800"><td>TOTAL INDIRECTOS DE CAMPO ('+(PRE.meses_obra||0)+' meses)</td>'+
+       '<td class="n">'+money(IND_CALC.total)+'</td><td></td></tr>'+
+     '<tr><td>Base de prorrateo: <b>'+
+       ({jornadas:'jornadas',costo_directo:'costo directo',m2:'metros cuadrados'}[rep._base]||rep._base)+
+       '</b></td><td class="n">costo directo '+money(cdTotal)+'</td>'+
+       '<td class="n">'+pctGlobal.toFixed(3)+' % medio</td></tr></table>';
+
+  if(rep._base==='jornadas' || rep._base==='m2'){
+    h+='<div class="item-sub" style="margin-top:8px">Con esta base cada modelo lleva su propio '+
+       'porcentaje, según la gente (o los m²) que consume, no según su precio.</div>';
+  }
+  c.innerHTML=h;
+  IND_REPARTO=rep;
+}
+var IND_REPARTO={};
+
+function indToggle(){
+  var d=$('cIndDetalle'); if(!d) return;
+  if(d.style.display!=='none'){ d.style.display='none'; return; }
+  if(!IND_CALC) pintarIndirectos();
+  var h='';
+  for(var g=1;g<=5;g++){
+    var filas=IND_CALC.filas.filter(function(f){return f.row.grupo===g;});
+    if(!filas.length) continue;
+    h+='<div style="font-weight:700;font-size:12px;margin:12px 0 4px">'+GRUPOS_IND[g]+'</div>'+
+       '<table><tr><th>Concepto</th><th class="n">Cant.</th><th>Unidad</th>'+
+       '<th class="n">Costo unit.</th><th class="n">Periodos</th><th class="n">FSR</th>'+
+       '<th class="n">Importe</th></tr>';
+    filas.forEach(function(f){
+      var r=f.row, der=r.derivado;
+      h+='<tr'+(der?' style="background:rgba(91,196,192,.07)"':'')+'>'+
+        '<td>'+esc(r.concepto)+
+          (der?'<div class="item-sub">calculado: '+esc(BASES_IND[der]||der)+
+               (r.divisor?' ÷ '+r.divisor:'')+' → '+f.derivado+
+               (r.derivado_en==='periodos'?' (en periodos)':'')+'</div>':'')+
+          (!der&&r.notas?'<div class="item-sub">'+esc(r.notas)+'</div>':'')+'</td>'+
+        '<td class="n">'+(der&&r.derivado_en==='cantidad'
+            ? '<b>'+f.cantidad+'</b>'
+            : '<input class="form-input" style="padding:3px 5px;font-size:12px;width:70px" '+
+              'type="number" step="0.01" value="'+f.cantidad+'" '+
+              'onchange="CANC.indEditar(\''+r.id+'\',\'cantidad\',this.value)">')+'</td>'+
+        '<td>'+esc(r.unidad||'')+'</td>'+
+        '<td class="n"><input class="form-input" style="padding:3px 5px;font-size:12px;width:90px" '+
+          'type="number" step="0.01" value="'+(r.costo_unitario||0)+'" '+
+          'onchange="CANC.indEditar(\''+r.id+'\',\'costo_unitario\',this.value)"></td>'+
+        '<td class="n">'+(der&&r.derivado_en==='periodos'
+            ? '<b>'+f.periodos+'</b>'
+            : '<input class="form-input" style="padding:3px 5px;font-size:12px;width:70px" '+
+              'type="number" step="0.01" value="'+f.periodos+'" '+
+              'onchange="CANC.indEditar(\''+r.id+'\',\'periodos\',this.value)">')+'</td>'+
+        '<td class="n">'+(r.usa_fsr?f.factor:'—')+'</td>'+
+        '<td class="n">'+money(f.importe)+'</td></tr>';
+    });
+    h+='</table>';
+  }
+  h+='<div class="item-sub" style="margin-top:10px">Los renglones sombreados no se capturan: '+
+     'su cantidad se deriva del personal, que a su vez sale de las jornadas de las tarjetas. '+
+     'Si cambia una cantidad del catálogo, la cadena se mueve sola.</div>';
+  d.innerHTML=h; d.style.display='';
+}
+
+function indEditar(id, campo, valor){
+  var v=Number(valor)||0;
+  db('PATCH','canc_indirectos?id=eq.'+id, JSON.parse('{"'+campo+'":'+v+'}'))
+    .then(function(r){
+      var i=INDIRECTOS.map(function(x){return x.id;}).indexOf(id);
+      if(i>=0 && r && r[0]) INDIRECTOS[i]=r[0];
+      pintarIndirectos();
+      var d=$('cIndDetalle');
+      if(d && d.style.display!=='none'){ d.style.display='none'; indToggle(); }
+      pintarApuLista();
+    })
+    .catch(function(e){ alert('No se pudo guardar: '+e.message); });
+}
+
 function asignarReceta(id, receta){
   db('PATCH','canc_modelos?id=eq.'+id, {receta_id:receta||null})
     .then(function(){
