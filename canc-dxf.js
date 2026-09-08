@@ -491,14 +491,28 @@
       unicos.push(gr);
     });
 
-    // Escoger con las dos orientaciones representadas. Antes se tomaban los
-    // primeros por número de vértices y en el muro cortina salían dos cortes
-    // horizontales y ningún vertical: media información de taller.
+    // ── Cuál es el horizontal y cuál el vertical ──────────────────────
+    // "Más ancho que alto" no basta. En OSC-01 el corte horizontal mide
+    // 361x543 y salía clasificado como vertical: la manija cuelga por debajo
+    // del perfil e infla la altura de la caja. Resultado, dos verticales y
+    // ningún horizontal.
+    //
+    // El DXF no rotula sus secciones —sólo trae un título "Cortes"—, así que
+    // hay que deducirlo. Lo que sí es fiable es la COMPARACIÓN: los cortes
+    // vienen en pareja, y de los dos, el de proporción más ancha es el
+    // horizontal y el otro el vertical. Eso no depende de ningún umbral
+    // absoluto, que es lo que se rompía con herrajes salientes.
     var n = max || 3;
-    var hor = unicos.filter(function (x) { return x.orientacion === 'horizontal'; });
-    var ver = unicos.filter(function (x) { return x.orientacion === 'vertical'; });
     var sel = [];
-    if (n >= 2 && hor.length && ver.length) { sel.push(hor[0], ver[0]); }
+    if (n >= 2 && unicos.length >= 2) {
+      var porFigura = unicos.slice().sort(function (a, b) {
+        return (b.w / b.h) - (a.w / a.h);
+      });
+      var A = porFigura[0], B = porFigura[porFigura.length - 1];
+      A.orientacion = 'horizontal';
+      B.orientacion = 'vertical';
+      sel.push(A, B);
+    }
     unicos.forEach(function (x) { if (sel.length < n && sel.indexOf(x) < 0) sel.push(x); });
     // devolver en orden de lectura: primero los horizontales
     sel.sort(function (a, b) {
