@@ -6722,7 +6722,7 @@ function abrir(){
 
 function sub(s){
   SUB = s;
-  ['importar','guardados','insumos','catalogo'].forEach(function(x){
+  ['importar','guardados','costeo','insumos','catalogo'].forEach(function(x){
     var c=$('cs-'+x); if(c) c.classList.toggle('active', x===s);
     var v=$('cv-'+x); if(v) v.style.display = x===s?'':'none';
   });
@@ -6732,6 +6732,7 @@ function sub(s){
   if(s==='guardados'){ listar(); pintarModelos(); }
   if(s==='insumos') pintarInsumos();
   if(s==='importar') pintarDestino();
+  if(s==='costeo'){ pintarParams(); pintarApuLista(); }
 }
 
 
@@ -7228,7 +7229,7 @@ function datos(){
     INSUMOS=(r[2]||[]).filter(function(i){ return !i.es_grupo; });
     poblarSelects(); pintarClientes(); pintarObras();
     pintarInsumos(); listar();
-    return restaurarDestino();
+    return cargarRecetas().then(restaurarDestino);
   }).catch(function(e){ dpista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
@@ -8424,6 +8425,11 @@ return {
   borrarModelo:borrarModelo,
   listar:listar,
   editarCabecera:editarCabecera,
+  guardarParams:guardarParams,
+  asignarReceta:asignarReceta,
+  apuAbrir:apuAbrir,
+  apuCerrar:apuCerrar,
+  apuImprimir:apuImprimir,
   filtrarObrasEdit:filtrarObrasEdit,
   guardarCabecera:guardarCabecera,
   abrirPre:abrirPre,
