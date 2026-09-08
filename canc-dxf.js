@@ -382,9 +382,49 @@
       }
     var g = {};
     for (var k = 0; k < comp.length; k++) { var r = raiz(k); (g[r] = g[r] || []).push(k); }
+    var bloques = Object.keys(g).map(function (kk) { return g[kk]; });
 
-    var grupos = Object.keys(g).map(function (kk) {
-      var idx = g[kk];
+    // ── Unir las piezas de un mismo corte ─────────────────────────────
+    // Un corte horizontal de puerta de dos hojas viene dibujado en tramos
+    // separados por huecos grandes: en PTA-01 son tres bloques en x=20, 1064
+    // y 2482, con claros de hasta 1748 unidades. Con un pad uniforme no se
+    // resuelve — el que alcanza para cerrar ese hueco (600) también se traga
+    // el alzado y devuelve un solo blob de 3176x3710.
+    //
+    // Lo que sí distingue a los tramos de un mismo corte es que comparten
+    // BANDA: ocupan el mismo rango vertical y tienen altura parecida. El
+    // alzado, que está en otra franja de la hoja, no cumple ninguna de las
+    // dos. Por eso la segunda pasada une por banda y no por cercanía.
+    function ext(idx, eje) {
+      var a = 'c', lo = eje === 'y' ? 'y0' : 'x0', hi = eje === 'y' ? 'y1' : 'x1';
+      return [Math.min.apply(null, idx.map(function (n) { return comp[n][a][lo]; })),
+              Math.max.apply(null, idx.map(function (n) { return comp[n][a][hi]; }))];
+    }
+    function mismaBanda(A, B, eje) {
+      var a = ext(A, eje), b = ext(B, eje);
+      var traslape = Math.min(a[1], b[1]) - Math.max(a[0], b[0]);
+      if (traslape <= 0) return false;
+      var ha = a[1] - a[0], hb = b[1] - b[0];
+      var corto = Math.min(ha, hb);
+      if (traslape < corto * 0.70) return false;           // no comparten franja
+      return Math.abs(ha - hb) <= Math.max(ha, hb) * 0.45; // alturas comparables
+    }
+    var fusion = true;
+    while (fusion) {
+      fusion = false;
+      for (var bi = 0; bi < bloques.length && !fusion; bi++)
+        for (var bj = bi + 1; bj < bloques.length && !fusion; bj++) {
+          // 'y' junta los tramos de un corte horizontal; 'x' los de uno vertical
+          if (mismaBanda(bloques[bi], bloques[bj], 'y') ||
+              mismaBanda(bloques[bi], bloques[bj], 'x')) {
+            bloques[bi] = bloques[bi].concat(bloques[bj]);
+            bloques.splice(bj, 1);
+            fusion = true;
+          }
+        }
+    }
+
+    var grupos = bloques.map(function (idx) {
       var x0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.x0; }));
       var y0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.y0; }));
       var x1 = Math.max.apply(null, idx.map(function (n) { return comp[n].c.x1; }));
