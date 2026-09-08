@@ -6490,6 +6490,10 @@ function plantilla(){
           'onchange="CANC.guardarDestino()"></select></div>'+
         '<div><label>Nombre del presupuesto</label><input class="form-input" id="dPreNom" '+
           'placeholder="Fachada poniente" onchange="CANC.guardarDestino()"></div>'+
+        // La receta define la mano de obra y la herramienta de la tarjeta APU.
+        // El DXF trae los materiales, pero no cuánta gente los instala.
+        '<div><label>Receta de mano de obra</label>'+
+          '<select class="form-input" id="dPreReceta"></select></div>'+
       '</div>'+
       '<div id="dDestino" style="margin-top:10px"></div>'+
       '<label style="margin-top:12px">Archivo .dxf</label>'+
