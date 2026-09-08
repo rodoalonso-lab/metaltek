@@ -8097,6 +8097,7 @@ function sincronizarCabecera(){
   if($('dPreNom'))  $('dPreNom').value  = PRE.nombre||'';
   pintarDestino();
   guardarDestino();
+  if(SUB==='costeo'){ pintarParams(); pintarApuLista(); }
 }
 
 function recargarModelos(){
