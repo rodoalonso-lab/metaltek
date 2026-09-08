@@ -6358,6 +6358,17 @@ aplicarTemaGuardado();
 #canc-app .pl-ct{text-align:center}
 #canc-app .pl-ct svg{height:26mm;max-width:78mm;background:none;border:none;border-radius:0;display:block}
 #canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em}
+/* Pieza vertical y angosta (puertas, fijos altos). Centrada en una columna
+   ancha deja media hoja en blanco a los lados y aplasta los cortes contra el
+   pie. Con los cortes al costado el alzado usa todo el alto disponible y la
+   hoja se llena. El interruptor está en planoHTML: alto/ancho > 1.35. */
+#canc-app .pl-izq.alto{display:grid;grid-template-columns:1fr 58mm;gap:5mm;align-items:stretch}
+#canc-app .pl-izq.alto .pl-dib{flex:none;min-height:0}
+#canc-app .pl-izq.alto .pl-dib svg{max-height:none;height:100%}
+#canc-app .pl-izq.alto .pl-cortes{border-top:none;border-left:.6pt solid #999;
+  padding-top:0;padding-left:4mm;display:flex;flex-direction:column;justify-content:center}
+#canc-app .pl-izq.alto .pl-ctrow{flex-direction:column;gap:6mm;align-items:center}
+#canc-app .pl-izq.alto .pl-ct svg{height:32mm;max-width:52mm}
 #canc-app .pl-th{font-size:7.5pt;font-weight:800;letter-spacing:.12em;color:#111;
   border-bottom:1.4pt solid #111;padding-bottom:2px;margin:0 0 3px}
 #canc-app .pl-th:not(:first-child){margin-top:5mm}
