@@ -6867,12 +6867,21 @@ function planoDibujo(a, vidrios){
 
   var x0=W+sep;
   if(cV.length){
+    var huecosV=[], accV=0;
+    for(i=0;i<cV.length;i++){
+      var vya=accV/tV*H; accV+=cV[i].valor; huecosV.push(accV/tV*H-vya);
+    }
+    var bV=ajustarBanda(cV, 'V', huecosV, fs, fsMin, alt);
     g+=celda(x0, 0, alt, H, lin);
     acc=0;
     for(i=0;i<cV.length;i++){
       var ya=acc/tV*H; acc+=cV[i].valor; var yb=acc/tV*H;
       if(i<cV.length-1) g+=div(x0, yb, x0+alt, yb, lin);
-      g+=texto(x0+alt*0.68, (ya+yb)/2, 'V'+cV[i].n+'='+cV[i].valor, fs, false, true);
+      // en esta banda el texto ya va girado por defecto, así que "girar"
+      // significa lo contrario: enderezarlo para que lo limite el ancho de
+      // la banda en vez del alto de una celda apretada
+      g+= bV.girar ? texto(x0+alt*0.5, (ya+yb)/2+bV.fs*0.35, bV.txts[i], bV.fs, false)
+                   : texto(x0+alt*0.68, (ya+yb)/2, bV.txts[i], bV.fs, false, true);
     }
     x0+=alt;
   }
