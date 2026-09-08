@@ -7614,19 +7614,20 @@ function nuevoPresupuesto(){
 }
 // Cliente, obra y nombre viven en dos tarjetas (Importar y Diseño). Si se
 // dejan sueltas, cada una guarda una cosa distinta en el mismo presupuesto.
+// Vuelca la cotización abierta a los campos de la pantalla de importación.
+//
+// Esta función copiaba desde cPreCli / cPreObra / cPreNom, que eran los
+// campos de la pestaña Diseño. Al borrar esa pestaña los elementos dejaron de
+// existir y el `if (!a || !b) return;` se salía en silencio: cliente, obra y
+// nombre nunca se llenaban, y al pulsar "Importar otro DXF a este
+// presupuesto" la pantalla salía en blanco. Ahora se llena desde PRE, que es
+// la fuente real, sin depender de campos de otra pantalla.
 function sincronizarCabecera(){
   if(!PRE) return;
-  [['cPreCli','dPreCli'],['cPreObra','dPreObra'],['cPreNom','dPreNom']].forEach(function(p){
-    var a=$(p[0]), b=$(p[1]); if(!a||!b) return;
-    var v = p[0]==='cPreNom' ? (PRE.nombre||'')
-          : p[0]==='cPreCli' ? (PRE.cliente_id||'')
-          : (PRE.obra_id||'');
-    a.value=v; b.value=v;
-  });
-  filtrarObras(); filtrarObrasDxf();
-  if($('cPreObra')) $('cPreObra').value=PRE.obra_id||'';
-  if($('dPreObra')) $('dPreObra').value=PRE.obra_id||'';
-  if($('cPreEst')) $('cPreEst').value=PRE.estado||'borrador';
+  if($('dPreCli')) $('dPreCli').value = PRE.cliente_id||'';
+  filtrarObrasDxf();                       // repuebla obras según el cliente
+  if($('dPreObra')) $('dPreObra').value = PRE.obra_id||'';
+  if($('dPreNom'))  $('dPreNom').value  = PRE.nombre||'';
   pintarDestino();
   guardarDestino();
 }
