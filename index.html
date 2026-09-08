@@ -6884,6 +6884,37 @@ function texto(x,y,txt,fs,fuerte,rot){
 }
 
 
+// Dibuja un corte seccional. TODOS los contornos van en UNA sola ruta con
+// fill-rule="evenodd".
+//
+// Un perfil de aluminio es hueco: su contorno exterior lleva dentro las
+// cámaras. WinPerfil las exporta como polilíneas independientes, así que
+// pintando una ruta por forma las cámaras se rellenaban encima del perfil con
+// el mismo color y la sección salía maciza. En PTA-01 el corte horizontal
+// tiene 97 pares de contornos anidados; por eso se veía como un bloque.
+//
+// Con evenodd sobre una ruta única, cada contorno metido dentro de otro
+// perfora en lugar de rellenar: quedan las paredes de aluminio macizas y las
+// cámaras huecas, que es como se lee un corte de taller.
+//
+// Las formas con color propio se quedan aparte: no son perfil (cristales,
+// empaques) y no deben perforarlo. Hoy ningún DXF de la muestra trae color,
+// pero el día que traiga uno esto no se rompe.
+function seccionSVG(formas, relleno, tinta, lin){
+  var d=[], g='';
+  formas.forEach(function(f){
+    if(!f.pts || f.pts.length<2) return;
+    var ruta='M '+f.pts.map(function(p){return p[0]+' '+p[1];}).join(' L ')+(f.cerrada?' Z':'');
+    if(f.color){
+      g+='<path d="'+ruta+'" fill="'+f.color+'" fill-opacity="0.22" stroke="'+f.color+
+         '" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+    } else { d.push(ruta); }
+  });
+  if(d.length) g='<path d="'+d.join(' ')+'" fill="'+relleno+'" fill-opacity="0.9" '+
+    'fill-rule="evenodd" stroke="'+tinta+'" stroke-width="'+lin+'" stroke-linejoin="round"/>'+g;
+  return g;
+}
+
 // Los cortes seccionales del conjunto. Se piden por orientación porque cada
 // uno va en su propia casilla: el vertical al costado derecho del alzado, el
 // horizontal debajo. Es lo que le da al plano el nivel de detalle de taller.
