@@ -7410,6 +7410,122 @@ function apuAbrir(id){
 function apuCerrar(){ var w=$('apuWrap'); if(w) w.style.display='none'; APU_ID=null; }
 function apuImprimir(){ imprimirHoja('imp-apu'); }
 
+// ── Pantalla de costeo ────────────────────────────────────────────────
+var CAMPOS_PRE=[
+  ['indirectos_pct',    'Indirectos de campo %', 'calculado abajo, no se teclea a mano'],
+  ['financiamiento_pct','Financiamiento %',      ''],
+  ['utilidad_pct',      'Utilidad %',            ''],
+  ['cargos_pct',        'Cargos adicionales %',  ''],
+  ['iva_pct',           'IVA %',                 ''],
+  ['meses_obra',        'Meses de obra',         'para los indirectos'],
+  ['dias_mes',          'Días por mes',          'días efectivos, 24 en tu Excel'],
+  ['fsr',               'FSR',                   'factor de salario real'],
+  ['imprevistos_pct',   'Imprevistos %',         'sobre la suma de indirectos']
+];
+
+function pintarParams(){
+  var c=$('cParams'); if(!c) return;
+  if(!PRE){ c.innerHTML='<div class="item-sub">Abre una cotización en Guardados '+
+    'para ver y ajustar sus parámetros.</div>'; return; }
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">';
+  CAMPOS_PRE.forEach(function(f){
+    h+='<div><label>'+f[1]+(f[2]?' <span style="color:var(--dim)">· '+f[2]+'</span>':'')+'</label>'+
+       '<input class="form-input" id="pp_'+f[0]+'" type="number" step="0.001" value="'+
+       (PRE[f[0]]!==null&&PRE[f[0]]!==undefined?PRE[f[0]]:0)+'"></div>';
+  });
+  h+='<div><label>Base de prorrateo de indirectos</label>'+
+     '<select class="form-input" id="pp_base_prorrateo">'+
+     [['jornadas','Por jornadas — el indirecto lo genera la gente'],
+      ['costo_directo','Por costo directo — como el Excel de hoy'],
+      ['m2','Por metros cuadrados']]
+     .map(function(o){ return '<option value="'+o[0]+'"'+
+       (PRE.base_prorrateo===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
+     '</select></div></div>'+
+     '<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">'+
+     '<button class="btn-primary" onclick="CANC.guardarParams()">Guardar parámetros</button>'+
+     '<span id="ppPista" class="item-sub" style="margin:0"></span></div>';
+  c.innerHTML=h;
+}
+
+function guardarParams(){
+  if(!PRE) return;
+  var cuerpo={base_prorrateo:val('pp_base_prorrateo')};
+  CAMPOS_PRE.forEach(function(f){ cuerpo[f[0]]=num('pp_'+f[0]); });
+  var e=$('ppPista'); if(e) e.textContent='Guardando…';
+  db('PATCH','canc_presupuestos?id=eq.'+PRE.id, cuerpo)
+    .then(function(r){
+      if(r&&r[0]) PRE=r[0];
+      if(e) e.innerHTML='<span style="color:var(--accent)">Guardado. '+
+        'Las tarjetas ya usan estos porcentajes.</span>';
+      pintarApuLista();
+      if(APU_ID) apuAbrir(APU_ID);      // refrescar la tarjeta abierta
+    })
+    .catch(function(err){
+      if(e) e.innerHTML='<span style="color:var(--danger)">No se guardó: '+esc(err.message)+'</span>';
+    });
+}
+
+// La lista de modelos con su receta y su precio. Necesita el despiece de
+// cada uno, que no viene en la lista: se piden todos de una vez, sin la
+// geometría, que es lo pesado.
+function pintarApuLista(){
+  var c=$('cApuLista'); if(!c) return;
+  if(!PRE){ c.innerHTML='<div class="item-sub">Sin cotización abierta.</div>'; return; }
+  if(!MODELOS.length){ c.innerHTML='<div class="item-sub">Esta cotización no tiene modelos.</div>'; return; }
+  c.innerHTML='<div class="item-sub">Calculando…</div>';
+
+  db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,clave,descripcion,cantidad,'+
+           'vano_w,vano_h,receta_id,despiece&order=orden')
+  .then(function(ms){
+    var h='<table><tr><th>Clave</th><th>Modelo</th><th>Receta</th><th class="n">m²</th>'+
+          '<th class="n">Jornadas</th><th class="n">Costo directo</th><th class="n">P.U.</th>'+
+          '<th class="n">Importe</th><th></th></tr>';
+    var tCd=0, tImp=0, tJor=0, tM2=0, faltan=0;
+    ms.forEach(function(m){
+      var a=apuCalcular(m, PRE);
+      var cant=Number(m.cantidad)||1;
+      tCd+=a.cd*cant; tImp+=a.pu*cant; tJor+=a.jornadas*cant; tM2+=a.bases.m2*cant;
+      faltan+=a.sinPrecio;
+      h+='<tr><td class="mono">'+esc(m.clave)+'</td>'+
+         '<td>'+esc(m.descripcion||'')+'</td>'+
+         '<td><select class="form-input" style="padding:4px 6px;font-size:12px" '+
+           'onchange="CANC.asignarReceta(\''+m.id+'\',this.value)">'+
+           '<option value="">— sin receta —</option>'+
+           RECETAS.map(function(r){ return '<option value="'+r.id+'"'+
+             (m.receta_id===r.id?' selected':'')+'>'+esc(r.clave)+'</option>'; }).join('')+
+           '</select></td>'+
+         '<td class="n">'+(a.bases.m2?a.bases.m2.toFixed(2):'—')+'</td>'+
+         '<td class="n">'+(a.jornadas?a.jornadas.toFixed(2):'—')+'</td>'+
+         '<td class="n">'+money(a.cd)+'</td>'+
+         '<td class="n">'+money(a.pu)+'</td>'+
+         '<td class="n">'+money(a.pu*cant)+'</td>'+
+         '<td style="text-align:right"><button class="chip" '+
+           'onclick="CANC.apuAbrir(\''+m.id+'\')">Tarjeta</button></td></tr>';
+    });
+    h+='<tr style="font-weight:800"><td colspan="3">TOTAL</td>'+
+       '<td class="n">'+tM2.toFixed(2)+'</td><td class="n">'+tJor.toFixed(2)+'</td>'+
+       '<td class="n">'+money(tCd)+'</td><td></td><td class="n">'+money(tImp)+'</td><td></td></tr>';
+    h+='</table>';
+    if(faltan) h+='<div class="aviso" style="margin-top:10px"><b>'+faltan+
+      ' renglón(es) sin precio</b> entre todas las tarjetas. El costo directo está incompleto '+
+      'hasta capturarlos en Insumos.</div>';
+    c.innerHTML=h;
+  })
+  .catch(function(e){ c.innerHTML='<div style="color:var(--danger)">No se pudo calcular: '+
+    esc(e.message)+'</div>'; });
+}
+
+function asignarReceta(id, receta){
+  db('PATCH','canc_modelos?id=eq.'+id, {receta_id:receta||null})
+    .then(function(){
+      var m=MODELOS.filter(function(x){return x.id===id;})[0];
+      if(m) m.receta_id=receta||null;
+      pintarApuLista();
+      if(APU_ID===id) apuAbrir(id);
+    })
+    .catch(function(e){ alert('No se pudo asignar la receta: '+e.message); });
+}
+
 // ── Dónde me quedé ────────────────────────────────────────────────────
 // Una cotización lleva varios modelos y se arma a lo largo del día, con
 // recargas de por medio. Si al entrar la pantalla arranca en blanco, hay que
