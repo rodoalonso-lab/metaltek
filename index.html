@@ -7322,6 +7322,125 @@ function apuCalcular(m, pre){
            sinPrecio: mat.concat(mo,he).filter(function(x){return x.sinPrecio;}).length };
 }
 
+// ══ INDIRECTOS DE CAMPO ═══════════════════════════════════════════════
+// No es un porcentaje supuesto: se calcula por recursos, de abajo hacia
+// arriba, y el porcentaje sólo es el vehículo para repartirlo en las
+// tarjetas. El lazo no es circular porque el % se calcula sobre el costo
+// DIRECTO, que no incluye indirectos.
+var INDIRECTOS=[], PERSONAL=null, IND_CALC=null;
+var GRUPOS_IND=['',
+  '1. Personal técnico, administrativo y supervisión',
+  '2. Oficina de campo e instalaciones provisionales',
+  '3. Transporte, fletes y maniobras',
+  '4. Viáticos y hospedaje de personal foráneo',
+  '5. Seguros, fianzas, permisos, EPP y pruebas'];
+var BASES_IND={ obra:'personal en obra', taller:'personal en taller',
+  estructura:'estructura de campo', obra_estructura:'obra + estructura',
+  plantilla:'plantilla total (obra + taller + estructura)' };
+
+// El personal no se teclea: sale de las jornadas de las tarjetas.
+//   personal promedio = jornadas presupuestadas ÷ días disponibles
+// La estructura sí se captura: es la suma del grupo 1, que es justamente la
+// gente de supervisión que uno decide poner.
+function personalDe(modelos, pre, indirectos){
+  var jObra=0, jTaller=0;
+  (modelos||[]).forEach(function(m){
+    var a=apuCalcular(m, pre), cant=Number(m.cantidad)||1;
+    a.mo.forEach(function(f){
+      if(f.unidad!=='jor') return;
+      if(/taller/i.test(f.desc)) jTaller += f.cantidad*cant;
+      else                      jObra   += f.cantidad*cant;
+    });
+  });
+  var dias=(Number(pre.dias_mes)||24)*(Number(pre.meses_obra)||1);
+  var estructura=(indirectos||[]).filter(function(r){return r.grupo===1;})
+    .reduce(function(a,r){ return a+(Number(r.cantidad)||0); },0);
+  var obra   = dias? jObra/dias   : 0;
+  var taller = dias? jTaller/dias : 0;
+  return { jornadasObra:jObra, jornadasTaller:jTaller, dias:dias,
+           obra:obra, taller:taller, estructura:estructura,
+           obra_estructura:obra+estructura, plantilla:obra+taller+estructura,
+           porSupervisor: estructura? (obra+taller)/estructura : 0 };
+}
+
+// Resuelve cada renglón y suma. Los derivados escriben en cantidad o en
+// periodos según el renglón: en EPP el número de personas va en periodos.
+function calcIndirectos(rows, per, pre){
+  var fsr=Number(pre.fsr)||1;
+  var out=rows.map(function(r){
+    var cantidad=Number(r.cantidad)||0, periodos=Number(r.periodos)||0;
+    var derivado=null;
+    if(r.derivado && per){
+      var base=per[r.derivado]||0;
+      var div=Number(r.divisor)||0;
+      // se redondea SIEMPRE hacia arriba: 15.46 personas necesitan 16 comidas
+      derivado = div ? Math.ceil(base/div) : Math.ceil(base);
+      if(r.derivado_en==='periodos') periodos=derivado; else cantidad=derivado;
+    }
+    var f=r.usa_fsr? fsr : 1;
+    return { row:r, cantidad:cantidad, periodos:periodos, factor:f,
+             derivado:derivado,
+             importe: cantidad*(Number(r.costo_unitario)||0)*periodos*f };
+  });
+  var grupos={}; out.forEach(function(x){
+    grupos[x.row.grupo]=(grupos[x.row.grupo]||0)+x.importe; });
+  var suma=out.reduce(function(a,x){return a+x.importe;},0);
+  var impr=suma*(Number(pre.imprevistos_pct)||0)/100;
+  return { filas:out, grupos:grupos, suma:suma, imprevistos:impr, total:suma+impr };
+}
+
+// El reparto. Aquí es donde la base importa: por costo directo, una partida
+// subcontratada absorbe indirecto en proporción a su dinero aunque no
+// consuma supervisión ni viáticos. Por jornadas absorbe en proporción a la
+// gente, que es quien genera el gasto de campo.
+function repartirIndirectos(modelos, pre, total){
+  var base=pre.base_prorrateo||'costo_directo';
+  var peso={}, suma=0;
+  (modelos||[]).forEach(function(m){
+    var a=apuCalcular(m, pre), cant=Number(m.cantidad)||1, w=0;
+    if(base==='jornadas')          w=a.jornadas*cant;
+    else if(base==='m2')           w=a.bases.m2*cant;
+    else                           w=a.cd*cant;
+    peso[m.id]=w; suma+=w;
+  });
+  var res={};
+  (modelos||[]).forEach(function(m){
+    var a=apuCalcular(m, pre), cant=Number(m.cantidad)||1;
+    var imp = suma? total*peso[m.id]/suma : 0;
+    var cdTot=a.cd*cant;
+    // el % que va en la tarjeta es el que reproduce ese importe sobre SU
+    // costo directo: con base por jornadas cada modelo lleva un % distinto
+    res[m.id]={ importe:imp, pct: cdTot? imp/cdTot*100 : 0, peso:peso[m.id] };
+  });
+  res._suma=suma; res._base=base;
+  return res;
+}
+
+function cargarIndirectos(){
+  if(!PRE) { INDIRECTOS=[]; return Promise.resolve([]); }
+  return db('GET','canc_indirectos?presupuesto_id=eq.'+PRE.id+'&order=grupo,orden')
+    .then(function(r){
+      if(r && r.length){ INDIRECTOS=r; return r; }
+      // primera vez: se copia la plantilla, para no arrancar con la hoja en
+      // blanco y perder los criterios que ya están decididos
+      return db('GET','canc_indirectos?presupuesto_id=is.null&order=grupo,orden')
+        .then(function(pl){
+          if(!pl || !pl.length){ INDIRECTOS=[]; return []; }
+          var copia=pl.map(function(x){
+            return { presupuesto_id:PRE.id, grupo:x.grupo, orden:x.orden,
+                     concepto:x.concepto, unidad:x.unidad, cantidad:x.cantidad,
+                     derivado:x.derivado, derivado_en:x.derivado_en,
+                     divisor:x.divisor, costo_unitario:x.costo_unitario,
+                     periodos:x.periodos, usa_fsr:x.usa_fsr, notas:x.notas };
+          });
+          return db('POST','canc_indirectos', copia).then(function(ins){
+            INDIRECTOS=ins||[]; return INDIRECTOS;
+          });
+        });
+    })
+    .catch(function(){ INDIRECTOS=[]; return []; });
+}
+
 function apuHTML(m, a){
   var cli=(CLIENTES.filter(function(c){return c.id===PRE.cliente_id;})[0]||{}).nombre||'—';
   var obr=(OBRAS.filter(function(o){return o.id===PRE.obra_id;})[0]||{}).nombre||'—';
