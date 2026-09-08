@@ -6838,14 +6838,27 @@ function planoDibujo(a, vidrios){
   // Las parciales se acomodan proporcionalmente sobre el ancho dibujado: así
   // siempre cierran contra el total aunque el marco medido difiera un par de
   // milímetros del que declara WinPerfil.
+  // Piso de legibilidad, atado al papel y no al dibujo: el alzado sale a unos
+  // 145 mm de ancho en la hoja, así que esto convierte unidades del DXF a
+  // milímetros impresos. Por debajo de 1.4 mm una cifra ya no se lee.
+  var mmPorUnidad = 145/(W+M*1.35);
+  var fsMin = 1.4/mmPorUnidad;
+
   var acc=0, i, y0=H+sep, corte;
   if(cH.length){
+    var huecosH=[], accH=0;
+    for(i=0;i<cH.length;i++){
+      var hxa=accH/tH*W; accH+=cH[i].valor; huecosH.push(accH/tH*W-hxa);
+    }
+    var bH=ajustarBanda(cH, 'H', huecosH, fs, fsMin, alt);
     g+=celda(0, y0, W, alt, lin);
     acc=0;
     for(i=0;i<cH.length;i++){
       var xa=acc/tH*W; acc+=cH[i].valor; var xb=acc/tH*W;
       if(i<cH.length-1) g+=div(xb, y0, xb, y0+alt, lin);
-      g+=texto((xa+xb)/2, y0+alt*0.68, 'H'+cH[i].n+'='+cH[i].valor, fs, false);
+      // girar aquí significa poner la cifra en vertical dentro de su celda
+      g+= bH.girar ? texto((xa+xb)/2, y0+alt*0.5+bH.fs*0.35, bH.txts[i], bH.fs, false, true)
+                   : texto((xa+xb)/2, y0+alt*0.68, bH.txts[i], bH.fs, false);
     }
     y0+=alt;
   }
