@@ -6887,6 +6887,38 @@ function texto(x,y,txt,fs,fuerte,rot){
   return rot ? '<g transform="rotate(-90 '+x+','+y+')">'+t+'</g>' : t;
 }
 
+// ── Autoajuste de la banda de cotas ───────────────────────────────────
+// Una fachada de 24 m trae 16 cotas horizontales. Cada celda mide W/16, y la
+// etiqueta "H12=1556" es casi el doble de ancha que su celda: las medidas se
+// encimaban hasta volverse una mancha. Un tamaño de letra fijo sólo funciona
+// mientras haya pocas cotas.
+//
+// Se escoge UNA presentación para toda la banda —no una por celda— porque
+// una banda con letras de tamaños distintos se ve como un error. El orden de
+// concesiones va de la menos dolorosa a la más:
+//   1. etiqueta completa
+//   2. sólo el número (el prefijo H12= es lo primero que sobra: el orden ya
+//      lo da la posición en la banda)
+//   3. encoger la letra, con piso en lo que todavía se lee impreso
+//   4. girarla 90°, que cambia la restricción del ancho de celda al alto de
+//      banda, mucho más holgado
+var EM_COTA = 0.55;   // ancho medio de carácter, en múltiplos del tamaño
+
+function ajustarBanda(items, prefijo, huecos, fsBase, fsMin, altBanda){
+  var completos = items.map(function(c){ return prefijo+c.n+'='+c.valor; });
+  var cortos    = items.map(function(c){ return String(c.valor); });
+  var hueco = Math.min.apply(null, huecos) * 0.88;   // deja aire a los lados
+  var lC = Math.max.apply(null, completos.map(function(t){ return t.length; }));
+  var lS = Math.max.apply(null, cortos.map(function(t){ return t.length; }));
+
+  if(lC*fsBase*EM_COTA <= hueco) return { txts:completos, fs:fsBase, girar:false };
+  if(lS*fsBase*EM_COTA <= hueco) return { txts:cortos,    fs:fsBase, girar:false };
+  var fs = hueco/(lS*EM_COTA);
+  if(fs >= fsMin) return { txts:cortos, fs:fs, girar:false };
+  var fsg = Math.min(fsBase, altBanda*0.88/(lS*EM_COTA));
+  return { txts:cortos, fs:Math.max(fsg,fsMin), girar:true };
+}
+
 
 // Dibuja un corte seccional. TODOS los contornos van en UNA sola ruta con
 // fill-rule="evenodd".
