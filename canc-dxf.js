@@ -395,34 +395,46 @@
     // BANDA: ocupan el mismo rango vertical y tienen altura parecida. El
     // alzado, que está en otra franja de la hoja, no cumple ninguna de las
     // dos. Por eso la segunda pasada une por banda y no por cercanía.
+    // Las decisiones se toman TODAS sobre los bloques originales y sólo
+    // después se aplican. Evaluar contra el bloque ya fusionado lo hacía
+    // crecer y tragarse al vecino en cadena: los 7 archivos terminaban en un
+    // grupo único de media hoja.
     function ext(idx, eje) {
-      var a = 'c', lo = eje === 'y' ? 'y0' : 'x0', hi = eje === 'y' ? 'y1' : 'x1';
-      return [Math.min.apply(null, idx.map(function (n) { return comp[n][a][lo]; })),
-              Math.max.apply(null, idx.map(function (n) { return comp[n][a][hi]; }))];
+      var lo = eje === 'y' ? 'y0' : 'x0', hi = eje === 'y' ? 'y1' : 'x1';
+      return [Math.min.apply(null, idx.map(function (n) { return comp[n].c[lo]; })),
+              Math.max.apply(null, idx.map(function (n) { return comp[n].c[hi]; }))];
     }
-    function mismaBanda(A, B, eje) {
-      var a = ext(A, eje), b = ext(B, eje);
-      var traslape = Math.min(a[1], b[1]) - Math.max(a[0], b[0]);
+    var cajas = bloques.map(function (b) { return { y: ext(b, 'y'), x: ext(b, 'x') }; });
+    function mismaBanda(a, b, eje) {
+      var A = a[eje], B = b[eje];
+      var traslape = Math.min(A[1], B[1]) - Math.max(A[0], B[0]);
       if (traslape <= 0) return false;
-      var ha = a[1] - a[0], hb = b[1] - b[0];
-      var corto = Math.min(ha, hb);
-      if (traslape < corto * 0.70) return false;           // no comparten franja
-      return Math.abs(ha - hb) <= Math.max(ha, hb) * 0.45; // alturas comparables
+      var ga = A[1] - A[0], gb = B[1] - B[0];
+      if (traslape < Math.min(ga, gb) * 0.70) return false;   // no comparten franja
+      if (Math.abs(ga - gb) > Math.max(ga, gb) * 0.45) return false; // grosores distintos
+      // y deben estar UNO AL LADO DEL OTRO en el otro eje: si también se
+      // enciman ahí, son dibujos superpuestos, no tramos de la misma pieza
+      var otro = eje === 'y' ? 'x' : 'y';
+      var C = a[otro], D2 = b[otro];
+      return Math.min(C[1], D2[1]) - Math.max(C[0], D2[0]) <= 0;
     }
-    var fusion = true;
-    while (fusion) {
-      fusion = false;
-      for (var bi = 0; bi < bloques.length && !fusion; bi++)
-        for (var bj = bi + 1; bj < bloques.length && !fusion; bj++) {
-          // 'y' junta los tramos de un corte horizontal; 'x' los de uno vertical
-          if (mismaBanda(bloques[bi], bloques[bj], 'y') ||
-              mismaBanda(bloques[bi], bloques[bj], 'x')) {
-            bloques[bi] = bloques[bi].concat(bloques[bj]);
-            bloques.splice(bj, 1);
-            fusion = true;
-          }
+    var pb = bloques.map(function (_, i) { return i; });
+    function rb2(a) { while (pb[a] !== a) { pb[a] = pb[pb[a]]; a = pb[a]; } return a; }
+    for (var bi = 0; bi < bloques.length; bi++)
+      for (var bj = bi + 1; bj < bloques.length; bj++) {
+        // 'y' junta los tramos de un corte horizontal; 'x' los de uno vertical
+        if (mismaBanda(cajas[bi], cajas[bj], 'y') || mismaBanda(cajas[bi], cajas[bj], 'x')) {
+          var r1 = rb2(bi), r2 = rb2(bj);
+          if (r1 !== r2) pb[r2] = r1;
         }
+      }
+    var gg = {};
+    for (var bk = 0; bk < bloques.length; bk++) {
+      var rr = rb2(bk); (gg[rr] = gg[rr] || []).push(bk);
     }
+    bloques = Object.keys(gg).map(function (kk) {
+      return gg[kk].reduce(function (acc, n) { return acc.concat(bloques[n]); }, []);
+    });
 
     var grupos = bloques.map(function (idx) {
       var x0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.x0; }));
