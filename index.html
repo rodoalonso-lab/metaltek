@@ -7510,25 +7510,20 @@ function pintarInsumos(){
 
 
 function poblarSelects(){
-  [['cPreCli','— elige cliente —'],['dPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
+  // cPreCli era de la pestaña Diseño, ya borrada; se quitó de la lista para
+  // no dejar la ilusión de que existe.
+  [['dPreCli','— elige cliente —'],['cOCli','— sin cliente —']].forEach(function(par){
     var s=$(par[0]); if(!s) return;
     var v=s.value; s.innerHTML=''; opt(s,'',par[1]);
     CLIENTES.forEach(function(c){ opt(s,c.id,c.nombre); });
     s.value=v;
   });
-  filtrarObras();
   filtrarObrasDxf();
 }
-// Solo las obras del cliente elegido; las que no tienen cliente ligado se
-// muestran siempre, para poder asignarlas sin salir de aqui.
-function filtrarObras(){
-  var s=$('cPreObra'); if(!s) return;
-  var cli=val('cPreCli'), v=s.value;
-  s.innerHTML=''; opt(s,'','— sin obra —');
-  OBRAS.filter(function(o){ return !cli || o.cliente_id===cli || !o.cliente_id; })
-       .forEach(function(o){ opt(s,o.id,o.nombre+(o.cliente_id?'':'  (sin cliente)')); });
-  s.value=v;
-}
+// filtrarObras() alimentaba el selector cPreObra de la pestaña Diseño. Desde
+// que esa pestaña no existe, la función salía en el primer renglón sin hacer
+// nada. Se eliminó junto con sus llamadas; el único selector de obra que
+// queda es el de importación, que atiende filtrarObrasDxf().
 function guardarCliente(){
   var nombre=val('cCNom').trim();
   if(!nombre){ alert('El cliente necesita nombre.'); return; }
