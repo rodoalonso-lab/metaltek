@@ -418,23 +418,39 @@
       var C = a[otro], D2 = b[otro];
       return Math.min(C[1], D2[1]) - Math.max(C[0], D2[0]) <= 0;
     }
-    var pb = bloques.map(function (_, i) { return i; });
-    function rb2(a) { while (pb[a] !== a) { pb[a] = pb[pb[a]]; a = pb[a]; } return a; }
-    for (var bi = 0; bi < bloques.length; bi++)
-      for (var bj = bi + 1; bj < bloques.length; bj++) {
-        // 'y' junta los tramos de un corte horizontal; 'x' los de uno vertical
-        if (mismaBanda(cajas[bi], cajas[bj], 'y') || mismaBanda(cajas[bi], cajas[bj], 'x')) {
-          var r1 = rb2(bi), r2 = rb2(bj);
-          if (r1 !== r2) pb[r2] = r1;
-        }
-      }
-    var gg = {};
-    for (var bk = 0; bk < bloques.length; bk++) {
-      var rr = rb2(bk); (gg[rr] = gg[rr] || []).push(bk);
+    // Unión con guardia de forma. Sin ella la fusión encadena entre ejes —
+    // A y B se juntan por banda horizontal, B y C por banda vertical— y
+    // CW-01 y MC-01 volvían a salir como un blob de 8166x7044. Un corte
+    // horizontal real es una tira: si el resultado deja de ser alargado en su
+    // eje, la unión propuesta no era un corte, era ruido. 2.0 deja pasar el
+    // vertical más achaparrado de la muestra (CW-02, 2.29) y rechaza el
+    // cuadrado de CORR-01 (1.03).
+    function une(a, b) {
+      return { y: [Math.min(a.y[0], b.y[0]), Math.max(a.y[1], b.y[1])],
+               x: [Math.min(a.x[0], b.x[0]), Math.max(a.x[1], b.x[1])] };
     }
-    bloques = Object.keys(gg).map(function (kk) {
-      return gg[kk].reduce(function (acc, n) { return acc.concat(bloques[n]); }, []);
-    });
+    function alargado(c, eje) {
+      var w = c.x[1] - c.x[0], h = c.y[1] - c.y[0];
+      return eje === 'y' ? w >= h * 2.0 : h >= w * 2.0;
+    }
+    var hubo = true;
+    while (hubo) {
+      hubo = false;
+      for (var bi = 0; bi < bloques.length && !hubo; bi++)
+        for (var bj = bi + 1; bj < bloques.length && !hubo; bj++) {
+          // 'y' junta los tramos de un corte horizontal; 'x' los de uno vertical
+          ['y', 'x'].forEach(function (eje) {
+            if (hubo) return;
+            if (!mismaBanda(cajas[bi], cajas[bj], eje)) return;
+            var u = une(cajas[bi], cajas[bj]);
+            if (!alargado(u, eje)) return;
+            bloques[bi] = bloques[bi].concat(bloques[bj]);
+            cajas[bi] = u;
+            bloques.splice(bj, 1); cajas.splice(bj, 1);
+            hubo = true;
+          });
+        }
+    }
 
     var grupos = bloques.map(function (idx) {
       var x0 = Math.min.apply(null, idx.map(function (n) { return comp[n].c.x0; }));
