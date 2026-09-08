@@ -7569,7 +7569,7 @@ function restaurarDestino(){
       if(!p || p.estado!=='borrador'){ olvidarDestino(); pintarDestino(); return; }
       PRE=p;
       return db('GET','canc_modelos?presupuesto_id=eq.'+p.id+
-                '&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
+                '&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,receta_id,partida,costo,precio&order=orden')
         .then(function(m){
           MODELOS=m||[]; MODELO_ID=null;
           sincronizarCabecera(); pintarModelos(); listar();
@@ -8105,7 +8105,7 @@ function recargarModelos(){
   // Sin la geometría: la lista sólo necesita texto y números. Traer
   // 'select=*' descargaba ~100 KB de vértices por modelo para pintar una
   // tabla. Los vértices se piden al abrir un modelo, uno a la vez.
-  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
+  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,receta_id,partida,costo,precio&order=orden')
     .then(function(r){
       MODELOS=r||[];
       var costo=MODELOS.reduce(function(a,m){ return a+Number(m.costo||0)*Number(m.cantidad||1); },0);
@@ -8380,7 +8380,7 @@ function borrarPre(id){
 function abrirPre(id){
   Promise.all([
     db('GET','canc_presupuestos?id=eq.'+id+'&select=*'),
-    db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
+    db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,receta_id,partida,costo,precio&order=orden')
   ]).then(function(r){
     PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
     sincronizarCabecera();
