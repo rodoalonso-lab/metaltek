@@ -7663,11 +7663,54 @@ function listar(){
          '<td>'+esc(p.cliente_nombre||'—')+'<div class="item-sub">'+esc(p.obra_nombre||'sin obra')+'</div></td>'+
          '<td>'+esc(p.estado)+'</td><td class="n">'+p.modelos+'</td>'+
          '<td class="n">'+money(p.precio_total)+'</td>'+
-         '<td style="text-align:right"><button class="chip" onclick="CANC.abrirPre(\''+p.id+'\')">'+
-         (act?'Recargar':'Ver modelos')+'</button></td></tr>';
+         '<td style="text-align:right;white-space:nowrap">'+
+         '<button class="chip" onclick="CANC.abrirPre(\''+p.id+'\')">'+
+         (act?'Recargar':'Ver modelos')+'</button> '+
+         '<button class="chip" style="border-color:var(--danger);color:var(--danger)" '+
+         'onclick="CANC.borrarPre(\''+p.id+'\')">Borrar</button>'+
+         '</td></tr>';
     });
     c.innerHTML=h+'</table>';
   }).catch(function(e){ c.innerHTML='<div style="color:var(--danger)">No se pudo leer: '+esc(e.message)+'</div>'; });
+}
+
+// Borrar una cotización completa. Se lleva sus modelos por delante: la llave
+// canc_modelos.presupuesto_id es ON DELETE CASCADE, así que la base los
+// elimina sola y no hay que borrarlos aparte ni quedan huérfanos.
+//
+// Lo que la base NO resuelve es padre_id, que es ON DELETE SET NULL: si esta
+// cotización tiene revisiones colgando, borrarla no las borra, las deja sin
+// origen. Por eso se avisa antes en lugar de descubrirlo después.
+function borrarPre(id){
+  var p=(LISTA||[]).filter(function(x){return x.id===id;})[0];
+  if(!p){ alert('No encuentro esa cotización en la lista. Recarga y vuelve a intentar.'); return; }
+
+  db('GET','canc_presupuestos?padre_id=eq.'+id+'&select=folio')
+  .then(function(rev){
+    var n=Number(p.modelos)||0;
+    var msg='Borrar la cotización '+p.folio+'\n'+(p.nombre||'')+'\n\n'+
+            'Se eliminan también sus '+n+' modelo'+(n===1?'':'s')+
+            ' con todo y geometría importada.\n';
+    if(rev && rev.length){
+      msg+='\nATENCIÓN: tiene '+rev.length+' revisión'+(rev.length===1?'':'es')+
+           ' ('+rev.map(function(r){return r.folio;}).join(', ')+
+           ') que quedarán sin cotización de origen.\n';
+    }
+    msg+='\nEsto no se puede deshacer. ¿Continuar?';
+    if(!confirm(msg)) return null;
+
+    // Segunda confirmación sólo cuando hay trabajo real de por medio: para
+    // una cotización vacía el doble aviso nada más estorba.
+    if(n>0 && !confirm('Última confirmación: se pierden los '+n+' modelo'+
+       (n===1?'':'s')+' de '+p.folio+'. ¿Borrar?')) return null;
+
+    return db('DELETE','canc_presupuestos?id=eq.'+id).then(function(){
+      if(PRE && PRE.id===id){ cerrarPre(); }   // ya repinta todo
+      else { listar(); }
+      dpista('Cotización '+p.folio+' borrada.');
+    });
+  })
+  .catch(function(e){ alert('No se pudo borrar: '+e.message); });
 }
 function abrirPre(id){
   Promise.all([
