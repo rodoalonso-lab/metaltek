@@ -7703,6 +7703,83 @@ function cerrarPre(){
   pintarModelos(); pintarImport(); pintarDestino(); listar();
 }
 
+// ── Corregir los datos de una cotización ya guardada ──────────────────
+// Cliente, obra y nombre se capturan una vez, al importar el primer DXF, y
+// hasta ahora no había manera de tocarlos después: un cliente mal elegido
+// quedaba así para siempre. Esto edita SÓLO la cabecera; los modelos y sus
+// despieces no se tocan, porque son la foto congelada de lo cotizado.
+var ESTADOS_PRE = ['borrador','enviado','aprobado','rechazado','cancelado'];
+
+function editarCabecera(){
+  var c=$('cEditCab'); if(!c || !PRE) return;
+  if(c.style.display!=='none'){ c.style.display='none'; c.innerHTML=''; return; }
+
+  c.innerHTML=
+    '<div class="card" style="margin:0">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">'+
+      '<div><label>Cliente</label><select class="form-input" id="ePreCli" '+
+        'onchange="CANC.filtrarObrasEdit()"></select></div>'+
+      '<div><label>Obra</label><select class="form-input" id="ePreObra"></select></div>'+
+      '<div><label>Nombre del presupuesto</label>'+
+        '<input class="form-input" id="ePreNom" value="'+esc(PRE.nombre||'')+'"></div>'+
+      '<div><label>Estado</label><select class="form-input" id="ePreEst">'+
+        ESTADOS_PRE.map(function(e){
+          return '<option value="'+e+'"'+(PRE.estado===e?' selected':'')+'>'+e+'</option>';
+        }).join('')+'</select></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">'+
+      '<button class="btn-primary" onclick="CANC.guardarCabecera()">Guardar cambios</button>'+
+      '<button class="btn-secondary" onclick="CANC.editarCabecera()">Cancelar</button>'+
+      '<span id="ePista" class="item-sub" style="margin:0"></span>'+
+    '</div></div>';
+  c.style.display='';
+
+  var s=$('ePreCli');
+  opt(s,'','— elige cliente —');
+  CLIENTES.forEach(function(x){ opt(s,x.id,x.nombre); });
+  s.value=PRE.cliente_id||'';
+  filtrarObrasEdit();
+  $('ePreObra').value=PRE.obra_id||'';
+}
+
+// Misma regla que en importación: sólo las obras del cliente elegido, más las
+// que no tienen cliente ligado, para poder asignarlas sin salir de aquí.
+function filtrarObrasEdit(){
+  var s=$('ePreObra'); if(!s) return;
+  var cli=val('ePreCli'), v=s.value;
+  s.innerHTML=''; opt(s,'','— sin obra —');
+  OBRAS.filter(function(o){ return !cli || o.cliente_id===cli || !o.cliente_id; })
+       .forEach(function(o){ opt(s,o.id,o.nombre+(o.cliente_id?'':'  (sin cliente)')); });
+  s.value=v;
+}
+
+function guardarCabecera(){
+  if(!PRE) return;
+  var e=$('ePista');
+  var cli=val('ePreCli'), nom=val('ePreNom').trim();
+  // nombre es NOT NULL en la base y cliente es lo que da sentido a la
+  // cotización: se validan aquí para no chocar contra un error de Postgres
+  if(!cli){ if(e) e.innerHTML='<span style="color:var(--danger)">Elige el cliente.</span>'; return; }
+  if(!nom){ if(e) e.innerHTML='<span style="color:var(--danger)">El presupuesto necesita nombre.</span>'; return; }
+  if(e) e.textContent='Guardando…';
+
+  db('PATCH','canc_presupuestos?id=eq.'+PRE.id,
+     {cliente_id:cli, obra_id:val('ePreObra')||null, nombre:nom, estado:val('ePreEst')})
+  .then(function(r){
+    if(r && r[0]) PRE=r[0];
+    var cc=$('cEditCab'); if(cc){ cc.style.display='none'; cc.innerHTML=''; }
+    // sincronizarCabecera repinta también la pantalla de importación y la
+    // franja de destino: si no, seguirían mostrando el cliente viejo
+    sincronizarCabecera();
+    pintarModelos();
+    listar();
+    dpista('Datos de '+PRE.folio+' actualizados.','accent');
+  })
+  .catch(function(err){
+    if(e) e.innerHTML='<span style="color:var(--danger)">No se guardó: '+esc(err.message)+'</span>';
+  });
+}
+
 // Abre el plano de un modelo guardado, directo desde la lista
 function verPlano(id){
   conGeometria(id, function(m){ verModeloDxf(m); planoAbrir(); });
