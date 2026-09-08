@@ -228,6 +228,11 @@
     formas.sort(function (a, b) { return b.area - a.area; });
 
     return { W: Math.round(mx1 - mx0), H: Math.round(my1 - my0),
+             // La caja del alzado en coordenadas del archivo. cortes() la
+             // necesita para no confundir con secciones lo que en realidad
+             // es parte del alzado: las flechas de sentido de apertura de una
+             // corrediza son polilíneas complejas y se colaban como "corte".
+             caja: { x0: mx0, y0: my0, x1: mx1, y1: my1 },
              piezas: piezas, formas: formas,
              cristales: panes.length, total: piezas.length };
   }
