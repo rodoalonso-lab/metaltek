@@ -7652,7 +7652,10 @@ function pintarModelos(){
         '<div><span class="mono" style="font-weight:800;font-size:15px">'+esc(PRE.folio)+'</span> '+
         '<span style="font-weight:700">'+esc(PRE.nombre)+'</span> '+
         '<span class="badge" style="color:var(--dim);border-color:var(--border)">'+esc(PRE.estado)+'</span></div>'+
-        '<button class="chip" onclick="CANC.cerrarPre()">Cerrar</button></div>';
+        '<div style="display:flex;gap:6px">'+
+        '<button class="chip" onclick="CANC.editarCabecera()">Editar datos</button>'+
+        '<button class="chip" onclick="CANC.cerrarPre()">Cerrar</button></div></div>'+
+        '<div id="cEditCab" style="display:none;margin-bottom:12px"></div>';
 
   if(!MODELOS.length){
     c.innerHTML=h+'<div class="item-sub">Este presupuesto todavía no tiene modelos. '+
