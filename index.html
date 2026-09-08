@@ -7495,7 +7495,10 @@ function sincronizarCabecera(){
 
 function recargarModelos(){
   if(!PRE) return Promise.resolve();
-  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=*&order=orden')
+  // Sin la geometría: la lista sólo necesita texto y números. Traer
+  // 'select=*' descargaba ~100 KB de vértices por modelo para pintar una
+  // tabla. Los vértices se piden al abrir un modelo, uno a la vez.
+  return db('GET','canc_modelos?presupuesto_id=eq.'+PRE.id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
     .then(function(r){
       MODELOS=r||[];
       var costo=MODELOS.reduce(function(a,m){ return a+Number(m.costo||0)*Number(m.cantidad||1); },0);
@@ -7565,13 +7568,23 @@ function cerrarPre(){
 
 // Abre el plano de un modelo guardado, directo desde la lista
 function verPlano(id){
-  var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
-  verModeloDxf(m);
-  planoAbrir();
+  conGeometria(id, function(m){ verModeloDxf(m); planoAbrir(); });
 }
-function abrirModelo(id){
+function abrirModelo(id){ conGeometria(id, verModeloDxf); }
+
+// Trae la geometría de UN modelo y la entrega al callback. La lista viene
+// sin ella a propósito; aquí se pide sólo lo que se va a dibujar.
+function conGeometria(id, luego){
   var m=MODELOS.filter(function(x){return x.id===id;})[0]; if(!m) return;
-  verModeloDxf(m);
+  if(m.modelo && m.despiece){ luego(m); return; }          // ya cargada
+  dpista('Cargando el modelo…');
+  db('GET','canc_modelos?id=eq.'+id+'&select=modelo,despiece')
+    .then(function(r){
+      if(r && r[0]){ m.modelo=r[0].modelo; m.despiece=r[0].despiece; }
+      dpista('');
+      luego(m);
+    })
+    .catch(function(e){ dpista('No se pudo cargar el modelo: '+e.message,'danger'); });
 }
 
 // Reconstruye la vista de importación desde lo que se guardó. No vuelve a
@@ -7631,7 +7644,7 @@ function listar(){
 function abrirPre(id){
   Promise.all([
     db('GET','canc_presupuestos?id=eq.'+id+'&select=*'),
-    db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=*&order=orden')
+    db('GET','canc_modelos?presupuesto_id=eq.'+id+'&select=id,presupuesto_id,orden,clave,descripcion,cantidad,tipo,vano_w,vano_h,costo,precio&order=orden')
   ]).then(function(r){
     PRE=r[0][0]; MODELOS=r[1]||[]; MODELO_ID=null;
     sincronizarCabecera();
