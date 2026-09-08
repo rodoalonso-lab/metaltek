@@ -480,15 +480,23 @@
       var x1 = Math.max.apply(null, idx.map(function (n) { return comp[n].c.x1; }));
       var y1 = Math.max.apply(null, idx.map(function (n) { return comp[n].c.y1; }));
       var vert = idx.reduce(function (a, n) { return a + comp[n].pts.length; }, 0);
+      // Recuperar lo simple que cae dentro de esta caja: es el cristal y los
+      // detalles menores. Sin esto la sección son islas de perfil flotando.
+      var piezas = idx.map(function (n) { return comp[n]; });
+      sueltas.forEach(function (s) {
+        if (s.c.x0 >= x0 - 1 && s.c.y0 >= y0 - 1 && s.c.x1 <= x1 + 1 && s.c.y1 <= y1 + 1)
+          piezas.push(s);
+      });
       return {
         w: Math.round((x1 - x0) * 10) / 10,
         h: Math.round((y1 - y0) * 10) / 10,
-        vertices: vert,
-        // horizontal si es más ancho que alto: así se rotula en el plano
+        vertices: vert,      // sólo las complejas: es la medida de "qué tan sección es"
+        // horizontal si es más ancho que alto; en cortes() esto se corrige
+        // luego por comparación entre los dos cortes del archivo
         orientacion: (x1 - x0) >= (y1 - y0) ? 'horizontal' : 'vertical',
-        formas: idx.map(function (n) {
-          return { cerrada: comp[n].cerrada, color: comp[n].color,
-                   pts: comp[n].pts.map(function (q) {
+        formas: piezas.map(function (n) {
+          return { cerrada: n.cerrada, color: n.color,
+                   pts: n.pts.map(function (q) {
                      return [Math.round((q[0] - x0) * 10) / 10,
                              Math.round((y1 - q[1]) * 10) / 10];
                    }) };
