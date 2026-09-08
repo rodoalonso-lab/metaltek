@@ -6447,6 +6447,9 @@ function money(n){
 
 // ── Estado ────────────────────────────────────────────────────────────
 var CLIENTES=[], OBRAS=[], PRE=null, MODELOS=[], MODELO_ID=null;
+// Última lista de cotizaciones que se pintó en Guardados. El botón Borrar la
+// consulta para armar el aviso sin volver a pegarle a la base.
+var LISTA=[];
 var EDIT_CLI=null, EDIT_OBRA=null, SUB='importar';
 var IMP=null;   // { archivo, datos, items, creados, total }
 var INSUMOS=[], EDIT_INS=null;
@@ -7651,6 +7654,7 @@ function listar(){
   var f=val('cFEst');
   db('GET','v_canc_presupuestos?select=*'+(f?'&estado=eq.'+f:'')+'&order=created_at.desc')
   .then(function(r){
+    LISTA = r || [];   // el borrado necesita folio y número de modelos para avisar
     if(!r || !r.length){ c.innerHTML='<div class="item-sub">Todavía no hay presupuestos guardados.</div>'; return; }
     var h='<table><tr><th>Folio</th><th>Presupuesto</th><th>Cliente / obra</th><th>Estado</th>'+
           '<th class="n">Modelos</th><th class="n">Total</th><th></th></tr>';
@@ -7759,7 +7763,8 @@ return {
   abrirModelo:abrirModelo,
   borrarModelo:borrarModelo,
   listar:listar,
-  abrirPre:abrirPre
+  abrirPre:abrirPre,
+  borrarPre:borrarPre
 };
 })();
 </script>
