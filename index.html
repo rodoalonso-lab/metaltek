@@ -7593,7 +7593,7 @@ function guardarParams(){
       if(r&&r[0]) PRE=r[0];
       if(e) e.innerHTML='<span style="color:var(--accent)">Guardado. '+
         'Las tarjetas ya usan estos porcentajes.</span>';
-      pintarApuLista();
+      refrescarCosteo();
       if(APU_ID) apuAbrir(APU_ID);      // refrescar la tarjeta abierta
     })
     .catch(function(err){
@@ -7769,7 +7769,7 @@ function indEditar(id, campo, valor){
       pintarIndirectos();
       var d=$('cIndDetalle');
       if(d && d.style.display!=='none'){ d.style.display='none'; indToggle(); }
-      pintarApuLista();
+      pintarApuLista();   // el reparto ya cambió: las tarjetas cambian con él
     })
     .catch(function(e){ alert('No se pudo guardar: '+e.message); });
 }
@@ -7779,7 +7779,7 @@ function asignarReceta(id, receta){
     .then(function(){
       var m=MODELOS.filter(function(x){return x.id===id;})[0];
       if(m) m.receta_id=receta||null;
-      pintarApuLista();
+      refrescarCosteo();   // cambian las jornadas, y con ellas el indirecto
       if(APU_ID===id) apuAbrir(id);
     })
     .catch(function(e){ alert('No se pudo asignar la receta: '+e.message); });
@@ -8355,7 +8355,7 @@ function sincronizarCabecera(){
   if($('dPreNom'))  $('dPreNom').value  = PRE.nombre||'';
   pintarDestino();
   guardarDestino();
-  if(SUB==='costeo'){ pintarParams(); pintarApuLista(); }
+  if(SUB==='costeo'){ pintarParams(); refrescarCosteo(); }
 }
 
 function recargarModelos(){
@@ -8686,6 +8686,8 @@ return {
   editarCabecera:editarCabecera,
   guardarParams:guardarParams,
   asignarReceta:asignarReceta,
+  indToggle:indToggle,
+  indEditar:indEditar,
   apuAbrir:apuAbrir,
   apuCerrar:apuCerrar,
   apuImprimir:apuImprimir,
