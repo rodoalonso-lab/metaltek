@@ -7475,7 +7475,12 @@ function guardarImport(){
       presupuesto_id:PRE.id, orden:orden,
       clave:'M-'+(orden<10?'0':'')+orden,
       descripcion: IMP.archivo.replace(/\.dxf$/i,'') + ' · ' + IMP.items.length + ' referencias',
-      cantidad:1, tipo:'dxf', vano_w:null, vano_h:null,
+      cantidad:1, tipo:'dxf',
+      // La medida del vano se guardaba en nulo. La tarjeta APU la necesita:
+      // los m² de la pieza son la base de casi todos los rendimientos.
+      vano_w:(IMP.alzado&&IMP.alzado.W)||null,
+      vano_h:(IMP.alzado&&IMP.alzado.H)||null,
+      receta_id: val('dPreReceta')||null,
       // el diseño es el archivo; el despiece es lo que WinPerfil ya resolvió
       modelo:   { origen:'dxf', archivo:IMP.archivo, importado:new Date().toISOString(),
                   alzado:IMP.alzado, cotas:IMP.cotas, minis:IMP.minis, cortes:IMP.cortes },
