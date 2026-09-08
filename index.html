@@ -7692,6 +7692,7 @@ function pintarModelos(){
 // Cierra el presupuesto abierto sin borrar nada
 function cerrarPre(){
   PRE=null; MODELOS=[]; MODELO_ID=null; IMP=null;
+  olvidarDestino();
   pintarModelos(); pintarImport(); pintarDestino(); listar();
 }
 
@@ -7807,6 +7808,10 @@ function borrarPre(id){
        (n===1?'':'s')+' de '+p.folio+'. ¿Borrar?')) return null;
 
     return db('DELETE','canc_presupuestos?id=eq.'+id).then(function(){
+      // si era la recordada, olvidarla: si no, al recargar se intenta reabrir
+      // una cotización que ya no existe
+      var d=null; try{ d=JSON.parse(localStorage.getItem(LLAVE_DESTINO)||'null'); }catch(e){}
+      if(d && d.pre===id) olvidarDestino();
       if(PRE && PRE.id===id){ cerrarPre(); }   // ya repinta todo
       else { listar(); }
       dpista('Cotización '+p.folio+' borrada.');
@@ -7839,6 +7844,7 @@ return {
   leerDxf:leerDxf,
   limpiarImport:limpiarImport,
   nuevaCotizacion:nuevaCotizacion,
+  guardarDestino:guardarDestino,
   cerrarPre:cerrarPre,
   verPlano:verPlano,
   planoAbrir:planoAbrir,
