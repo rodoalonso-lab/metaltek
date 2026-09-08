@@ -7317,7 +7317,12 @@ function apuCalcular(m, pre){
   // La cascada del Excel: cada porcentaje sobre el ACUMULADO anterior, no
   // sobre el costo directo. Aplicarlo sobre el directo subestima el precio.
   var p=pre||{};
-  var pInd=Number(p.indirectos_pct)||0, pFin=Number(p.financiamiento_pct)||0;
+  // El % de indirectos ya no se teclea: lo pone el reparto. Con base por
+  // jornadas cada modelo lleva el suyo, según la gente que consume. Si
+  // todavía no hay indirectos calculados, cae al campo capturado.
+  var rep=IND_REPARTO && IND_REPARTO[m.id];
+  var pInd = rep ? rep.pct : (Number(p.indirectos_pct)||0);
+  var pFin=Number(p.financiamiento_pct)||0;
   var pUti=Number(p.utilidad_pct)||0,   pCar=Number(p.cargos_pct)||0;
   var ind=cd*pInd/100;
   var fin=(cd+ind)*pFin/100;
