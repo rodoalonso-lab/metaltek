@@ -6823,6 +6823,31 @@ function texto(x,y,txt,fs,fuerte,rot){
 }
 
 
+// Los cortes seccionales del conjunto, debajo del alzado. Es lo que le da
+// al plano el nivel de detalle de taller: se ve cómo ensamblan los perfiles.
+function planoCortes(){
+  var cs=(IMP && IMP.cortes) || [];
+  if(!cs.length) return '';
+  var h='<div class="pl-cortes"><div class="pl-cth">CORTES</div><div class="pl-ctrow">';
+  cs.forEach(function(c,i){
+    if(!c.formas || !c.formas.length) return;
+    var pad=Math.max(c.w,c.h)*0.03+1;
+    var vb=[-pad,-pad,c.w+pad*2,c.h+pad*2].join(' ');
+    var lin=Math.max(c.w,c.h)*0.0035;
+    var g='';
+    c.formas.forEach(function(f){
+      if(!f.pts || f.pts.length<2) return;
+      g+='<path d="M '+f.pts.map(function(p){return p[0]+' '+p[1];}).join(' L ')+
+         (f.cerrada?' Z':'')+'" fill="'+(f.color||'#d2dae1')+'" fill-opacity="'+(f.color?0.22:0.85)+
+         '" stroke="'+(f.color||'#39434d')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+    });
+    h+='<div class="pl-ct"><svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>'+
+       '<div class="pl-ctlbl">'+(c.orientacion==='vertical'?'Corte vertical':'Corte horizontal')+
+       (cs.length>1?' '+(i+1):'')+'</div></div>';
+  });
+  return h+'</div></div>';
+}
+
 // El corte seccional del perfil, en miniatura, junto a su renglón. Es lo
 // que WinPerfil pone en la primera columna de la tabla y lo que hace que el
 // plano se lea como plano de taller y no como una lista.
