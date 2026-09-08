@@ -6477,9 +6477,12 @@ function plantilla(){
       'que es donde está el catálogo calibrado. Aquí se leen y se valorizan contra tus insumos. '+
       'Lo que no exista se da de alta solo, con precio pendiente.</div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'+
-        '<div><label>Cliente</label><select class="form-input" id="dPreCli" onchange="CANC.filtrarObrasDxf()"></select></div>'+
-        '<div><label>Obra</label><select class="form-input" id="dPreObra"></select></div>'+
-        '<div><label>Nombre del presupuesto</label><input class="form-input" id="dPreNom" placeholder="Fachada poniente"></div>'+
+        '<div><label>Cliente</label><select class="form-input" id="dPreCli" '+
+          'onchange="CANC.filtrarObrasDxf();CANC.guardarDestino()"></select></div>'+
+        '<div><label>Obra</label><select class="form-input" id="dPreObra" '+
+          'onchange="CANC.guardarDestino()"></select></div>'+
+        '<div><label>Nombre del presupuesto</label><input class="form-input" id="dPreNom" '+
+          'placeholder="Fachada poniente" onchange="CANC.guardarDestino()"></div>'+
       '</div>'+
       '<div id="dDestino" style="margin-top:10px"></div>'+
       '<label style="margin-top:12px">Archivo .dxf</label>'+
@@ -7171,6 +7174,7 @@ function nuevaCotizacion(){
   pintarImport();
   pintarModelos();
   pintarDestino();
+  olvidarDestino();
   dpista('Cotización nueva. Elige cliente, obra y archivo.');
 }
 
@@ -7615,6 +7619,7 @@ function sincronizarCabecera(){
   if($('dPreObra')) $('dPreObra').value=PRE.obra_id||'';
   if($('cPreEst')) $('cPreEst').value=PRE.estado||'borrador';
   pintarDestino();
+  guardarDestino();
 }
 
 function recargarModelos(){
