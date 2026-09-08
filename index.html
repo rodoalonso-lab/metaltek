@@ -7232,6 +7232,95 @@ function datos(){
   }).catch(function(e){ dpista('No se pudo leer el catálogo: '+e.message,'danger'); });
 }
 
+// ══ COSTEO Y TARJETA APU ══════════════════════════════════════════════
+// La tarjeta del Excel tiene 54 renglones: 20 materiales, 9 de mano de obra,
+// 5 de herramienta, y la cascada hasta el precio unitario. Aquí los
+// materiales salen del despiece del DXF —exactos, con los largos reales de
+// corte— y la mano de obra de la receta de la tipología.
+var RECETAS=[], APU_ID=null;
+
+function cargarRecetas(){
+  return db('GET','canc_recetas?select=id,clave,nombre,descripcion,activa'+
+                  ',canc_receta_renglones(id,orden,base,factor,notas,'+
+                  'canc_insumos(id,clave,descripcion,unidad,tipo,precio))'+
+                  '&activa=is.true&order=clave')
+    .then(function(r){
+      RECETAS=r||[];
+      RECETAS.forEach(function(x){
+        x.renglones=(x.canc_receta_renglones||[]).sort(function(a,b){return a.orden-b.orden;});
+      });
+      var s=$('dPreReceta');
+      if(s){ var v=s.value; s.innerHTML=''; opt(s,'','— sin mano de obra —');
+             RECETAS.forEach(function(x){ opt(s,x.id,x.clave+' · '+x.nombre); });
+             s.value=v; }
+      return RECETAS;
+    })
+    .catch(function(e){ RECETAS=[]; });
+}
+
+// Las bases sobre las que se aplica cada rendimiento. Todas se derivan del
+// despiece o del vano: ninguna se teclea.
+function basesDe(m){
+  var d=(m.despiece&&m.despiece.items)||[];
+  var W=Number(m.vano_w)||0, H=Number(m.vano_h)||0;
+  var suma=function(sec,campo){
+    return d.filter(function(i){return i.seccion===sec;})
+            .reduce(function(a,i){return a+(Number(i[campo])||0);},0);
+  };
+  return {
+    m2:        W&&H ? (W*H)/1e6 : 0,
+    pieza:     1,
+    ml_perim:  W&&H ? 2*(W+H)/1000 : 0,
+    ml_perfil: suma('perfiles','cantidad'),
+    m2_vidrio: suma('vidrios','cantidad')
+  };
+}
+
+// El cálculo completo de una tarjeta. Devuelve los renglones y todos los
+// subtotales, sin pintar nada: así se puede probar y reusar en la explosión.
+function apuCalcular(m, pre){
+  var receta=RECETAS.filter(function(x){return x.id===m.receta_id;})[0]||null;
+  var bases=basesDe(m);
+  var mat=((m.despiece&&m.despiece.items)||[]).map(function(i){
+    var cant=Number(i.cantidad)||0, pu=Number(i.precio)||0;
+    return { clave:i.clave||'—', desc:i.descripcion||'', unidad:i.unidad||'',
+             cantidad:cant, pu:pu, importe:cant*pu, sinPrecio:!pu };
+  });
+  var mo=[], he=[];
+  (receta?receta.renglones:[]).forEach(function(r){
+    var ins=r.canc_insumos; if(!ins) return;
+    var base=bases[r.base]||0;
+    var cant=(Number(r.factor)||0)*base;
+    var pu=Number(ins.precio)||0;
+    var fila={ clave:ins.clave, desc:ins.descripcion, unidad:ins.unidad||'',
+               cantidad:cant, pu:pu, importe:cant*pu, sinPrecio:!pu,
+               base:r.base, factor:Number(r.factor)||0 };
+    if(ins.tipo==='mano_obra') mo.push(fila); else he.push(fila);
+  });
+
+  var sum=function(a){ return a.reduce(function(x,y){return x+y.importe;},0); };
+  var sMat=sum(mat), sMo=sum(mo), sHe=sum(he);
+  var cd=sMat+sMo+sHe;
+
+  // La cascada del Excel: cada porcentaje sobre el ACUMULADO anterior, no
+  // sobre el costo directo. Aplicarlo sobre el directo subestima el precio.
+  var p=pre||{};
+  var pInd=Number(p.indirectos_pct)||0, pFin=Number(p.financiamiento_pct)||0;
+  var pUti=Number(p.utilidad_pct)||0,   pCar=Number(p.cargos_pct)||0;
+  var ind=cd*pInd/100;
+  var fin=(cd+ind)*pFin/100;
+  var uti=(cd+ind+fin)*pUti/100;
+  var car=(cd+ind+fin+uti)*pCar/100;
+  var pu=cd+ind+fin+uti+car;
+
+  return { receta:receta, bases:bases, mat:mat, mo:mo, he:he,
+           sMat:sMat, sMo:sMo, sHe:sHe, cd:cd,
+           ind:ind, fin:fin, uti:uti, car:car, pu:pu,
+           pInd:pInd, pFin:pFin, pUti:pUti, pCar:pCar,
+           jornadas: mo.reduce(function(a,x){ return a+(x.unidad==='jor'?x.cantidad:0); },0),
+           sinPrecio: mat.concat(mo,he).filter(function(x){return x.sinPrecio;}).length };
+}
+
 // ── Dónde me quedé ────────────────────────────────────────────────────
 // Una cotización lleva varios modelos y se arma a lo largo del día, con
 // recargas de por medio. Si al entrar la pantalla arranca en blanco, hay que
