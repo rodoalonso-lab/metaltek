@@ -673,7 +673,7 @@
   }
 
   var API = { leerTextos: leerTextos, parsear: parsear, resumir: resumir, alzado: alzado,
-              cotas: cotasEtiquetadas, miniaturas: miniaturas,
+              cotas: cotasEtiquetadas, miniaturas: miniaturas, cortes: cortes,
               empatar: empatar, indiceInsumos: indiceInsumos, limpiar: limpiar };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
