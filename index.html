@@ -6715,13 +6715,27 @@ function planoDibujo(a, vidrios){
     return 'M '+f.pts.map(function(p){ return p[0]+' '+p[1]; }).join(' L ')+(f.cerrada?' Z':'');
   };
   if(a.formas && a.formas.length){
-    a.formas.forEach(function(f){
+    // Orden: primero el aluminio, el cristal al final. Al revés el cristal
+    // quedaba sepultado bajo los perfiles y la puerta se veía maciza.
+    // Va translúcido, que además es lo correcto: por un cristal se ve el
+    // perfil de atrás.
+    var alu=a.formas.filter(function(f){ return !f.cristal; });
+    var vid=a.formas.filter(function(f){ return f.cristal; });
+    alu.forEach(function(f){
       if(!f.pts || f.pts.length<2) return;
-      // si el DXF trae color de entidad se respeta; si no, paleta del plano
-      var rel=f.color||(f.cristal?PL_VIDRIO:'#dde3e8');
+      // dos puntos es una línea suelta — las diagonales de apertura, por
+      // ejemplo. Rellenarlas no tiene sentido y ensucia el dibujo.
+      var esLinea=f.pts.length===2;
+      var rel=f.color||'#dde3e8';
       var tra=f.color||'#55606b';
-      g+='<path d="'+camino(f)+'" fill="'+rel+'" fill-opacity="'+(f.color?0.20:1)+
+      g+='<path d="'+camino(f)+'" fill="'+(esLinea?'none':rel)+
+         '" fill-opacity="'+(f.color?0.20:1)+
          '" stroke="'+tra+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
+    });
+    vid.forEach(function(f){
+      if(!f.pts || f.pts.length<2) return;
+      g+='<path d="'+camino(f)+'" fill="'+(f.color||PL_VIDRIO)+'" fill-opacity="0.55"'+
+         ' stroke="'+(f.color||'#7d8a97')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
     });
   } else {
     // Modelo guardado antes de que se leyeran los vértices: sólo tiene las
