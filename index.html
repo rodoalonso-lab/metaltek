@@ -6739,12 +6739,22 @@ function planoDibujo(a, vidrios){
     });
   } else {
     // Modelo guardado antes de que se leyeran los vértices: sólo tiene las
-    // cajas envolventes. Se dibujan para que el plano no salga vacío, con
-    // aviso de que el detalle se recupera reimportando el DXF.
+    // cajas envolventes. Se dibujan para que el plano no salga vacío, pero
+    // con una marca de agua encima: sin ella parece un dibujo malo y no un
+    // dibujo viejo, y se pierde tiempo buscando un problema que no existe.
     (a.piezas||[]).forEach(function(p){
+      if(p.cristal) return;
       g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
-         '" fill="'+(p.cristal?PL_VIDRIO:'#dde3e8')+'" stroke="#55606b" stroke-width="'+lin+'"/>';
+         '" fill="#dde3e8" stroke="#55606b" stroke-width="'+lin+'"/>';
     });
+    (a.piezas||[]).forEach(function(p){
+      if(!p.cristal) return;
+      g+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+
+         '" fill="'+PL_VIDRIO+'" fill-opacity="0.55" stroke="#7d8a97" stroke-width="'+lin+'"/>';
+    });
+    g+='<text x="'+(W/2)+'" y="'+(H*0.53)+'" font-size="'+(Math.max(W,H)*0.045)+
+       '" text-anchor="middle" fill="#c0392b" opacity="0.5" font-weight="700" '+
+       'transform="rotate(-22 '+(W/2)+','+(H*0.53)+')">DIBUJO SIMPLIFICADO · REIMPORTA EL DXF</text>';
   }
   var crist=(a.piezas||[]).filter(function(p){return p.cristal;});
   if(!crist.length && a.formas)
