@@ -6349,29 +6349,30 @@ aplicarTemaGuardado();
 #canc-app .pl-datos span{display:block;font-size:6.5pt;letter-spacing:.09em;color:#666;text-transform:uppercase}
 #canc-app .pl-datos b{font-size:9.5pt;line-height:1.25;display:block}
 #canc-app .pl-cuerpo{display:grid;grid-template-columns:1fr 74mm;gap:6mm;flex:1;min-height:0}
-#canc-app .pl-izq{display:flex;flex-direction:column;min-height:0;gap:3mm}
-#canc-app .pl-dib{display:flex;align-items:center;justify-content:center;min-height:0;flex:1}
-#canc-app .pl-dib svg{width:100%;height:100%;max-height:112mm;background:none;border:none;border-radius:0}
-#canc-app .pl-cortes{border-top:.6pt solid #999;padding-top:2mm}
-#canc-app .pl-cth{font-size:6.5pt;font-weight:800;letter-spacing:.12em;color:#555;margin-bottom:1mm}
-#canc-app .pl-ctrow{display:flex;gap:6mm;align-items:flex-end;justify-content:center}
-#canc-app .pl-ct{text-align:center}
-#canc-app .pl-ct svg{height:26mm;max-width:78mm;background:none;border:none;border-radius:0;display:block}
-/* El corte vertical es 3 veces más alto que ancho. Con el mismo alto que el
-   horizontal salía como una tira de 7 mm, ilegible. Va más alto y más angosto. */
-#canc-app .pl-ct.v svg{height:44mm;max-width:32mm}
-#canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em}
-/* Pieza vertical y angosta (puertas, fijos altos). Centrada en una columna
-   ancha deja media hoja en blanco a los lados y aplasta los cortes contra el
-   pie. Con los cortes al costado el alzado usa todo el alto disponible y la
-   hoja se llena. El interruptor está en planoHTML: alto/ancho > 1.35. */
-#canc-app .pl-izq.alto{display:grid;grid-template-columns:1fr 58mm;gap:5mm;align-items:stretch}
-#canc-app .pl-izq.alto .pl-dib{flex:none;min-height:0}
-#canc-app .pl-izq.alto .pl-dib svg{max-height:none;height:100%}
-#canc-app .pl-izq.alto .pl-cortes{border-top:none;border-left:.6pt solid #999;
-  padding-top:0;padding-left:4mm;display:flex;flex-direction:column;justify-content:center}
-#canc-app .pl-izq.alto .pl-ctrow{flex-direction:column;gap:6mm;align-items:center}
-#canc-app .pl-izq.alto .pl-ct svg{height:32mm;max-width:52mm}
+/* Los cortes van EN CRUZ alrededor del alzado, como en la hoja de WinPerfil:
+   el vertical al costado derecho, alineado con el alto de la pieza, y el
+   horizontal abajo, alineado con su ancho. Así cada corte queda del lado del
+   plano por el que se cortó y se lee sin pensarlo. Apilarlos los dos abajo
+   obligaba a adivinar cuál correspondía a qué. */
+#canc-app .pl-izq{display:grid;grid-template-columns:1fr 34mm;grid-template-rows:1fr 34mm;
+  gap:3mm 4mm;min-height:0}
+#canc-app .pl-dib{grid-area:1/1/2/2;display:flex;align-items:center;justify-content:center;min-height:0}
+#canc-app .pl-dib svg{width:100%;height:100%;background:none;border:none;border-radius:0}
+#canc-app .pl-cv{grid-area:1/2/2/3;border-left:.6pt solid #999;padding-left:3mm;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+#canc-app .pl-ch{grid-area:2/1/3/2;border-top:.6pt solid #999;padding-top:2mm;
+  display:flex;align-items:center;justify-content:center;gap:6mm;min-height:0}
+#canc-app .pl-ct{text-align:center;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;min-height:0;min-width:0}
+#canc-app .pl-ct svg{background:none;border:none;border-radius:0;display:block;flex:1;min-height:0}
+/* Cada corte se estira en su propio eje: el de abajo por ancho, el del
+   costado por alto. Con un tamaño fijo para los dos, el vertical salía como
+   una tira de 7 mm. */
+#canc-app .pl-ch .pl-ct{height:100%}
+#canc-app .pl-ch .pl-ct svg{width:auto;max-width:100%;height:100%}
+#canc-app .pl-cv .pl-ct{width:100%;flex:1}
+#canc-app .pl-cv .pl-ct svg{width:100%;height:auto;max-height:100%;flex:none}
+#canc-app .pl-ctlbl{font-size:6pt;color:#666;margin-top:1mm;letter-spacing:.04em;flex:none}
 #canc-app .pl-th{font-size:7.5pt;font-weight:800;letter-spacing:.12em;color:#111;
   border-bottom:1.4pt solid #111;padding-bottom:2px;margin:0 0 3px}
 #canc-app .pl-th:not(:first-child){margin-top:5mm}
