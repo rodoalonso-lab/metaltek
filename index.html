@@ -6947,13 +6947,8 @@ function miniSVG(m){
   var pad=m.w*0.06+1;
   var vb=[-pad,-pad,m.w+pad*2,m.h+pad*2].join(' ');
   var lin=Math.max(m.w,m.h)*0.022;
-  var g='';
-  m.formas.forEach(function(f){
-    if(!f.pts || f.pts.length<2) return;
-    g+='<path d="M '+f.pts.map(function(p){return p[0]+' '+p[1];}).join(' L ')+
-       (f.cerrada?' Z':'')+'" fill="'+(f.color||'#c8d2da')+'" fill-opacity="'+(f.color?0.25:0.9)+
-       '" stroke="'+(f.color||'#3f4a55')+'" stroke-width="'+lin+'" stroke-linejoin="round"/>';
-  });
+  // mismo criterio que los cortes grandes: cámaras huecas, no macizas
+  var g=seccionSVG(m.formas, '#c8d2da', '#3f4a55', lin);
   return '<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
 }
 
