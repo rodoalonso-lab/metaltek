@@ -502,10 +502,22 @@
     // vienen en pareja, y de los dos, el de proporción más ancha es el
     // horizontal y el otro el vertical. Eso no depende de ningún umbral
     // absoluto, que es lo que se rompía con herrajes salientes.
+    // Antes de comparar hay que tirar la basura. En el archivo quedan
+    // fragmentos sueltos —marcas de 20x120, restos de simbología— que la
+    // unión por banda apila en tiras altísimas. Como su proporción es la más
+    // vertical de todas, ganaban la comparación y el "corte vertical" salía
+    // como una raya de 20 unidades. Un corte de verdad tiene dos órdenes de
+    // magnitud más de vértices que un fragmento.
     var n = max || 3;
     var sel = [];
-    if (n >= 2 && unicos.length >= 2) {
-      var porFigura = unicos.slice().sort(function (a, b) {
+    var tope = Math.max.apply(null, unicos.map(function (x) { return x.vertices; }));
+    var reales = unicos.filter(function (x) {
+      return x.vertices >= Math.max(150, tope * 0.05);
+    });
+    if (reales.length < 2) reales = unicos;      // muestra pobre: mejor algo que nada
+
+    if (n >= 2 && reales.length >= 2) {
+      var porFigura = reales.slice().sort(function (a, b) {
         return (b.w / b.h) - (a.w / a.h);
       });
       var A = porFigura[0], B = porFigura[porFigura.length - 1];
