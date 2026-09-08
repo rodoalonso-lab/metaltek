@@ -355,7 +355,7 @@
   // formas complejas que quedan fuera del alzado y fuera de la franja de
   // miniaturas. Se devuelven ordenados por tamaño; el plano toma los
   // primeros.
-  function cortes(contenido, max) {
+  function cortes(contenido, max, zonaAlzado) {
     var textos = leerTextos(contenido);
     var refs = textos.filter(function (t) {
       var s = t.texto.replace('@', '');
@@ -363,12 +363,22 @@
     });
     var xref = refs.length ? Math.min.apply(null, refs.map(function (r) { return r.x; })) : 1e9;
 
+    // El alzado NO es un corte. Sin excluirlo, en una corrediza las flechas
+    // de sentido de apertura —polilíneas de decenas de vértices— entraban al
+    // agrupador y salían dibujadas como si fueran una sección. Quien llama
+    // suele tener ya el alzado calculado; si no, se calcula aquí.
+    var za = zonaAlzado;
+    if (za === undefined) { var al = alzado(contenido); za = al && al.caja; }
+
     var comp = [];
     leerFormas(contenido).forEach(function (f) {
       if (f.pts.length < 8) return;
       var c = caja(f.pts);
       // fuera de la franja de miniaturas
       if (c.x1 < xref && c.x1 > xref - 700 && (c.y1 - c.y0) < 95) return;
+      // dentro del alzado: es parte del dibujo, no una sección
+      if (za && c.x0 >= za.x0 - 1 && c.y0 >= za.y0 - 1 &&
+                c.x1 <= za.x1 + 1 && c.y1 <= za.y1 + 1) return;
       comp.push({ c: c, pts: f.pts, color: colorACI(f.color), cerrada: f.cerrada !== false });
     });
     if (!comp.length) return [];
