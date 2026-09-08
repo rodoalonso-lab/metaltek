@@ -6743,7 +6743,7 @@ function sub(s){
   if(s==='guardados'){ listar(); pintarModelos(); }
   if(s==='insumos') pintarInsumos();
   if(s==='importar') pintarDestino();
-  if(s==='costeo'){ pintarParams(); pintarApuLista(); }
+  if(s==='costeo'){ pintarParams(); refrescarCosteo(); }
 }
 
 
@@ -7664,9 +7664,7 @@ function pintarApuLista(){
       ' renglón(es) sin precio</b> entre todas las tarjetas. El costo directo está incompleto '+
       'hasta capturarlos en Insumos.</div>';
     c.innerHTML=h;
-  })
-  .catch(function(e){ c.innerHTML='<div style="color:var(--danger)">No se pudo calcular: '+
-    esc(e.message)+'</div>'; });
+  })(MODELOS_CD);
 }
 
 // ── Pantalla de indirectos ────────────────────────────────────────────
