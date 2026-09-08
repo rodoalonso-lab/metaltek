@@ -6399,6 +6399,39 @@ aplicarTemaGuardado();
 #canc-app .pl-linea{border-bottom:.8pt solid #111;height:9mm;margin-bottom:2px}
 #canc-app .pl-nota{font-size:6.6pt;color:#666;text-align:right}
 
+/* ══ TARJETA APU ═══════════════════════════════════════════════════
+   Vertical, carta. Misma lógica que el plano: hoja blanca siempre,
+   medidas en milímetros para que al imprimir salga a tamaño. */
+#canc-app .apu-hoja{background:#fff;color:#111;width:216mm;min-height:279mm;padding:10mm 12mm;
+  margin:0 auto 8mm;box-shadow:0 4px 24px rgba(0,0,0,.4);
+  font-family:'Barlow',Arial,sans-serif;font-size:8pt}
+#canc-app .apu-cab{display:flex;align-items:baseline;gap:12px;border-bottom:2.2pt solid #111;padding-bottom:4px}
+#canc-app .apu-marca{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19pt;letter-spacing:.04em}
+#canc-app .apu-tit{font-size:9.5pt;font-weight:700;letter-spacing:.14em;color:#555;flex:1}
+#canc-app .apu-num{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16pt;
+  border:2pt solid #111;padding:1px 10px}
+#canc-app .apu-datos{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1pt solid #111;margin-bottom:3mm}
+#canc-app .apu-datos>div{padding:3px 7px 5px;border-right:.6pt solid #bbb}
+#canc-app .apu-datos>div:last-child{border-right:none}
+#canc-app .apu-datos span{display:block;font-size:6pt;letter-spacing:.09em;color:#666;text-transform:uppercase}
+#canc-app .apu-datos b{font-size:9pt;line-height:1.25;display:block}
+#canc-app table.apu-t{width:100%;border-collapse:collapse;font-size:7.4pt;margin-bottom:1mm}
+#canc-app table.apu-t th{text-align:left;font-size:6.2pt;letter-spacing:.06em;color:#555;
+  text-transform:uppercase;padding:2px 3px;border-bottom:.6pt solid #999;background:none}
+#canc-app table.apu-t td{padding:1.5px 3px;border-bottom:.4pt solid #e2e2e2;color:#111;vertical-align:top}
+#canc-app table.apu-t td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#canc-app table.apu-t td.k{font-family:ui-monospace,Consolas,monospace;font-size:6.8pt}
+#canc-app table.apu-t tr.sec td{background:#f0f2f4;font-weight:800;font-size:6.6pt;
+  letter-spacing:.1em;text-transform:uppercase;padding-top:4px;border-bottom:.6pt solid #999}
+#canc-app table.apu-t tr.sub td{font-weight:700;border-top:.8pt solid #111;border-bottom:none;background:#fafbfc}
+#canc-app table.apu-t tr.cd td{font-weight:800;font-size:8.4pt;border-top:1.6pt solid #111;
+  border-bottom:1.6pt solid #111;background:#eef1f3}
+#canc-app table.apu-t tr.pu td{font-weight:800;font-size:10pt;border-top:2.2pt solid #111;
+  border-bottom:2.2pt solid #111;background:#e6eaee}
+#canc-app table.apu-t tr.cero td{color:#b04a3a}
+#canc-app .apu-pie{margin-top:4mm;border-top:1pt solid #111;padding-top:2mm;
+  font-size:6.6pt;color:#666;line-height:1.5}
+
 @media print{
   /* sólo la hoja: se oculta la app entera */
   body>*{display:none !important}
