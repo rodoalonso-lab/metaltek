@@ -7607,13 +7607,12 @@ function pintarObras(){
 
 
 // ── Presupuestos ──────────────────────────────────────────────────────
-function nuevoPresupuesto(){
-  PRE=null; MODELOS=[]; MODELO_ID=null;
-  $('cPreNom').value=''; $('cPreEst').value='borrador';
-  pintarModelos(); dpista('Presupuesto nuevo: se crea al guardar el primer modelo.');
-}
-// Cliente, obra y nombre viven en dos tarjetas (Importar y Diseño). Si se
-// dejan sueltas, cada una guarda una cosa distinta en el mismo presupuesto.
+// Tocaba cPreNom y cPreEst sin comprobar que existieran. Al borrarse la
+// pestaña Diseño quedaron en null y esta función lanzaba TypeError antes de
+// llegar a pintarModelos. Ahora hace lo mismo que el botón de la pantalla de
+// importación, que es la única que quedó.
+function nuevoPresupuesto(){ nuevaCotizacion(); }
+
 // Vuelca la cotización abierta a los campos de la pantalla de importación.
 //
 // Esta función copiaba desde cPreCli / cPreObra / cPreNom, que eran los
