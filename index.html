@@ -6432,16 +6432,31 @@ aplicarTemaGuardado();
 #canc-app .apu-pie{margin-top:4mm;border-top:1pt solid #111;padding-top:2mm;
   font-size:6.6pt;color:#666;line-height:1.5}
 
+/* El plano va horizontal y la tarjeta vertical. Como @page no se puede
+   condicionar por clase, se usan páginas con nombre: cada hoja declara la
+   suya y el navegador aplica el tamaño que le toca. */
+@page apaisada{size:letter landscape;margin:8mm}
+@page retrato  {size:letter portrait; margin:10mm}
+#canc-app .pl-hoja{page:apaisada}
+#canc-app .apu-hoja{page:retrato}
+
 @media print{
   /* sólo la hoja: se oculta la app entera */
   body>*{display:none !important}
   body{background:#fff !important;padding:0 !important}
-  #screen-costeo,#canc-app,#cv-importar,#planoWrap{display:block !important}
-  #canc-app>*:not(#cv-importar){display:none !important}
-  #cv-importar>*:not(#planoWrap){display:none !important}
+  #screen-costeo,#canc-app{display:block !important}
+  #canc-app>*{display:none !important}
   #canc-app .pl-barra{display:none !important}
   #canc-app .pl-hoja{box-shadow:none;width:auto;min-height:0;padding:0;margin:0}
-  @page{size:letter landscape;margin:8mm}
+  #canc-app .apu-hoja{box-shadow:none;width:auto;min-height:0;padding:0;margin:0;
+    break-after:page}
+  #canc-app .apu-hoja:last-child{break-after:auto}
+
+  /* qué se imprime lo decide la clase que el botón pone en <body> */
+  body.imp-plano #cv-importar{display:block !important}
+  body.imp-plano #cv-importar>*:not(#planoWrap){display:none !important}
+  body.imp-apu   #cv-costeo{display:block !important}
+  body.imp-apu   #cv-costeo>*:not(#apuWrap){display:none !important}
 }
 </style>
 <script>
