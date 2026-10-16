@@ -1614,12 +1614,19 @@ function showObra(id) {
       <button class="chip" onclick="setGanttZoom('dias','${o.id}')">Por días</button>
     </div>
     <div id="gantt-container-${o.id}" style="min-height:60px"></div>
+    <div id="cobra-host"></div>
     <div style="height:20px"></div>`;
   document.getElementById('obras-list-view').style.display='none';
   document.getElementById('obras-detail-view').style.display='block';
   document.getElementById('obras-detail-view').innerHTML=html;
   document.getElementById('screen-obras').scrollTop=0;
   setTimeout(function(){ renderGantt(id); }, 80);
+  // Control de obra. Va aparte, en su propio contenedor: si algo falla ahí
+  // dentro, la ficha de la obra sigue funcionando como siempre.
+  if(window.COBRA){
+    var host=document.getElementById('cobra-host');
+    if(host) COBRA.montar(o, host);
+  }
 }
 
 function hideObra() {
