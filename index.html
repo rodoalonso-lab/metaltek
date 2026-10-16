@@ -8722,5 +8722,714 @@ return {
 };
 })();
 </script>
+<script>
+// ════════════════════════════════════════════════════════════════════════
+//  CONTROL DE OBRA
+//  Todo vive en window.COBRA. Igual que el módulo de cancelería: un solo
+//  objeto global, cero funciones sueltas, imposible chocar con lo que ya
+//  existe en Metaltek (que es un archivo de medio mega con cientos de
+//  funciones globales).
+//
+//  REGLAS.md, respetadas a propósito:
+//   · Nada de onclick dentro de innerHTML — todo con addEventListener.
+//   · Nada de confirm() — hojas propias.
+//   · Estados en minúsculas y comparaciones sin distinguir mayúsculas.
+//   · Nada de template literals; se concatena, que es lo que ya rompió
+//     el módulo de Tareas cuando se anidaron.
+//   · Sub-nav fija, no dropdowns.
+//
+//  FRONTERA CON FINANZAS: este módulo NO nombra cuentas_por_pagar ni
+//  cuentas_por_cobrar. Lee únicamente las vistas de contrato v_obra_pagado
+//  y v_obra_cobrado. Si Finanzas cambia por dentro, se ajusta la vista.
+// ════════════════════════════════════════════════════════════════════════
+window.COBRA = (function(){
+'use strict';
+
+var OBRA=null, CONTRATO=null, CONCEPTOS=[], BASE=[], PROY=[], ESTIM=[],
+    CAMBIOS=[], PENDS=[], PAGADO=[], COBRADO=null, COMPROM=[], NOMINA=[],
+    TIPOS=[], TAB='tablero', ROL='capturista', MONTADO=false;
+
+// ── utilidades ───────────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s===null||s===undefined?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function n(v){ return Number(v)||0; }
+function money(v){
+  return '$'+n(v).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function pct(v){ return (n(v)*100).toFixed(1)+'%'; }
+function low(s){ return String(s===null||s===undefined?'':s).trim().toLowerCase(); }
+function fecha(d){
+  if(!d) return '—';
+  var p=String(d).slice(0,10).split('-');
+  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : String(d);
+}
+
+// Suma por llave. Devuelve objeto {llave: importe}.
+function porLlave(arr, llave, campo){
+  var o={};
+  (arr||[]).forEach(function(r){
+    var k=r[llave]||'SIN_CLASIFICAR';
+    o[k]=(o[k]||0)+n(r[campo]);
+  });
+  return o;
+}
+
+// ── carga ────────────────────────────────────────────────────────────
+function cargar(obraId){
+  var g=function(q){ return db('GET',q).catch(function(){ return []; }); };
+  return Promise.all([
+    g('obra_contratos?obra_id=eq.'+obraId),
+    g('obra_conceptos?obra_id=eq.'+obraId+'&order=orden'),
+    g('obra_presupuesto_base?obra_id=eq.'+obraId),
+    g('obra_costo_proyectado?obra_id=eq.'+obraId+'&order=tipo_insumo'),
+    g('obra_estimaciones?obra_id=eq.'+obraId+'&order=no'),
+    g('obra_cambios?obra_id=eq.'+obraId+'&order=fecha.desc'),
+    g('obra_pendientes?or=(obra_id.eq.'+obraId+',obra_id.is.null)&order=prioridad,fecha_compromiso'),
+    // ── vistas de contrato: la única puerta hacia Finanzas ──
+    g('v_obra_pagado?obra_id=eq.'+obraId),
+    g('v_obra_cobrado?obra_id=eq.'+obraId),
+    g('v_obra_comprometido?obra_id=eq.'+obraId),
+    g('cat_tipo_insumo?activo=is.true&order=orden'),
+    g('nomina_detalle?select=*,nomina_semanas!inner(obra_id)&nomina_semanas.obra_id=eq.'+obraId)
+  ]).then(function(r){
+    CONTRATO = (r[0]&&r[0][0]) || null;
+    CONCEPTOS=r[1]||[]; BASE=r[2]||[]; PROY=r[3]||[]; ESTIM=r[4]||[];
+    CAMBIOS=r[5]||[]; PENDS=r[6]||[]; PAGADO=r[7]||[];
+    COBRADO=(r[8]&&r[8][0])||null; COMPROM=r[9]||[]; TIPOS=r[10]||[];
+    NOMINA=r[11]||[];
+  });
+}
+
+// ── cálculos (sección 4 del prompt) ──────────────────────────────────
+// Se devuelven todos juntos para que el tablero y las demás pantallas
+// usen exactamente los mismos números: si se calculan dos veces, tarde o
+// temprano se separan.
+function calcular(){
+  var c=CONTRATO||{};
+  var venta=CONCEPTOS.reduce(function(a,x){ return a+n(x.importe); },0);
+  var ejecutado=CONCEPTOS.reduce(function(a,x){
+    return a+n(x.importe)*n(x.avance_fisico); },0);
+  var avance = venta ? ejecutado/venta : 0;
+
+  var estimado=ESTIM.filter(function(e){ return low(e.tipo)!=='anticipo'; })
+                    .reduce(function(a,e){ return a+n(e.importe_ejecutado); },0);
+  var facturado=ESTIM.filter(function(e){ return !!e.fecha_presentada; })
+                     .reduce(function(a,e){ return a+n(e.total); },0);
+  var cobrado = COBRADO ? n(COBRADO.cobrado)
+              : ESTIM.reduce(function(a,e){ return a+n(e.importe_cobrado); },0);
+
+  // Nómina pagada de la obra: entra como MANO_DE_OBRA en comprometido y
+  // en pagado, porque la raya ya salió del banco.
+  var nomPagada=NOMINA.reduce(function(a,x){
+    return a + (x.pagado===false ? 0 : n(x.total)); },0);
+  var jornadasPag=NOMINA.reduce(function(a,x){ return a+n(x.dias_trabajados); },0);
+
+  var base=porLlave(BASE,'tipo_insumo','importe');
+  var cdBase=0; for(var k in base) cdBase+=base[k];
+  var indirectos=cdBase*n(c.pct_indirectos);
+  var costoBase=cdBase+indirectos;
+
+  var proy=porLlave(PROY,'tipo_insumo','importe');
+  var costoProy=0; for(var k2 in proy) costoProy+=proy[k2];
+  if(!PROY.length) costoProy=costoBase;      // sin proyectado capturado, manda la base
+
+  var comp=porLlave(COMPROM,'tipo_insumo','comprometido');
+  comp.MANO_DE_OBRA=(comp.MANO_DE_OBRA||0)+nomPagada;
+  var pag=porLlave(PAGADO,'tipo_insumo','pagado');
+  pag.MANO_DE_OBRA=(pag.MANO_DE_OBRA||0)+nomPagada;
+
+  var totComp=0; for(var k3 in comp) totComp+=comp[k3];
+  var totPag=0;  for(var k4 in pag)  totPag+=pag[k4];
+
+  var fin=n(c.pct_financiamiento), car=n(c.pct_cargos);
+  var util=function(costo){ return venta - costo*(1+fin) - venta*car/(1+car); };
+  var utilBase=util(costoBase), utilProy=util(costoProy);
+
+  // Caja: lo cobrado sin IVA menos lo pagado. Negativa = la obra se está
+  // financiando con dinero de la empresa.
+  var caja=cobrado/1.16 - totPag;
+
+  var jb=n(c.jornadas_base);
+  var rend = (jb && jornadasPag) ? avance/(jornadasPag/jb) : null;
+
+  return { venta:venta, ejecutado:ejecutado, avance:avance, estimado:estimado,
+           porEstimar:ejecutado-estimado, facturado:facturado, cobrado:cobrado,
+           base:base, cdBase:cdBase, indirectos:indirectos, costoBase:costoBase,
+           proy:proy, costoProy:costoProy, comp:comp, pag:pag,
+           totComp:totComp, totPag:totPag, nomPagada:nomPagada,
+           jornadasPag:jornadasPag, rendimiento:rend,
+           utilBase:utilBase, utilProy:utilProy,
+           margenBase: venta?utilBase/venta:0, margenProy: venta?utilProy/venta:0,
+           caja:caja };
+}
+
+// ── piezas de interfaz ───────────────────────────────────────────────
+function semaforoMargen(m){
+  if(m<0.10) return 'var(--danger)';
+  if(m<0.20) return '#F59E0B';
+  return '#10B981';
+}
+function tarjeta(label, valor, sub, color){
+  return '<div class="stat-box"'+(color?' style="border-color:'+color+'33"':'')+'>'+
+    '<div class="stat-label">'+esc(label)+'</div>'+
+    '<div class="stat-val"'+(color?' style="color:'+color+'"':'')+'>'+valor+'</div>'+
+    (sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>';
+}
+function nombreTipo(clave){
+  var t=TIPOS.filter(function(x){ return x.clave===clave; })[0];
+  return t ? t.nombre : (clave==='SIN_CLASIFICAR' ? 'Sin clasificar' : clave);
+}
+// Todos los tipos que aparecen en cualquiera de los cinco orígenes.
+function tiposPresentes(x){
+  var s={};
+  TIPOS.forEach(function(t){ s[t.clave]=1; });
+  [x.base,x.proy,x.comp,x.pag].forEach(function(o){ for(var k in o) s[k]=1; });
+  var orden={}; TIPOS.forEach(function(t,i){ orden[t.clave]=i; });
+  return Object.keys(s).sort(function(a,b){
+    return (orden[a]===undefined?99:orden[a])-(orden[b]===undefined?99:orden[b]);
+  });
+}
+
+// ── 1. TABLERO ───────────────────────────────────────────────────────
+function pintaTablero(el){
+  var x=calcular();
+  var h='<div class="cstats" style="margin-bottom:14px">';
+  h+=tarjeta('Venta contratada', money(x.venta), 'sin IVA');
+  h+=tarjeta('Avance físico', pct(x.avance), money(x.ejecutado)+' ejecutado');
+  h+=tarjeta('Costo proyectado', money(x.costoProy),
+       (x.costoProy>x.costoBase?'▲ ':'')+money(x.costoProy-x.costoBase)+' vs base',
+       x.costoProy>x.costoBase?'var(--danger)':'#10B981');
+  h+=tarjeta('Utilidad proyectada', money(x.utilProy), 'base '+money(x.utilBase));
+  h+=tarjeta('Margen proyectado', pct(x.margenProy),
+       'base '+pct(x.margenBase), semaforoMargen(x.margenProy));
+  h+=tarjeta('Caja de la obra', money(x.caja),
+       x.caja<0?'la financiamos nosotros':'cobrado − pagado',
+       x.caja<0?'var(--danger)':'#10B981');
+  h+=tarjeta('Comprometido', money(x.totComp),
+       x.costoProy?pct(x.totComp/x.costoProy)+' del proyectado':'');
+  h+=tarjeta('Pagado', money(x.totPag), 'cobrado '+money(x.cobrado));
+  h+='</div>';
+
+  if(x.rendimiento!==null){
+    var col=x.rendimiento<0.90?'var(--danger)':(x.rendimiento>=1?'#10B981':'#F59E0B');
+    h+='<div class="card" style="margin-bottom:12px"><div class="card-label">RENDIMIENTO DE MANO DE OBRA</div>'+
+       '<div style="font-size:26px;font-weight:800;color:'+col+'">'+pct(x.rendimiento)+'</div>'+
+       '<div class="item-sub">'+x.jornadasPag.toFixed(2)+' jornadas pagadas de '+
+       n((CONTRATO||{}).jornadas_base).toFixed(2)+' presupuestadas · avance '+pct(x.avance)+'</div></div>';
+  }
+
+  h+='<div class="card"><div class="card-label">CÓMO SE LEE</div><div class="item-sub" style="line-height:1.7">'+
+     'El <b>margen</b> compara la venta contra el costo proyectado, no contra lo que llevas gastado: '+
+     'se mueve cuando cambia la ingeniería o un precio, no cuando llega una factura.<br>'+
+     'La <b>caja</b> es lo cobrado sin IVA menos lo pagado. En rojo significa que la obra '+
+     'avanza con dinero de la empresa.<br>'+
+     'El <b>comprometido</b> ya incluye lo autorizado aunque todavía no se pague.'+
+     '</div></div>';
+  el.innerHTML=h;
+}
+
+// ── 2. CONTRATO Y AVANCE ─────────────────────────────────────────────
+function pintaContrato(el){
+  var c=CONTRATO||{}, x=calcular();
+  var h='<div class="card" style="margin-bottom:12px"><div class="card-label">CONTRATO</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px 14px;margin-top:8px">'+
+    dato('Cotización', esc(c.folio_cotizacion||'—'))+
+    dato('Autorizada', fecha(c.fecha_autorizacion))+
+    dato('Monto sin IVA', money(c.monto_sin_iva))+
+    dato('Anticipo', pct(c.pct_anticipo))+
+    dato('Amortización', pct(c.pct_amortizacion))+
+    dato('Retención', pct(c.pct_retencion))+
+    dato('Indirectos', pct(c.pct_indirectos))+
+    dato('Financiamiento', pct(c.pct_financiamiento))+
+    dato('Cargos', pct(c.pct_cargos))+
+    dato('Jornadas base', n(c.jornadas_base).toFixed(2)+' a '+money(c.costo_jornada))+
+    '</div></div>';
+
+  h+='<div class="card"><div class="card-label">CONCEPTOS Y AVANCE FÍSICO</div>'+
+     '<div class="item-sub" style="margin:4px 0 10px">El avance que captures aquí es el que mueve '+
+     'el ejecutado, el tablero y el porcentaje de la obra.</div>'+
+     '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+     '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">Clave</th>'+
+     '<th style="text-align:left">Descripción</th><th>Cant.</th><th>P.U.</th><th>Importe</th>'+
+     '<th style="width:110px">% avance</th><th>Ejecutado</th></tr>';
+  CONCEPTOS.forEach(function(k){
+    h+='<tr style="text-align:right;border-bottom:1px solid var(--border)">'+
+      '<td style="text-align:left;padding:5px 4px;font-weight:700">'+esc(k.clave||'')+'</td>'+
+      '<td style="text-align:left;color:var(--dim);max-width:240px">'+esc(String(k.descripcion||'').slice(0,70))+'</td>'+
+      '<td>'+n(k.cantidad)+'</td><td>'+money(k.precio_unitario)+'</td>'+
+      '<td style="font-weight:700">'+money(k.importe)+'</td>'+
+      '<td><input type="number" min="0" max="100" step="1" class="cobra-av" '+
+        'data-id="'+k.id+'" value="'+Math.round(n(k.avance_fisico)*100)+'" '+
+        'style="width:62px;padding:3px 5px;font-size:12px;text-align:right" '+
+        (puede('avance')?'':'disabled')+'></td>'+
+      '<td>'+money(n(k.importe)*n(k.avance_fisico))+'</td></tr>';
+  });
+  h+='<tr style="text-align:right;font-weight:800"><td colspan="4" style="text-align:left;padding:8px 4px">TOTAL</td>'+
+     '<td>'+money(x.venta)+'</td><td>'+pct(x.avance)+'</td><td>'+money(x.ejecutado)+'</td></tr>';
+  h+='</table></div></div>';
+  el.innerHTML=h;
+
+  // addEventListener, nunca onclick dentro de innerHTML (REGLAS.md)
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-av'), function(inp){
+    inp.addEventListener('change', function(){
+      guardarAvance(inp.getAttribute('data-id'), inp.value);
+    });
+  });
+}
+function dato(k,v){
+  return '<div><div class="stat-label">'+esc(k)+'</div><div style="font-size:13px;font-weight:700">'+v+'</div></div>';
+}
+
+function guardarAvance(id, valor){
+  var v=Math.max(0, Math.min(100, Number(valor)||0))/100;
+  db('PATCH','obra_conceptos?id=eq.'+id, {avance_fisico:v})
+    .then(function(){
+      var k=CONCEPTOS.filter(function(x){ return x.id===id; })[0];
+      if(k) k.avance_fisico=v;
+      var x=calcular();
+      // el avance de la obra lo manda el ejecutado, no una captura aparte
+      return db('PATCH','obras?id=eq.'+OBRA.id, {avance: Math.round(x.avance*100)});
+    })
+    .then(function(){
+      OBRA.avance=Math.round(calcular().avance*100);
+      if(typeof showToast==='function') showToast('Avance guardado');
+      pinta();
+    })
+    .catch(function(e){
+      if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+    });
+}
+
+// ── 3. COSTO ─────────────────────────────────────────────────────────
+function pintaCosto(el){
+  var x=calcular();
+  var h='<div class="card"><div class="card-label">COSTO POR TIPO DE INSUMO</div>'+
+    '<div class="item-sub" style="margin:4px 0 10px">La <b>base</b> está congelada: es contra lo que '+
+    'se mide todo. Al editar el <b>proyectado</b> se pide una nota y queda registrado en Cambios.</div>'+
+    '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">Tipo de insumo</th>'+
+    '<th>Base</th><th style="width:110px">Proyectado</th><th>Desviación</th><th>Comprometido</th>'+
+    '<th>Pagado</th><th>Por comprar</th><th>%&nbsp;comp.</th></tr>';
+
+  tiposPresentes(x).forEach(function(t){
+    var b=x.base[t]||0, p=x.proy[t]||0, c=x.comp[t]||0, g=x.pag[t]||0;
+    if(!b && !p && !c && !g) return;
+    var desv=p-b, porComprar=p-c;
+    h+='<tr style="text-align:right;border-bottom:1px solid var(--border)">'+
+      '<td style="text-align:left;padding:5px 4px;font-weight:700">'+esc(nombreTipo(t))+'</td>'+
+      '<td>'+money(b)+'</td>'+
+      '<td><input type="number" step="0.01" class="cobra-proy" data-tipo="'+t+'" value="'+p.toFixed(2)+'" '+
+        'style="width:100px;padding:3px 5px;font-size:12px;text-align:right" '+
+        (puede('costo')?'':'disabled')+'></td>'+
+      '<td style="color:'+(desv>0?'var(--danger)':'inherit')+';font-weight:'+(desv>0?'700':'400')+'">'+
+        (desv?money(desv):'—')+'</td>'+
+      '<td>'+money(c)+'</td><td>'+money(g)+'</td>'+
+      '<td style="color:'+(porComprar<0?'var(--danger)':'inherit')+';font-weight:'+(porComprar<0?'700':'400')+'">'+
+        money(porComprar)+'</td>'+
+      '<td>'+(p?pct(c/p):'—')+'</td></tr>';
+  });
+  var desvT=x.costoProy-x.costoBase;
+  h+='<tr style="text-align:right;font-weight:800;border-top:2px solid var(--border)">'+
+     '<td style="text-align:left;padding:8px 4px">TOTAL (con indirectos)</td>'+
+     '<td>'+money(x.costoBase)+'</td><td>'+money(x.costoProy)+'</td>'+
+     '<td style="color:'+(desvT>0?'var(--danger)':'inherit')+'">'+money(desvT)+'</td>'+
+     '<td>'+money(x.totComp)+'</td><td>'+money(x.totPag)+'</td>'+
+     '<td>'+money(x.costoProy-x.totComp)+'</td><td>'+
+     (x.costoProy?pct(x.totComp/x.costoProy):'—')+'</td></tr>';
+  h+='</table></div>';
+  h+='<div class="item-sub" style="margin-top:8px">Rojo en <b>desviación</b>: cuesta más que lo cotizado. '+
+     'Rojo en <b>por comprar</b>: ya comprometiste más de lo proyectado.</div></div>';
+  el.innerHTML=h;
+
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-proy'), function(inp){
+    var previo=inp.value;
+    inp.addEventListener('change', function(){
+      pedirNota(inp.getAttribute('data-tipo'), Number(inp.value)||0, Number(previo)||0, function(ok){
+        if(!ok) inp.value=previo;
+      });
+    });
+  });
+}
+
+// Hoja propia para la nota. Nada de confirm(), que en móvil no abre.
+function pedirNota(tipo, nuevo, previo, luego){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:85vh;overflow:auto';
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:4px">¿Por qué cambia el proyectado?</div>'+
+    '<div class="item-sub" style="margin-bottom:12px">'+esc(nombreTipo(tipo))+': '+
+    money(previo)+' → <b>'+money(nuevo)+'</b> ('+(nuevo-previo>0?'+':'')+money(nuevo-previo)+')</div>'+
+    '<label class="stat-label">Causa</label>'+
+    '<select id="cobra-causa" class="form-input" style="width:100%;margin-bottom:10px">'+
+      '<option value="ingenieria_propia">Ingeniería propia</option>'+
+      '<option value="precio_proveedor">Precio de proveedor</option>'+
+      '<option value="alcance_cliente">Cambio de alcance del cliente</option>'+
+      '<option value="cantidad_obra">Cantidad de obra</option></select>'+
+    '<label class="stat-label">Qué cambió</label>'+
+    '<textarea id="cobra-nota" class="form-input" rows="3" style="width:100%;margin-bottom:10px" '+
+      'placeholder="Ej. paños de 10 mm a 9.5 mm según plano VE_01 rev A"></textarea>'+
+    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px">'+
+      '<input type="checkbox" id="cobra-cobrable"> Se le cobra al cliente</label>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="cobra-ok" class="btn-primary" style="flex:1">Guardar</button>'+
+      '<button id="cobra-cancel" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+
+  var cerrar=function(ok){ document.body.removeChild(ov); luego(ok); };
+  card.querySelector('#cobra-cancel').addEventListener('click', function(){ cerrar(false); });
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(false); });
+  card.querySelector('#cobra-ok').addEventListener('click', function(){
+    var nota=card.querySelector('#cobra-nota').value.trim();
+    if(!nota){ card.querySelector('#cobra-nota').style.borderColor='var(--danger)'; return; }
+    var causa=card.querySelector('#cobra-causa').value;
+    var cobrable=card.querySelector('#cobra-cobrable').checked;
+    guardarProyectado(tipo, nuevo, nota, causa, cobrable)
+      .then(function(){ cerrar(true); })
+      .catch(function(e){
+        if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+        cerrar(false);
+      });
+  });
+}
+
+function guardarProyectado(tipo, importe, nota, causa, cobrable){
+  var previo=(PROY.filter(function(p){ return p.tipo_insumo===tipo; })[0]||{}).importe;
+  var usuario=(typeof currentUser!=='undefined' && currentUser) ? currentUser.nombre : null;
+  var fila=PROY.filter(function(p){ return p.tipo_insumo===tipo; })[0];
+  var guardar = fila
+    ? db('PATCH','obra_costo_proyectado?id=eq.'+fila.id,
+        {importe:importe, nota:nota, updated_by:usuario, updated_at:new Date().toISOString()})
+    : db('POST','obra_costo_proyectado',
+        {obra_id:OBRA.id, tipo_insumo:tipo, importe:importe, nota:nota, updated_by:usuario});
+  return guardar.then(function(){
+    // Todo movimiento del proyectado deja rastro. Sin esto la desviación es
+    // un número sin historia y nadie sabe de dónde salió.
+    return db('POST','obra_cambios', {
+      obra_id:OBRA.id,
+      descripcion:nombreTipo(tipo)+': '+nota,
+      causa:causa, cobrable:!!cobrable,
+      impacto_costo: importe-n(previo),
+      estado:'registrado'
+    });
+  }).then(function(){ return cargar(OBRA.id); })
+    .then(function(){
+      if(typeof showToast==='function') showToast('Proyectado actualizado y registrado en Cambios');
+      pinta();
+    });
+}
+
+// ── 4. ESTIMACIONES ──────────────────────────────────────────────────
+function pintaEstim(el){
+  var c=CONTRATO||{}, x=calcular();
+  var hoy=new Date();
+  var h='<div class="cstats" style="margin-bottom:12px">'+
+    tarjeta('Ejecutado', money(x.ejecutado), pct(x.avance)+' de avance')+
+    tarjeta('Estimado', money(x.estimado), 'sin contar anticipo')+
+    tarjeta('Por estimar', money(x.porEstimar), 'ejecutado − estimado',
+            x.porEstimar>0?'#F59E0B':null)+
+    tarjeta('Cobrado', money(x.cobrado), 'facturado '+money(x.facturado))+
+    '</div>';
+
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+     '<div class="card-label" style="margin:0">ESTIMACIONES</div>'+
+     (puede('estimaciones')?'<button id="cobra-nueva-estim" class="add-btn">+ Estimación</button>':'')+
+     '</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+     '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">No.</th>'+
+     '<th style="text-align:left">Tipo</th><th>Ejecutado</th><th>Amortización</th><th>Retención</th>'+
+     '<th>Subtotal</th><th>IVA</th><th>Total</th><th style="text-align:left">Presentada</th>'+
+     '<th>Cobrado</th></tr>';
+  if(!ESTIM.length){
+    h+='<tr><td colspan="10" class="item-sub" style="padding:10px">Sin estimaciones. '+
+       'El anticipo se genera al cargar el contrato.</td></tr>';
+  }
+  ESTIM.forEach(function(e){
+    var vieja = e.fecha_presentada && !e.fecha_pagada &&
+      (hoy-new Date(e.fecha_presentada))/86400000 > 30;
+    h+='<tr style="text-align:right;border-bottom:1px solid var(--border)'+
+       (vieja?';background:rgba(239,68,68,.08)':'')+'">'+
+      '<td style="text-align:left;padding:5px 4px">'+esc(e.no)+'</td>'+
+      '<td style="text-align:left">'+esc(e.tipo)+'</td>'+
+      '<td>'+money(e.importe_ejecutado)+'</td><td>'+money(e.amortizacion)+'</td>'+
+      '<td>'+money(e.retencion)+'</td><td>'+money(e.subtotal)+'</td>'+
+      '<td>'+money(e.iva)+'</td><td style="font-weight:700">'+money(e.total)+'</td>'+
+      '<td style="text-align:left">'+fecha(e.fecha_presentada)+(vieja?' ⚠️':'')+'</td>'+
+      '<td>'+money(e.importe_cobrado)+'</td></tr>';
+  });
+  h+='</table></div>';
+  h+='<div class="item-sub" style="margin-top:8px">En rojo, las presentadas hace más de 30 días sin cobrar. '+
+     'Amortización = '+pct(c.pct_amortizacion)+' del importe; retención = '+pct(c.pct_retencion)+'.</div></div>';
+  el.innerHTML=h;
+
+  var btn=$('cobra-nueva-estim');
+  if(btn) btn.addEventListener('click', nuevaEstimacion);
+}
+
+function nuevaEstimacion(){
+  var c=CONTRATO||{}, x=calcular();
+  var sug=Math.max(0, x.porEstimar);
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px';
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:10px">Nueva estimación</div>'+
+    '<label class="stat-label">Importe ejecutado del periodo (sin IVA)</label>'+
+    '<input type="number" step="0.01" id="cobra-imp" class="form-input" style="width:100%;margin-bottom:4px" value="'+sug.toFixed(2)+'">'+
+    '<div class="item-sub" style="margin-bottom:10px">Por estimar hoy: '+money(x.porEstimar)+'</div>'+
+    '<label class="stat-label">Periodo</label>'+
+    '<input id="cobra-per" class="form-input" style="width:100%;margin-bottom:10px" placeholder="Ej. 1 al 15 de noviembre">'+
+    '<div id="cobra-prev" class="item-sub" style="margin-bottom:12px"></div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="cobra-ok2" class="btn-primary" style="flex:1">Crear</button>'+
+      '<button id="cobra-c2" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+
+  var calc=function(){
+    var imp=Number(card.querySelector('#cobra-imp').value)||0;
+    var am=-imp*n(c.pct_amortizacion), re=-imp*n(c.pct_retencion);
+    var st=imp+am+re;
+    card.querySelector('#cobra-prev').innerHTML=
+      'Amortización '+money(am)+' · Retención '+money(re)+
+      '<br>Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+' · Total a cobrar <b>'+money(st*1.16)+'</b>';
+  };
+  card.querySelector('#cobra-imp').addEventListener('input', calc); calc();
+
+  var cerrar=function(){ document.body.removeChild(ov); };
+  card.querySelector('#cobra-c2').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+  card.querySelector('#cobra-ok2').addEventListener('click', function(){
+    var imp=Number(card.querySelector('#cobra-imp').value)||0;
+    if(imp<=0) return;
+    var maxNo=ESTIM.reduce(function(a,e){ return Math.max(a, n(e.no)); }, 0);
+    db('POST','obra_estimaciones', {
+      obra_id:OBRA.id, no:maxNo+1, tipo:'estimacion',
+      periodo: card.querySelector('#cobra-per').value || null,
+      importe_ejecutado: imp,
+      amortizacion: -imp*n(c.pct_amortizacion),
+      retencion:    -imp*n(c.pct_retencion)
+    }).then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('Estimación creada');
+        pinta();
+      })
+      .catch(function(e){
+        if(typeof showToast==='function') showToast('No se creó: '+e.message, true);
+      });
+  });
+}
+
+// ── 5. PROGRAMA ──────────────────────────────────────────────────────
+// Se reusa el Gantt que ya existe. No se crea otra tabla de programa.
+function pintaPrograma(el){
+  el.innerHTML='<div class="card"><div class="card-label">PROGRAMA DE OBRA</div>'+
+    '<div class="item-sub" style="margin:4px 0 10px">Verde: terminada. Rojo: atrasada contra el programa.</div>'+
+    '<div id="cobra-gantt" style="min-height:60px"></div></div>';
+  if(typeof renderGantt==='function'){
+    var cont=document.createElement('div');
+    cont.id='gantt-container-'+OBRA.id;
+    $('cobra-gantt').appendChild(cont);
+    setTimeout(function(){ try{ renderGantt(OBRA.id); }catch(e){} }, 60);
+  }
+}
+
+// ── 6. CAMBIOS ───────────────────────────────────────────────────────
+function pintaCambios(el){
+  var absorbe=0, cobra=0;
+  CAMBIOS.forEach(function(c){
+    if(c.cobrable) cobra+=n(c.impacto_costo); else absorbe+=n(c.impacto_costo);
+  });
+  var h='<div class="cstats" style="margin-bottom:12px">'+
+    tarjeta('Impacto total', money(absorbe+cobra), CAMBIOS.length+' cambio(s)')+
+    tarjeta('Lo que absorbemos', money(absorbe), 'no cobrable',
+            absorbe>0?'var(--danger)':null)+
+    tarjeta('Lo que se cobra', money(cobra), 'con orden de cambio')+
+    '</div>';
+  h+='<div class="card"><div class="card-label">BITÁCORA DE CAMBIOS</div>'+
+     '<div style="overflow:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+     '<tr style="color:var(--dim);text-align:left"><th style="padding:4px">Fecha</th><th>Cambio</th>'+
+     '<th>Causa</th><th style="text-align:right">Impacto</th><th>Estado</th><th></th></tr>';
+  if(!CAMBIOS.length) h+='<tr><td colspan="6" class="item-sub" style="padding:10px">Sin cambios registrados.</td></tr>';
+  CAMBIOS.forEach(function(c){
+    h+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="padding:5px 4px;white-space:nowrap">'+fecha(c.fecha)+'</td>'+
+      '<td style="max-width:280px">'+esc(c.descripcion)+
+        (c.referencia?'<div class="item-sub">'+esc(c.referencia)+'</div>':'')+'</td>'+
+      '<td class="item-sub">'+esc(String(c.causa||'').replace(/_/g,' '))+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+
+        (n(c.impacto_costo)>0?'var(--danger)':'#10B981')+'">'+money(c.impacto_costo)+'</td>'+
+      '<td class="item-sub">'+esc(c.estado)+'</td>'+
+      '<td style="text-align:right">'+
+        (c.cobrable && !c.orden_cambio_id && puede('cambios')
+          ? '<button class="chip cobra-oc" data-id="'+c.id+'">Convertir en orden de cambio</button>'
+          : (c.orden_cambio_id?'<span class="item-sub">ligado</span>':''))+
+      '</td></tr>';
+  });
+  h+='</table></div></div>';
+  el.innerHTML=h;
+
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-oc'), function(b){
+    b.addEventListener('click', function(){ convertirEnOC(b.getAttribute('data-id')); });
+  });
+}
+
+function convertirEnOC(id){
+  var c=CAMBIOS.filter(function(x){ return x.id===id; })[0];
+  if(!c) return;
+  db('POST','ordenes_cambio', {
+    obra_id:OBRA.id,
+    tipo: n(c.impacto_costo)>=0 ? 'aditiva' : 'deductiva',
+    concepto: c.descripcion,
+    monto: Math.abs(n(c.impacto_costo)),
+    fecha: c.fecha,
+    estatus: 'pendiente'
+  }).then(function(r){
+    var oc=r&&r[0]&&r[0].id;
+    return db('PATCH','obra_cambios?id=eq.'+id,
+      {orden_cambio_id:oc||null, estado:'en_cotizacion'});
+  }).then(function(){ return cargar(OBRA.id); })
+    .then(function(){
+      if(typeof showToast==='function') showToast('Orden de cambio creada');
+      pinta();
+    })
+    .catch(function(e){
+      if(typeof showToast==='function') showToast('No se pudo: '+e.message, true);
+    });
+}
+
+// ── 7. PENDIENTES Y RIESGOS ──────────────────────────────────────────
+var FILTRO_PRI='', FILTRO_EST='abierto';
+function pintaPendientes(el){
+  var lista=PENDS.filter(function(p){
+    if(FILTRO_PRI && low(p.prioridad)!==FILTRO_PRI) return false;
+    if(FILTRO_EST==='abierto' && low(p.estado)==='cerrado') return false;
+    if(FILTRO_EST && FILTRO_EST!=='abierto' && low(p.estado)!==FILTRO_EST) return false;
+    return true;
+  });
+  var altas=PENDS.filter(function(p){
+    return low(p.prioridad)==='alta' && low(p.estado)!=='cerrado'; }).length;
+
+  var h='<div class="card" style="margin-bottom:12px"><div style="display:flex;gap:6px;flex-wrap:wrap">';
+  [['','Todas'],['alta','Alta'],['media','Media'],['baja','Baja']].forEach(function(f){
+    h+='<button class="chip cobra-fp'+(FILTRO_PRI===f[0]?' active':'')+'" data-v="'+f[0]+'">'+f[1]+'</button>';
+  });
+  h+='<span style="flex:1"></span>';
+  [['abierto','Sin cerrar'],['','Todos'],['cerrado','Cerrados']].forEach(function(f){
+    h+='<button class="chip cobra-fe'+(FILTRO_EST===f[0]?' active':'')+'" data-v="'+f[0]+'">'+f[1]+'</button>';
+  });
+  h+='</div>'+(altas?'<div style="margin-top:8px;font-size:12px;color:var(--danger);font-weight:700">⚠️ '+
+     altas+' pendiente(s) de prioridad alta sin cerrar</div>':'')+'</div>';
+
+  h+='<div class="card"><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+     '<tr style="color:var(--dim);text-align:left"><th style="padding:4px">Tipo</th><th>Descripción</th>'+
+     '<th>Prioridad</th><th>Responsable</th><th>Compromiso</th><th>Estado</th></tr>';
+  if(!lista.length) h+='<tr><td colspan="6" class="item-sub" style="padding:10px">Nada que mostrar con estos filtros.</td></tr>';
+  lista.forEach(function(p){
+    var col=low(p.prioridad)==='alta'?'var(--danger)':(low(p.prioridad)==='media'?'#F59E0B':'var(--dim)');
+    h+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="padding:5px 4px">'+(low(p.tipo)==='riesgo'?'⚠️':'📋')+'</td>'+
+      '<td style="max-width:300px">'+esc(p.descripcion)+
+        (p.obra_id?'':'<div class="item-sub">aplica a las dos obras del cliente</div>')+
+        (p.nota?'<div class="item-sub">'+esc(p.nota)+'</div>':'')+'</td>'+
+      '<td style="color:'+col+';font-weight:700">'+esc(p.prioridad)+'</td>'+
+      '<td class="item-sub">'+esc(p.responsable||'—')+'</td>'+
+      '<td class="item-sub">'+fecha(p.fecha_compromiso)+'</td>'+
+      '<td>'+(puede('pendientes')
+        ? '<select class="cobra-est" data-id="'+p.id+'" style="padding:2px 4px;font-size:11px">'+
+          ['abierto','en_proceso','cerrado'].map(function(e){
+            return '<option value="'+e+'"'+(low(p.estado)===e?' selected':'')+'>'+e.replace('_',' ')+'</option>';
+          }).join('')+'</select>'
+        : esc(p.estado))+'</td></tr>';
+  });
+  h+='</table></div></div>';
+  el.innerHTML=h;
+
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-fp'), function(b){
+    b.addEventListener('click', function(){ FILTRO_PRI=b.getAttribute('data-v'); pinta(); });
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-fe'), function(b){
+    b.addEventListener('click', function(){ FILTRO_EST=b.getAttribute('data-v'); pinta(); });
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-est'), function(s){
+    s.addEventListener('change', function(){
+      db('PATCH','obra_pendientes?id=eq.'+s.getAttribute('data-id'), {estado:s.value})
+        .then(function(){ return cargar(OBRA.id); })
+        .then(function(){ pinta(); })
+        .catch(function(e){
+          if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+        });
+    });
+  });
+}
+
+// ── permisos ─────────────────────────────────────────────────────────
+// director edita todo; admin todo menos la línea base; capturista sólo
+// avance y pendientes.
+function puede(que){
+  if(ROL==='director') return true;
+  if(ROL==='admin')    return que!=='base';
+  return que==='avance' || que==='pendientes';
+}
+
+// ── navegación ───────────────────────────────────────────────────────
+var TABS=[['tablero','Tablero'],['contrato','Contrato y avance'],['costo','Costo'],
+          ['estimaciones','Estimaciones'],['programa','Programa'],['cambios','Cambios'],
+          ['pendientes','Pendientes y riesgos']];
+
+function pinta(){
+  var nav=$('cobra-nav'), cuerpo=$('cobra-cuerpo');
+  if(!nav||!cuerpo) return;
+  var h='';
+  TABS.forEach(function(t){
+    h+='<button class="chip cobra-tab'+(TAB===t[0]?' active':'')+'" data-t="'+t[0]+'">'+t[1]+'</button>';
+  });
+  nav.innerHTML=h;
+  Array.prototype.forEach.call(nav.querySelectorAll('.cobra-tab'), function(b){
+    b.addEventListener('click', function(){ TAB=b.getAttribute('data-t'); pinta(); });
+  });
+  ({tablero:pintaTablero, contrato:pintaContrato, costo:pintaCosto,
+    estimaciones:pintaEstim, programa:pintaPrograma, cambios:pintaCambios,
+    pendientes:pintaPendientes}[TAB]||pintaTablero)(cuerpo);
+}
+
+// ── montaje ──────────────────────────────────────────────────────────
+// Lo llama showObra(). Si la obra no tiene contrato cargado, el módulo se
+// anuncia pero no estorba: Metaltek sigue funcionando igual que siempre.
+function montar(obra, contenedor){
+  OBRA=obra; TAB='tablero';
+  ROL=(typeof currentUser!=='undefined' && currentUser && currentUser.rol)
+      ? low(currentUser.rol) : 'capturista';
+  contenedor.innerHTML=
+    '<div class="section-title" style="margin:18px 0 8px">Control de obra</div>'+
+    '<div id="cobra-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>'+
+    '<div id="cobra-cuerpo"><div class="item-sub">Cargando…</div></div>';
+  return cargar(obra.id).then(function(){
+    if(!CONTRATO && !CONCEPTOS.length){
+      $('cobra-nav').innerHTML='';
+      $('cobra-cuerpo').innerHTML='<div class="card"><div class="item-sub">'+
+        'Esta obra todavía no tiene contrato de control de obra. '+
+        'Se carga con el script SQL o desde la cotización autorizada.</div></div>';
+      return;
+    }
+    MONTADO=true;
+    pinta();
+  }).catch(function(e){
+    $('cobra-cuerpo').innerHTML='<div class="card"><div style="color:var(--danger)">'+
+      'No se pudo cargar el control de obra: '+esc(e.message)+'</div></div>';
+  });
+}
+
+return { montar:montar, calcular:calcular, recargar:function(){
+  return cargar(OBRA.id).then(pinta); } };
+})();
+
+</script>
 </body>
 </html>
