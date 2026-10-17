@@ -935,6 +935,18 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
         ⚠️ El monto ingresado coincide con el <strong>total con IVA</strong> de la cotización. Verifica que sea el subtotal sin IVA.
       </div>
     </div>
+    <!-- Tipo de insumo: OPCIONAL. Es el nivel fino con el que el Control de
+         Obra compara lo comprado contra lo presupuestado. Si se deja vacío
+         la requisición se autoriza igual y cae en "Sin clasificar" dentro
+         de su partida: no se rompe el flujo de quien no lo llene. -->
+    <div class="form-group">
+      <label class="form-label" for="fap-tipo-insumo">Tipo de insumo
+        <span style="color:var(--dim);font-weight:400">· opcional, para el control de obra</span></label>
+      <select class="form-input" id="fap-tipo-insumo">
+        <option value="">— sin clasificar —</option>
+      </select>
+      <div id="fap-tipo-insumo-ayuda" style="font-size:11px;color:var(--dim);margin-top:5px"></div>
+    </div>
     <div class="form-group">
       <label class="form-label" for="fap-iva-pct">IVA (%)</label>
       <select class="form-input" id="fap-iva-pct" onchange="calcTotalAutorizacion()">
