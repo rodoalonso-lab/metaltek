@@ -1589,6 +1589,42 @@ async function getOrCreateTipo() {
   return opt ? (opt.dataset.nombre || '') : '';
 }
 
+// ── TIPO DE INSUMO ────────────────────────────────────
+// Catálogo fino dentro de la partida. Lo usa el Control de Obra para
+// comparar lo comprado contra lo presupuestado por tipo: sin esto, todo
+// cae en un solo renglón de "Sin clasificar" y la comparación se pierde.
+let tiposInsumoData = [];
+async function cargarTiposInsumo(){
+  if(tiposInsumoData.length) return tiposInsumoData;
+  try { tiposInsumoData = await db('GET','cat_tipo_insumo?activo=is.true&order=orden') || []; }
+  catch(e){ tiposInsumoData = []; }
+  return tiposInsumoData;
+}
+async function poblarTipoInsumo(partida, valorActual){
+  var sel = document.getElementById('fap-tipo-insumo');
+  var ayuda = document.getElementById('fap-tipo-insumo-ayuda');
+  if(!sel) return;
+  await cargarTiposInsumo();
+  var p = String(partida||'').trim().toUpperCase();
+  var opciones = tiposInsumoData.filter(function(t){
+    return !p || String(t.partida||'').toUpperCase() === p; });
+  // si la partida no empata con ninguno, se ofrecen todos en vez de nada
+  if(!opciones.length) opciones = tiposInsumoData;
+
+  sel.innerHTML = '<option value="">— sin clasificar —</option>';
+  opciones.forEach(function(t){
+    var o = document.createElement('option');
+    o.value = t.clave; o.textContent = t.nombre;
+    sel.appendChild(o);
+  });
+  sel.value = valorActual || '';
+  if(ayuda){
+    ayuda.textContent = p
+      ? 'Partida ' + p + '. Si lo dejas vacío, la compra se cuenta como "sin clasificar" en el control de obra.'
+      : 'Esta requisición no trae partida, así que se muestran todos los tipos.';
+  }
+}
+
 // ── OBRAS ─────────────────────────────────────────────
 let obrasData = [];
 
