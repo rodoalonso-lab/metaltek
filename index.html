@@ -9759,7 +9759,13 @@ function pintaCambios(el){
             absorbe>0?'var(--danger)':null)+
     tarjeta('Lo que se cobra', money(cobra), 'con orden de cambio')+
     '</div>';
-  h+='<div class="card"><div class="card-label">BITÁCORA DE CAMBIOS</div>'+
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'+
+     '<div class="card-label" style="margin:0">BITÁCORA DE CAMBIOS</div>'+
+     (puede('cambios')?'<button id="cobra-nuevo-cambio" class="add-btn">+ Registrar cambio</button>':'')+
+     '</div>'+
+     '<div class="cobra-ayuda" style="margin:6px 0 2px">Los que vienen de editar el proyectado '+
+     'se registran solos. Aquí se anotan los demás: lo que pide el cliente, lo que todavía '+
+     'no se cotiza, lo que no cuesta dinero pero hay que recordar.</div>'+
      '<div class="cobra-tabla" style="margin-top:8px"><table>'+
      '<tr><th style="padding:4px">Fecha</th><th>Cambio</th>'+
      '<th>Causa</th><th style="text-align:right">Impacto</th><th>Estado</th><th></th></tr>';
@@ -9772,7 +9778,12 @@ function pintaCambios(el){
       '<td class="item-sub">'+esc(String(c.causa||'').replace(/_/g,' '))+'</td>'+
       '<td style="text-align:right;font-weight:700;color:'+
         (n(c.impacto_costo)>0?'var(--danger)':'#10B981')+'">'+money(c.impacto_costo)+'</td>'+
-      '<td class="item-sub">'+esc(c.estado)+'</td>'+
+      '<td>'+(puede('cambios')
+        ? '<select class="cobra-est-cam" data-id="'+c.id+'" style="font-size:11px;padding:2px 4px">'+
+          ['registrado','en_cotizacion','autorizado','rechazado'].map(function(e){
+            return '<option value="'+e+'"'+(low(c.estado)===e?' selected':'')+'>'+
+                   e.replace('_',' ')+'</option>'; }).join('')+'</select>'
+        : '<span class="item-sub">'+esc(c.estado)+'</span>')+'</td>'+
       '<td style="text-align:right">'+
         (c.cobrable && !c.orden_cambio_id && puede('cambios')
           ? '<button class="chip cobra-oc" data-id="'+c.id+'">Convertir en orden de cambio</button>'
@@ -9784,6 +9795,81 @@ function pintaCambios(el){
 
   Array.prototype.forEach.call(el.querySelectorAll('.cobra-oc'), function(b){
     b.addEventListener('click', function(){ convertirEnOC(b.getAttribute('data-id')); });
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-est-cam'), function(sel){
+    sel.addEventListener('change', function(){
+      db('PATCH','obra_cambios?id=eq.'+sel.getAttribute('data-id'), {estado:sel.value})
+        .then(function(){ return cargar(OBRA.id); })
+        .then(function(){
+          if(typeof showToast==='function') showToast('Estado actualizado');
+          pinta();
+        })
+        .catch(function(e){
+          if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+        });
+    });
+  });
+  var bn=$('cobra-nuevo-cambio');
+  if(bn) bn.addEventListener('click', nuevoCambio);
+}
+
+// Alta manual. Un cambio puede no tener impacto en costo todavía —lo que el
+// cliente pide y aún no se cotiza— y aun así hay que dejarlo escrito.
+function nuevoCambio(){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:88vh;overflow:auto';
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:12px">Registrar cambio</div>'+
+    '<label class="cobra-lbl">Qué cambió</label>'+
+    '<textarea id="cam-desc" class="form-input" rows="3" style="width:100%;margin-bottom:10px" '+
+      'placeholder="Ej. el cliente pide cambiar el cristal de la fachada norte a control solar"></textarea>'+
+    '<label class="cobra-lbl">Causa</label>'+
+    '<select id="cam-causa" class="form-input" style="width:100%;margin-bottom:10px">'+
+      '<option value="alcance_cliente">Cambio de alcance del cliente</option>'+
+      '<option value="ingenieria_propia">Ingeniería propia</option>'+
+      '<option value="precio_proveedor">Precio de proveedor</option>'+
+      '<option value="cantidad_obra">Cantidad de obra</option></select>'+
+    '<label class="cobra-lbl">Impacto en el costo</label>'+
+    '<input type="number" step="0.01" id="cam-imp" class="form-input" style="width:100%;margin-bottom:4px" value="0">'+
+    '<div class="cobra-ayuda" style="margin-bottom:10px">Positivo si sube el costo, negativo si baja. '+
+    'Déjalo en cero si todavía no sabes cuánto cuesta.</div>'+
+    '<label class="cobra-lbl">Referencia</label>'+
+    '<input id="cam-ref" class="form-input" style="width:100%;margin-bottom:10px" '+
+      'placeholder="Plano, correo, minuta…">'+
+    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px">'+
+      '<input type="checkbox" id="cam-cobrable"> Se le cobra al cliente</label>'+
+    '<div class="cobra-ayuda" style="margin-bottom:14px">Si lo marcas, después podrás convertirlo '+
+    'en orden de cambio desde la lista.</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="cam-ok" class="btn-primary" style="flex:1">Registrar</button>'+
+      '<button id="cam-no" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+
+  var cerrar=function(){ document.body.removeChild(ov); };
+  card.querySelector('#cam-no').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+  card.querySelector('#cam-ok').addEventListener('click', function(){
+    var d=card.querySelector('#cam-desc').value.trim();
+    if(!d){ card.querySelector('#cam-desc').style.borderColor='var(--danger)'; return; }
+    db('POST','obra_cambios', {
+      obra_id: OBRA.id,
+      descripcion: d,
+      causa: card.querySelector('#cam-causa').value,
+      impacto_costo: Number(card.querySelector('#cam-imp').value)||0,
+      referencia: card.querySelector('#cam-ref').value.trim() || null,
+      cobrable: card.querySelector('#cam-cobrable').checked,
+      estado: 'registrado'
+    }).then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('Cambio registrado');
+        pinta();
+      })
+      .catch(function(e){
+        if(typeof showToast==='function') showToast('No se registró: '+e.message, true);
+      });
   });
 }
 
