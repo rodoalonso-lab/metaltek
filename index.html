@@ -954,9 +954,10 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
          de su partida: no se rompe el flujo de quien no lo llene. -->
     <div class="form-group">
       <label class="form-label" for="fap-tipo-insumo">Tipo de insumo
-        <span style="color:var(--dim);font-weight:400">· opcional, para el control de obra</span></label>
+        <span style="color:#EF4444;font-weight:700">*</span>
+        <span style="color:var(--dim);font-weight:400">· define contra qué se compara en el control de obra</span></label>
       <select class="form-input" id="fap-tipo-insumo">
-        <option value="">— sin clasificar —</option>
+        <option value="">— elige el tipo —</option>
       </select>
       <div id="fap-tipo-insumo-ayuda" style="font-size:11px;color:var(--dim);margin-top:5px"></div>
     </div>
@@ -1624,7 +1625,7 @@ async function poblarTipoInsumo(partida, valorActual){
   // si la partida no empata con ninguno, se ofrecen todos en vez de nada
   if(!opciones.length) opciones = tiposInsumoData;
 
-  sel.innerHTML = '<option value="">— sin clasificar —</option>';
+  sel.innerHTML = '<option value="">— elige el tipo —</option>';
   opciones.forEach(function(t){
     var o = document.createElement('option');
     o.value = t.clave; o.textContent = t.nombre;
@@ -1633,7 +1634,7 @@ async function poblarTipoInsumo(partida, valorActual){
   sel.value = valorActual || '';
   if(ayuda){
     ayuda.textContent = p
-      ? 'Partida ' + p + '. Si lo dejas vacío, la compra se cuenta como "sin clasificar" en el control de obra.'
+      ? 'Partida ' + p + '. Obligatorio: sin esto la compra no se puede comparar contra lo presupuestado.'
       : 'Esta requisición no trae partida, así que se muestran todos los tipos.';
   }
 }
@@ -3535,6 +3536,22 @@ async function confirmarAutorizacion() {
     return;
   }
   if(montoInput) { montoInput.style.borderColor = ''; montoInput.setCustomValidity(''); }
+
+  // Tipo de insumo OBLIGATORIO para autorizar. Se exige aqui y no al crear
+  // la requisicion a proposito: al autorizar ya se sabe exactamente que se
+  // compra y a quien. Pedirlo antes empuja a escoger cualquier cosa por
+  // salir del formulario, y una clasificacion equivocada es peor que
+  // ninguna: "sin clasificar" se ve y se corrige, "cristal" cuando era
+  // herraje se queda mintiendo.
+  var tiSel = document.getElementById('fap-tipo-insumo');
+  if(tiSel && !tiSel.value) {
+    tiSel.style.borderColor = '#EF4444';
+    tiSel.focus();
+    showToast('Clasifica el tipo de insumo para autorizar', true);
+    return;
+  }
+  if(tiSel) tiSel.style.borderColor = '';
+
   var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
   // Bloquear si el monto parece ser el total con IVA (solo cuando IVA > 0%; con 0% subtotal=total es correcto)
   var refConIva = montoInput ? parseFloat(montoInput.dataset.refConIva) || 0 : 0;
