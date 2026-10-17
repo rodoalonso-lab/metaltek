@@ -78,6 +78,42 @@
   .kpi-icon { font-size: 22px; margin-bottom: 6px; }
   .kpi-val { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
   .kpi-label { font-size: 11px; color: var(--dim); }
+
+  /* ── Control de obra ──────────────────────────────────────────────
+     Todo va bajo #cobra-host para que no pueda afectar a otra pantalla.
+     Las tarjetas reusan .kpi-card de arriba; aquí sólo va la rejilla,
+     las etiquetas y las tablas, que son lo nuevo. */
+  #cobra-host .cobra-kpis { display:grid; gap:10px; margin-bottom:14px;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  #cobra-host .kpi-card { padding:12px 14px; }
+  #cobra-host .kpi-val { font-size:17px; margin-bottom:2px; letter-spacing:-.2px; }
+  #cobra-host .cobra-sub { font-size:10px; color:var(--dim); margin-top:4px; line-height:1.4; }
+  #cobra-host .cobra-lbl { font-size:10px; color:var(--dim); font-weight:700;
+    text-transform:uppercase; letter-spacing:.8px; margin-bottom:3px; }
+
+  /* Barra de pestañas: fija y con scroll lateral en celular, nunca dropdown */
+  #cobra-nav { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  #cobra-nav::-webkit-scrollbar { display:none; }
+  #cobra-nav .chip { flex:0 0 auto; white-space:nowrap; }
+
+  /* Tablas: en celular se leen con scroll horizontal, no se aplastan */
+  #cobra-host .cobra-tabla { overflow-x:auto; -webkit-overflow-scrolling:touch;
+    margin:0 -4px; padding:0 4px; }
+  #cobra-host table { width:100%; border-collapse:collapse; font-size:12px; min-width:520px; }
+  #cobra-host th { font-size:10px; color:var(--dim); font-weight:700;
+    text-transform:uppercase; letter-spacing:.5px; padding:6px 6px;
+    border-bottom:1px solid var(--border); white-space:nowrap; }
+  #cobra-host td { padding:7px 6px; border-bottom:1px solid var(--border); }
+  #cobra-host tbody tr:last-child td { border-bottom:none; }
+  #cobra-host .cobra-tot td { font-weight:800; border-top:2px solid var(--border);
+    border-bottom:none; background:rgba(255,255,255,.03); }
+  #cobra-host input[type=number], #cobra-host select, #cobra-host textarea {
+    background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); padding:5px 7px; font-size:12px; font-family:inherit; }
+  #cobra-host input[type=number]:focus, #cobra-host select:focus { outline:none;
+    border-color:var(--accent); }
+  #cobra-host .cobra-ayuda { font-size:11px; color:var(--dim); line-height:1.7; }
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: #000; font-weight: 700; padding: 10px 20px; border-radius: 99px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); color: #fff; }
@@ -237,6 +273,7 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
         <button class="add-btn" onclick="_OBRA_PARTIDAS.forEach(function(p){var el=document.getElementById('fp-'+p);if(el)el.value=''});var st=document.getElementById('partidas-suma-status');if(st)st.innerHTML='';document.getElementById('f-nombre').value='';document.getElementById('f-presupuesto').value='';document.getElementById('f-gastado').value='';document.getElementById('f-avance').value=0;document.getElementById('avance-label').textContent=0;document.getElementById('obra-edit-id').value='';document.getElementById('obra-sheet-title').textContent='Nueva Obra';document.getElementById('obra-delete-wrap').style.display='none';openSheet('obra')">+ Nueva</button>
       </div>
       <div class="page-sub" id="obras-count">Cargando...</div>
+      <div id="obras-filtros" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px"></div>
       <div id="obras-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
     </div>
     <div id="obras-detail-view" style="display:none"></div>
@@ -1524,13 +1561,42 @@ async function loadObras() {
   }
 }
 
+// Qué cuenta como obra viva en el tablero. Se compara en minúsculas porque
+// la base trae 'En progreso' con mayúscula y REGLAS.md pide comparar sin
+// distinguir. 'cotizacion' no entra: todavía no es obra, es una propuesta.
+const ESTADOS_VIVOS = ['en progreso','iniciando','por iniciar','pausada'];
+function obraViva(o){
+  return ESTADOS_VIVOS.indexOf(String(o.estado||'Iniciando').trim().toLowerCase()) >= 0;
+}
+// 'activas' por defecto; el usuario puede ver el resto sin salir de aquí.
+var obrasVista = 'activas';
+function setObrasVista(v){ obrasVista = v; renderObras(); }
+
 function renderObras() {
   const rol = currentUser?.rol;
-  const lista = (!rol || rol==='admin' || rol==='director' || rol==='compras') ? obrasData : obrasData.filter(o=>{
+  const permitidas = (!rol || rol==='admin' || rol==='director' || rol==='compras') ? obrasData : obrasData.filter(o=>{
     const ids = Array.isArray(currentUser.obras_ids) ? currentUser.obras_ids : [];
     return ids.includes(o.id);
   });
-  document.getElementById('obras-count').textContent = lista.length + ' proyectos';
+  const nArch = permitidas.filter(o=>o.archivada).length;
+  const nOtras = permitidas.filter(o=>!o.archivada && !obraViva(o)).length;
+  const lista = permitidas.filter(function(o){
+    if(obrasVista==='archivadas') return !!o.archivada;
+    if(obrasVista==='todas')      return true;
+    return !o.archivada && obraViva(o);
+  });
+
+  const chips = [['activas','En curso'],['todas','Todas ('+permitidas.length+')'],
+                 ['archivadas','Archivadas ('+nArch+')']];
+  document.getElementById('obras-filtros').innerHTML = chips.map(function(c){
+    return '<button class="chip'+(obrasVista===c[0]?' active':'')+'" data-v="'+c[0]+'">'+c[1]+'</button>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('#obras-filtros .chip'), function(b){
+    b.addEventListener('click', function(){ setObrasVista(b.getAttribute('data-v')); });
+  });
+
+  document.getElementById('obras-count').textContent = lista.length + ' proyectos' +
+    (obrasVista==='activas' && (nArch+nOtras) ? ' · '+(nArch+nOtras)+' fuera de vista' : '');
   if(!lista.length) {
     document.getElementById('obras-list').innerHTML = `<div class="empty"><div class="empty-icon">🏗</div><div class="empty-title">Sin obras</div><div class="empty-sub">Toca "+ Nueva" para agregar</div></div>`;
     return;
@@ -1575,8 +1641,12 @@ function showObra(id) {
         <div style="font-size:22px;font-weight:800;margin:8px 0 3px">${o.nombre}</div>
         <div class="item-sub">${o.cliente||''} ${o.ubicacion?'· '+o.ubicacion:''}</div>
       </div>
-      <button class="edit-btn" onclick="editObra('${o.id}')">✏️ Editar</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="chip" id="btn-archivar-obra">${o.archivada?'📂 Desarchivar':'📥 Archivar'}</button>
+        <button class="edit-btn" onclick="editObra('${o.id}')">✏️ Editar</button>
+      </div>
     </div>
+    ${o.archivada ? `<div style="background:#8B949E22;border:1px solid #8B949E55;border-radius:8px;padding:8px 10px;font-size:12px;color:var(--dim);margin-bottom:10px">📥 Obra archivada. No aparece en el tablero de obras, pero su información se conserva completa.</div>` : ''}
     <div class="card">
       <div class="card-label">AVANCE GENERAL</div>
       <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px">
@@ -1627,6 +1697,27 @@ function showObra(id) {
     var host=document.getElementById('cobra-host');
     if(host) COBRA.montar(o, host);
   }
+  var bArch=document.getElementById('btn-archivar-obra');
+  if(bArch) bArch.addEventListener('click', function(){ archivarObra(o.id, !o.archivada); });
+}
+
+// Archivar NO borra nada ni cambia el estado: sólo la saca del tablero.
+// Se mantiene separado del estado a propósito — una obra puede estar
+// Completada y seguir a la vista mientras se cobra.
+async function archivarObra(id, archivar){
+  var o = obrasData.find(function(x){ return x.id===id; });
+  if(!o) return;
+  try{
+    await db('PATCH','obras?id=eq.'+id, {
+      archivada: archivar,
+      fecha_archivo: archivar ? new Date().toISOString() : null
+    });
+    o.archivada = archivar;
+    o.fecha_archivo = archivar ? new Date().toISOString() : null;
+    showToast(archivar ? '📥 '+o.nombre+' archivada' : '📂 '+o.nombre+' de vuelta en el tablero');
+    if(archivar){ hideObra(); renderObras(); }
+    else { showObra(id); renderObras(); }
+  }catch(e){ showToast('No se pudo archivar: '+e.message, true); }
 }
 
 function hideObra() {
@@ -3663,7 +3754,7 @@ function renderDashboard() {
     const ids = Array.isArray(currentUser.obras_ids) ? currentUser.obras_ids : [];
     return ids.includes(o.id);
   });
-  const activas=obrasFiltradas.filter(o=>{ var e=(o.estado||'').toLowerCase(); return e==='en progreso'||e==='activa'||e==='en curso'; }).length;
+  const activas=obrasFiltradas.filter(o=>{ if(o.archivada) return false; var e=(o.estado||'').toLowerCase(); return e==='en progreso'||e==='activa'||e==='en curso'; }).length;
   const alertas=materialesData.filter(m=>m.stock<m.stock_minimo).length;
   const reqPend=requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='pendiente'||e==='en comparativa'; }).length;
   const reqAuth=requisicionesData.filter(r=>{ var e=(r.estado||'').toLowerCase(); return e==='autorizada'; }).length;
@@ -3683,7 +3774,7 @@ function renderDashboard() {
 
   if(obrasFiltradas.length) {
     html+=`<div class="section-title">Obras activas</div>`;
-    obrasFiltradas.filter(o=>o.estado!=='Completada').slice(0,3).forEach(o=>{
+    obrasFiltradas.filter(o=>o.estado!=='Completada' && !o.archivada).slice(0,3).forEach(o=>{
       html+=`<div class="card clickable" onclick="showTab('obras');showObra('${o.id}')">
         <div class="row-start" style="margin-bottom:8px"><div style="flex:1"><div class="item-title">${o.nombre}</div><div class="item-sub">${o.tipo||''}</div></div>${badge(o.estado||'Iniciando',estadoColor[o.estado]||'#F59E0B')}</div>
         <div style="display:flex;align-items:center;gap:10px">${bar(o.avance,o.avance>=100?'#10B981':'#F59E0B')}<span style="font-size:13px;font-weight:700;color:#F59E0B">${o.avance||0}%</span></div>
@@ -3793,7 +3884,7 @@ function setTTab(n){
 }
 
 function renderTObras(){
-  var activas=obrasData.filter(function(o){return o.estado!=='Completada';});
+  var activas=obrasData.filter(function(o){return o.estado!=='Completada' && !o.archivada;});
   if(!activas.length){
     document.getElementById('tar-obras-v').innerHTML='<div class="empty"><div class="empty-icon">🏗</div><div class="empty-title">Sin obras activas</div></div>';
     return;
@@ -8873,11 +8964,15 @@ function semaforoMargen(m){
   if(m<0.20) return '#F59E0B';
   return '#10B981';
 }
+// Usa .kpi-card/.kpi-val/.kpi-label, que son las clases REALES de Metaltek.
+// Antes usaba stat-box/stat-label/stat-val, copiadas de finanzas.html: en
+// Metaltek no existen, así que las ocho tarjetas del tablero salían como
+// texto suelto sin caja ni jerarquía.
 function tarjeta(label, valor, sub, color){
-  return '<div class="stat-box"'+(color?' style="border-color:'+color+'33"':'')+'>'+
-    '<div class="stat-label">'+esc(label)+'</div>'+
-    '<div class="stat-val"'+(color?' style="color:'+color+'"':'')+'>'+valor+'</div>'+
-    (sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>';
+  return '<div class="kpi-card"'+(color?' style="border-color:'+color+'55"':'')+'>'+
+    '<div class="kpi-val"'+(color?' style="color:'+color+'"':'')+'>'+valor+'</div>'+
+    '<div class="kpi-label">'+esc(label)+'</div>'+
+    (sub?'<div class="cobra-sub">'+sub+'</div>':'')+'</div>';
 }
 function nombreTipo(clave){
   var t=TIPOS.filter(function(x){ return x.clave===clave; })[0];
@@ -8897,7 +8992,7 @@ function tiposPresentes(x){
 // ── 1. TABLERO ───────────────────────────────────────────────────────
 function pintaTablero(el){
   var x=calcular();
-  var h='<div class="cstats" style="margin-bottom:14px">';
+  var h='<div class="cobra-kpis">';
   h+=tarjeta('Venta contratada', money(x.venta), 'sin IVA');
   h+=tarjeta('Avance físico', pct(x.avance), money(x.ejecutado)+' ejecutado');
   h+=tarjeta('Costo proyectado', money(x.costoProy),
@@ -8952,8 +9047,8 @@ function pintaContrato(el){
   h+='<div class="card"><div class="card-label">CONCEPTOS Y AVANCE FÍSICO</div>'+
      '<div class="item-sub" style="margin:4px 0 10px">El avance que captures aquí es el que mueve '+
      'el ejecutado, el tablero y el porcentaje de la obra.</div>'+
-     '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-     '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">Clave</th>'+
+     '<div class="cobra-tabla"><table>'+
+     '<tr style="text-align:right"><th style="text-align:left;padding:4px">Clave</th>'+
      '<th style="text-align:left">Descripción</th><th>Cant.</th><th>P.U.</th><th>Importe</th>'+
      '<th style="width:110px">% avance</th><th>Ejecutado</th></tr>';
   CONCEPTOS.forEach(function(k){
@@ -8968,7 +9063,7 @@ function pintaContrato(el){
         (puede('avance')?'':'disabled')+'></td>'+
       '<td>'+money(n(k.importe)*n(k.avance_fisico))+'</td></tr>';
   });
-  h+='<tr style="text-align:right;font-weight:800"><td colspan="4" style="text-align:left;padding:8px 4px">TOTAL</td>'+
+  h+='<tr class="cobra-tot" style="text-align:right"><td colspan="4" style="text-align:left;padding:8px 4px">TOTAL</td>'+
      '<td>'+money(x.venta)+'</td><td>'+pct(x.avance)+'</td><td>'+money(x.ejecutado)+'</td></tr>';
   h+='</table></div></div>';
   el.innerHTML=h;
@@ -8981,7 +9076,8 @@ function pintaContrato(el){
   });
 }
 function dato(k,v){
-  return '<div><div class="stat-label">'+esc(k)+'</div><div style="font-size:13px;font-weight:700">'+v+'</div></div>';
+  return '<div><div class="cobra-lbl">'+esc(k)+'</div>'+
+         '<div style="font-size:13px;font-weight:700">'+v+'</div></div>';
 }
 
 function guardarAvance(id, valor){
@@ -9010,8 +9106,8 @@ function pintaCosto(el){
   var h='<div class="card"><div class="card-label">COSTO POR TIPO DE INSUMO</div>'+
     '<div class="item-sub" style="margin:4px 0 10px">La <b>base</b> está congelada: es contra lo que '+
     'se mide todo. Al editar el <b>proyectado</b> se pide una nota y queda registrado en Cambios.</div>'+
-    '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-    '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">Tipo de insumo</th>'+
+    '<div class="cobra-tabla"><table>'+
+    '<tr style="text-align:right"><th style="text-align:left;padding:4px">Tipo de insumo</th>'+
     '<th>Base</th><th style="width:110px">Proyectado</th><th>Desviación</th><th>Comprometido</th>'+
     '<th>Pagado</th><th>Por comprar</th><th>%&nbsp;comp.</th></tr>';
 
@@ -9033,7 +9129,7 @@ function pintaCosto(el){
       '<td>'+(p?pct(c/p):'—')+'</td></tr>';
   });
   var desvT=x.costoProy-x.costoBase;
-  h+='<tr style="text-align:right;font-weight:800;border-top:2px solid var(--border)">'+
+  h+='<tr class="cobra-tot" style="text-align:right">'+
      '<td style="text-align:left;padding:8px 4px">TOTAL (con indirectos)</td>'+
      '<td>'+money(x.costoBase)+'</td><td>'+money(x.costoProy)+'</td>'+
      '<td style="color:'+(desvT>0?'var(--danger)':'inherit')+'">'+money(desvT)+'</td>'+
@@ -9066,13 +9162,13 @@ function pedirNota(tipo, nuevo, previo, luego){
   card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:4px">¿Por qué cambia el proyectado?</div>'+
     '<div class="item-sub" style="margin-bottom:12px">'+esc(nombreTipo(tipo))+': '+
     money(previo)+' → <b>'+money(nuevo)+'</b> ('+(nuevo-previo>0?'+':'')+money(nuevo-previo)+')</div>'+
-    '<label class="stat-label">Causa</label>'+
+    '<label class="cobra-lbl">Causa</label>'+
     '<select id="cobra-causa" class="form-input" style="width:100%;margin-bottom:10px">'+
       '<option value="ingenieria_propia">Ingeniería propia</option>'+
       '<option value="precio_proveedor">Precio de proveedor</option>'+
       '<option value="alcance_cliente">Cambio de alcance del cliente</option>'+
       '<option value="cantidad_obra">Cantidad de obra</option></select>'+
-    '<label class="stat-label">Qué cambió</label>'+
+    '<label class="cobra-lbl">Qué cambió</label>'+
     '<textarea id="cobra-nota" class="form-input" rows="3" style="width:100%;margin-bottom:10px" '+
       'placeholder="Ej. paños de 10 mm a 9.5 mm según plano VE_01 rev A"></textarea>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px">'+
@@ -9129,7 +9225,7 @@ function guardarProyectado(tipo, importe, nota, causa, cobrable){
 function pintaEstim(el){
   var c=CONTRATO||{}, x=calcular();
   var hoy=new Date();
-  var h='<div class="cstats" style="margin-bottom:12px">'+
+  var h='<div class="cobra-kpis">'+
     tarjeta('Ejecutado', money(x.ejecutado), pct(x.avance)+' de avance')+
     tarjeta('Estimado', money(x.estimado), 'sin contar anticipo')+
     tarjeta('Por estimar', money(x.porEstimar), 'ejecutado − estimado',
@@ -9141,7 +9237,7 @@ function pintaEstim(el){
      '<div class="card-label" style="margin:0">ESTIMACIONES</div>'+
      (puede('estimaciones')?'<button id="cobra-nueva-estim" class="add-btn">+ Estimación</button>':'')+
      '</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-     '<tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:4px">No.</th>'+
+     '<tr style="text-align:right"><th style="text-align:left;padding:4px">No.</th>'+
      '<th style="text-align:left">Tipo</th><th>Ejecutado</th><th>Amortización</th><th>Retención</th>'+
      '<th>Subtotal</th><th>IVA</th><th>Total</th><th style="text-align:left">Presentada</th>'+
      '<th>Cobrado</th></tr>';
@@ -9181,10 +9277,10 @@ function nuevaEstimacion(){
   card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
     'border-radius:16px 16px 0 0;padding:18px 16px 22px';
   card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:10px">Nueva estimación</div>'+
-    '<label class="stat-label">Importe ejecutado del periodo (sin IVA)</label>'+
+    '<label class="cobra-lbl">Importe ejecutado del periodo (sin IVA)</label>'+
     '<input type="number" step="0.01" id="cobra-imp" class="form-input" style="width:100%;margin-bottom:4px" value="'+sug.toFixed(2)+'">'+
     '<div class="item-sub" style="margin-bottom:10px">Por estimar hoy: '+money(x.porEstimar)+'</div>'+
-    '<label class="stat-label">Periodo</label>'+
+    '<label class="cobra-lbl">Periodo</label>'+
     '<input id="cobra-per" class="form-input" style="width:100%;margin-bottom:10px" placeholder="Ej. 1 al 15 de noviembre">'+
     '<div id="cobra-prev" class="item-sub" style="margin-bottom:12px"></div>'+
     '<div style="display:flex;gap:8px">'+
@@ -9246,15 +9342,15 @@ function pintaCambios(el){
   CAMBIOS.forEach(function(c){
     if(c.cobrable) cobra+=n(c.impacto_costo); else absorbe+=n(c.impacto_costo);
   });
-  var h='<div class="cstats" style="margin-bottom:12px">'+
+  var h='<div class="cobra-kpis">'+
     tarjeta('Impacto total', money(absorbe+cobra), CAMBIOS.length+' cambio(s)')+
     tarjeta('Lo que absorbemos', money(absorbe), 'no cobrable',
             absorbe>0?'var(--danger)':null)+
     tarjeta('Lo que se cobra', money(cobra), 'con orden de cambio')+
     '</div>';
   h+='<div class="card"><div class="card-label">BITÁCORA DE CAMBIOS</div>'+
-     '<div style="overflow:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-     '<tr style="color:var(--dim);text-align:left"><th style="padding:4px">Fecha</th><th>Cambio</th>'+
+     '<div class="cobra-tabla" style="margin-top:8px"><table>'+
+     '<tr><th style="padding:4px">Fecha</th><th>Cambio</th>'+
      '<th>Causa</th><th style="text-align:right">Impacto</th><th>Estado</th><th></th></tr>';
   if(!CAMBIOS.length) h+='<tr><td colspan="6" class="item-sub" style="padding:10px">Sin cambios registrados.</td></tr>';
   CAMBIOS.forEach(function(c){
@@ -9328,7 +9424,7 @@ function pintaPendientes(el){
      altas+' pendiente(s) de prioridad alta sin cerrar</div>':'')+'</div>';
 
   h+='<div class="card"><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-     '<tr style="color:var(--dim);text-align:left"><th style="padding:4px">Tipo</th><th>Descripción</th>'+
+     '<tr><th style="padding:4px">Tipo</th><th>Descripción</th>'+
      '<th>Prioridad</th><th>Responsable</th><th>Compromiso</th><th>Estado</th></tr>';
   if(!lista.length) h+='<tr><td colspan="6" class="item-sub" style="padding:10px">Nada que mostrar con estos filtros.</td></tr>';
   lista.forEach(function(p){
