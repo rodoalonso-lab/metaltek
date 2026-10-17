@@ -9312,14 +9312,34 @@ function pintaTablero(el){
 // ── 2. CONTRATO Y AVANCE ─────────────────────────────────────────────
 function pintaContrato(el){
   var c=CONTRATO||{}, x=calcular();
-  var h='<div class="card" style="margin-bottom:12px"><div class="card-label">CONTRATO</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px 14px;margin-top:8px">'+
+  // Lo que falta por capturar. El Excel sólo sirvió para la carga inicial;
+  // de aquí en adelante el contrato se completa en Metaltek, así que estos
+  // huecos tienen que verse y poder llenarse sin salir de la app.
+  var faltan=[];
+  if(!c.folio_contrato)     faltan.push('número de contrato');
+  if(!c.fecha_firma)        faltan.push('fecha de firma');
+  if(!c.periodo_estimacion) faltan.push('periodo de estimaciones');
+  if(!c.dias_pago)          faltan.push('días de pago');
+
+  var h='<div class="card" style="margin-bottom:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">'+
+    '<div class="card-label" style="margin:0">CONTRATO</div>'+
+    (puede('costo')?'<button id="cobra-edit-contrato" class="add-btn">✏️ Editar</button>':'')+
+    '</div>'+
+    (faltan.length?'<div class="aviso" style="margin:8px 0 4px;font-size:11px">'+
+      '⚠️ Falta capturar: '+esc(faltan.join(', '))+'. '+
+      'Sin eso, las fechas de cobranza y el programa trabajan con supuestos.</div>':'')+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px 14px;margin-top:10px">'+
     dato('Cotización', esc(c.folio_cotizacion||'—'))+
+    dato('Contrato / OC', esc(c.folio_contrato||'—'))+
     dato('Autorizada', fecha(c.fecha_autorizacion))+
+    dato('Firma', fecha(c.fecha_firma))+
     dato('Monto sin IVA', money(c.monto_sin_iva))+
     dato('Anticipo', pct(c.pct_anticipo))+
     dato('Amortización', pct(c.pct_amortizacion))+
     dato('Retención', pct(c.pct_retencion))+
+    dato('Estimaciones', esc(c.periodo_estimacion||'—'))+
+    dato('Días de pago', c.dias_pago?String(c.dias_pago):'—')+
     dato('Indirectos', pct(c.pct_indirectos))+
     dato('Financiamiento', pct(c.pct_financiamiento))+
     dato('Cargos', pct(c.pct_cargos))+
@@ -9355,6 +9375,74 @@ function pintaContrato(el){
     inp.addEventListener('change', function(){
       guardarAvance(inp.getAttribute('data-id'), inp.value);
     });
+  });
+  var be=$('cobra-edit-contrato');
+  if(be) be.addEventListener('click', editarContrato);
+}
+
+// Editor del contrato. El Excel fue la carga inicial y nada más: los datos
+// que allí estaban como PENDIENTE se capturan aquí.
+function editarContrato(){
+  var c=CONTRATO||{};
+  var campos=[
+    ['folio_contrato',    'Contrato u orden de compra', 'text'],
+    ['fecha_firma',       'Fecha de firma',             'date'],
+    ['periodo_estimacion','Periodo de estimaciones',    'text'],
+    ['dias_pago',         'Días de pago',               'number'],
+    ['pct_retencion',     'Retención / fondo de garantía (%)', 'pct'],
+    ['pct_anticipo',      'Anticipo (%)',               'pct'],
+    ['pct_amortizacion',  'Amortización del anticipo (%)','pct'],
+    ['pct_indirectos',    'Indirectos (%)',             'pct'],
+    ['pct_financiamiento','Financiamiento (%)',         'pct'],
+    ['pct_cargos',        'Cargos adicionales (%)',     'pct'],
+    ['jornadas_base',     'Jornadas base',              'number'],
+    ['costo_jornada',     'Costo por jornada',          'number']
+  ];
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:560px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:88vh;overflow:auto';
+  var g='<div style="font-weight:800;font-size:15px;margin-bottom:4px">Datos del contrato</div>'+
+    '<div class="cobra-ayuda" style="margin-bottom:12px">Los porcentajes se capturan como número: '+
+    'escribe 50 para 50%.</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  campos.forEach(function(f){
+    var v=c[f[0]];
+    if(f[2]==='pct') v = v===null||v===undefined ? '' : (n(v)*100);
+    if(f[2]==='date') v = v ? String(v).slice(0,10) : '';
+    g+='<div><label class="cobra-lbl">'+esc(f[1])+'</label>'+
+       '<input id="ct-'+f[0]+'" class="form-input" style="width:100%" '+
+       'type="'+(f[2]==='pct'?'number':f[2])+'" step="0.001" value="'+
+       (v===null||v===undefined?'':esc(v))+'"></div>';
+  });
+  g+='</div><div style="display:flex;gap:8px;margin-top:14px">'+
+     '<button id="ct-ok" class="btn-primary" style="flex:1">Guardar</button>'+
+     '<button id="ct-no" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+  card.innerHTML=g; ov.appendChild(card); document.body.appendChild(ov);
+
+  var cerrar=function(){ document.body.removeChild(ov); };
+  card.querySelector('#ct-no').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+  card.querySelector('#ct-ok').addEventListener('click', function(){
+    var cuerpo={};
+    campos.forEach(function(f){
+      var el2=card.querySelector('#ct-'+f[0]); if(!el2) return;
+      var v=el2.value;
+      if(f[2]==='pct')        cuerpo[f[0]] = v==='' ? 0 : (Number(v)||0)/100;
+      else if(f[2]==='number')cuerpo[f[0]] = v==='' ? null : (Number(v)||0);
+      else                    cuerpo[f[0]] = v==='' ? null : v;
+    });
+    db('PATCH','obra_contratos?id=eq.'+c.id, cuerpo)
+      .then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('Contrato actualizado');
+        pinta();
+      })
+      .catch(function(e){
+        if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+      });
   });
 }
 function dato(k,v){
