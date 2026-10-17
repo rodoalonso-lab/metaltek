@@ -3315,6 +3315,11 @@ async function autorizarReq(reqId) {
   }
   window._autorizarProveedor = proveedorResuelto;
 
+  // Tipo de insumo: se ofrecen sólo los de la partida de la requisición.
+  // Si la partida viene vacía se ofrecen todos, para no dejar al usuario
+  // sin opciones por un dato que no capturó nadie.
+  await poblarTipoInsumo(reqObj && reqObj.partida, reqObj && reqObj.tipo_insumo);
+
   if(comps.length) {
     try {
       // Calcular desde items (misma lógica que el detalle de cotización)
