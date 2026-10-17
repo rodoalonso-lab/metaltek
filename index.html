@@ -3566,9 +3566,13 @@ async function confirmarAutorizacion() {
     var reqFull = reqRows && reqRows[0];
 
     // 1) Actualizar estado + monto + proveedor en requisición
+    // tipo_insumo va aqui y en la CxP: si solo fuera a uno de los dos, el
+    // comprometido y el pagado del control de obra no coincidirian.
+    var tipoInsumoSel = (document.getElementById('fap-tipo-insumo')||{}).value || null;
     await db('PATCH','requisiciones?id=eq.'+id,{
       estado:              'autorizada',
       proveedor:           window._autorizarProveedor || '',
+      tipo_insumo:         tipoInsumoSel,
       monto_cotizado:      subtotal,
       iva_pct:             ivaPct,
       iva_cotizado:        ivaMonto,
@@ -3600,6 +3604,7 @@ async function confirmarAutorizacion() {
         concepto:          (reqFull.notas || reqFull.folio || '').toString().substring(0,200),
         monto:             totalConIva,
         partida:           reqFull.partida || 'MATERIAL',
+        tipo_insumo:       tipoInsumoSel,
         requisicion_id:    id,
         estatus:           'PENDIENTE',
         prioridad:         urgToPriv[reqFull.urgencia] || 'MEDIA',
