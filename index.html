@@ -8990,41 +8990,221 @@ function tiposPresentes(x){
 }
 
 // ── 1. TABLERO ───────────────────────────────────────────────────────
+// Tablero de verdad, no ocho cifras en cajas. Todo es SVG en línea: la app
+// es un archivo único y no se le mete una librería de gráficas por esto.
+// Las gráficas usan viewBox y width:100%, así que escalan solas del
+// escritorio al celular sin dos versiones del código.
+
+var AZUL='#3B9EBF', TURQ='#5BC4C0', AMBAR='#F0A500', ROJO='#EF4444', VERDE='#10B981';
+
+// Barra apilada horizontal: para qué se va la venta.
+function svgApilada(segs, total){
+  if(!total) return '';
+  var W=1000, H=54, x=0, g='';
+  segs.forEach(function(s){
+    var w=Math.max(0, s.v/total*W);
+    if(w<=0) return;
+    g+='<rect x="'+x.toFixed(1)+'" y="0" width="'+w.toFixed(1)+'" height="30" fill="'+s.c+'" '+
+       (s.op?'fill-opacity="'+s.op+'" ':'')+'rx="3"/>';
+    if(w>95){
+      g+='<text x="'+(x+w/2).toFixed(1)+'" y="19" text-anchor="middle" font-size="12" '+
+         'fill="#fff" font-weight="700">'+pct(s.v/total)+'</text>';
+    }
+    g+='<text x="'+x.toFixed(1)+'" y="46" font-size="12" fill="#8B949E">'+esc(s.n)+'</text>';
+    x+=w;
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" '+
+         'style="width:100%;height:56px;display:block">'+g+'</svg>';
+}
+
+// Barras agrupadas por tipo de insumo: base, proyectado y comprometido.
+// Es la gráfica que explica de dónde salió la desviación.
+function svgTipos(x){
+  var tipos=tiposPresentes(x).filter(function(t){
+    return (x.base[t]||0)+(x.proy[t]||0)+(x.comp[t]||0) > 0; });
+  if(!tipos.length) return '<div class="cobra-ayuda">Sin costo capturado.</div>';
+  var max=0;
+  tipos.forEach(function(t){
+    max=Math.max(max, x.base[t]||0, x.proy[t]||0, x.comp[t]||0); });
+  if(!max) return '';
+  var fila=34, W=1000, LAB=200, BAR=W-LAB-110, H=tipos.length*fila+16, g='';
+  tipos.forEach(function(t,i){
+    var y=i*fila+8;
+    var b=x.base[t]||0, p=x.proy[t]||0, c=x.comp[t]||0;
+    g+='<text x="0" y="'+(y+13)+'" font-size="12" fill="#C9D1D9">'+esc(nombreTipo(t))+'</text>';
+    // base al fondo, proyectado encima: si el proyectado sobresale, se ve
+    g+='<rect x="'+LAB+'" y="'+y+'" width="'+(b/max*BAR).toFixed(1)+'" height="8" fill="#8B949E" fill-opacity=".45" rx="2"/>';
+    g+='<rect x="'+LAB+'" y="'+(y+10)+'" width="'+(p/max*BAR).toFixed(1)+'" height="8" fill="'+
+       (p>b?ROJO:AZUL)+'" rx="2"/>';
+    if(c>0) g+='<rect x="'+LAB+'" y="'+(y+20)+'" width="'+(c/max*BAR).toFixed(1)+'" height="6" fill="'+TURQ+'" rx="2"/>';
+    var d=p-b;
+    if(Math.abs(d)>=1){
+      g+='<text x="'+W+'" y="'+(y+15)+'" text-anchor="end" font-size="11" font-weight="700" fill="'+
+         (d>0?ROJO:VERDE)+'">'+(d>0?'+':'')+money(d)+'</text>';
+    }
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+g+'</svg>'+
+    '<div class="cobra-leyenda">'+
+      '<span><i style="background:#8B949E;opacity:.45"></i>Base</span>'+
+      '<span><i style="background:'+AZUL+'"></i>Proyectado</span>'+
+      '<span><i style="background:'+TURQ+'"></i>Comprometido</span>'+
+      '<span style="color:#8B949E">la cifra de la derecha es la desviación</span>'+
+    '</div>';
+}
+
+// Avance físico contra avance del dinero. Cuando el dinero va más rápido
+// que la obra, la estás financiando tú. Es la caja, pero vista.
+function svgAvance(x){
+  var filas=[
+    {n:'Obra ejecutada', v:x.avance, c:AMBAR, d:money(x.ejecutado)},
+    {n:'Costo pagado',   v:x.costoProy?x.totPag/x.costoProy:0,  c:ROJO,  d:money(x.totPag)},
+    {n:'Comprometido',   v:x.costoProy?x.totComp/x.costoProy:0, c:TURQ,  d:money(x.totComp)},
+    {n:'Cobrado',        v:x.venta?x.cobrado/1.16/x.venta:0,    c:VERDE, d:money(x.cobrado)}
+  ];
+  var W=1000, fila=40, LAB=170, BAR=W-LAB-150, g='';
+  filas.forEach(function(f,i){
+    var y=i*fila+6;
+    g+='<text x="0" y="'+(y+16)+'" font-size="12" fill="#C9D1D9">'+f.n+'</text>';
+    g+='<rect x="'+LAB+'" y="'+y+'" width="'+BAR+'" height="16" fill="#ffffff" fill-opacity=".06" rx="4"/>';
+    g+='<rect x="'+LAB+'" y="'+y+'" width="'+(Math.min(1,Math.max(0,f.v))*BAR).toFixed(1)+
+       '" height="16" fill="'+f.c+'" rx="4"/>';
+    g+='<text x="'+W+'" y="'+(y+13)+'" text-anchor="end" font-size="11" fill="#C9D1D9">'+
+       pct(f.v)+' · '+f.d+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+(filas.length*fila+6)+'" style="width:100%;height:auto;display:block">'+g+'</svg>';
+}
+
+// Estimaciones: lo presentado contra lo cobrado, en orden.
+function svgEstim(){
+  if(!ESTIM.length) return '<div class="cobra-ayuda">Todavía no hay estimaciones.</div>';
+  var max=0; ESTIM.forEach(function(e){ max=Math.max(max, n(e.total), n(e.importe_cobrado)); });
+  if(!max) return '<div class="cobra-ayuda">Estimaciones sin importe.</div>';
+  var W=1000, ancho=Math.min(90, W/ESTIM.length-14), paso=W/ESTIM.length, H=170, base=120, g='';
+  var hoy=new Date();
+  ESTIM.forEach(function(e,i){
+    var cx=i*paso+paso/2;
+    var ht=n(e.total)/max*100, hc=n(e.importe_cobrado)/max*100;
+    var vieja = e.fecha_presentada && !e.fecha_pagada &&
+      (hoy-new Date(e.fecha_presentada))/86400000 > 30;
+    g+='<rect x="'+(cx-ancho/2)+'" y="'+(base-ht)+'" width="'+ancho+'" height="'+ht+
+       '" fill="'+(vieja?ROJO:AZUL)+'" fill-opacity="'+(vieja?'.75':'.55')+'" rx="3"/>';
+    if(hc>0) g+='<rect x="'+(cx-ancho/2)+'" y="'+(base-hc)+'" width="'+ancho+'" height="'+hc+
+       '" fill="'+VERDE+'" rx="3"/>';
+    g+='<text x="'+cx+'" y="'+(base-ht-6)+'" text-anchor="middle" font-size="11" fill="#C9D1D9">'+
+       money(e.total)+'</text>';
+    g+='<text x="'+cx+'" y="'+(base+16)+'" text-anchor="middle" font-size="11" fill="#8B949E">'+
+       esc(String(e.tipo).slice(0,10))+' '+esc(e.no)+'</text>';
+    g+='<text x="'+cx+'" y="'+(base+30)+'" text-anchor="middle" font-size="10" fill="#8B949E">'+
+       (e.fecha_presentada?fecha(e.fecha_presentada):'sin presentar')+(vieja?' ⚠':'')+'</text>';
+  });
+  g+='<line x1="0" y1="'+base+'" x2="'+W+'" y2="'+base+'" stroke="#8B949E" stroke-opacity=".3"/>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+g+'</svg>'+
+    '<div class="cobra-leyenda"><span><i style="background:'+AZUL+';opacity:.55"></i>Total a cobrar</span>'+
+    '<span><i style="background:'+VERDE+'"></i>Cobrado</span>'+
+    '<span style="color:'+ROJO+'">rojo: más de 30 días sin cobrar</span></div>';
+}
+
+// Aguja de margen: dónde cae contra los umbrales 10% y 20%.
+function svgMargen(m){
+  var W=320, H=92, cx=W/2, cy=78, r=62;
+  var p=Math.max(0, Math.min(1, (m+0.05)/0.35));   // escala de -5% a 30%
+  var ang=Math.PI*(1-p);
+  var arco=function(a,b,col,gr){
+    var x1=cx+r*Math.cos(Math.PI*(1-a)), y1=cy-r*Math.sin(Math.PI*(1-a));
+    var x2=cx+r*Math.cos(Math.PI*(1-b)), y2=cy-r*Math.sin(Math.PI*(1-b));
+    return '<path d="M '+x1.toFixed(1)+' '+y1.toFixed(1)+' A '+r+' '+r+' 0 0 1 '+
+           x2.toFixed(1)+' '+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(gr||11)+
+           '" fill="none" stroke-linecap="round"/>';
+  };
+  var u1=(0.10+0.05)/0.35, u2=(0.20+0.05)/0.35;
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:320px;height:auto;display:block;margin:0 auto">'+
+    arco(0,u1,ROJO)+arco(u1,u2,AMBAR)+arco(u2,1,VERDE)+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+(r-14)*Math.cos(ang)).toFixed(1)+'" y2="'+
+      (cy-(r-14)*Math.sin(ang)).toFixed(1)+'" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="#fff"/>'+
+    '<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" font-size="26" font-weight="800" fill="'+
+      semaforoMargen(m)+'">'+pct(m)+'</text>'+
+    '<text x="8" y="'+(cy+12)+'" font-size="10" fill="#8B949E">-5%</text>'+
+    '<text x="'+(W-8)+'" y="'+(cy+12)+'" text-anchor="end" font-size="10" fill="#8B949E">30%</text>'+
+    '</svg>';
+}
+
+function panel(titulo, cuerpo, ancho){
+  return '<div class="card cobra-panel'+(ancho?' '+ancho:'')+'">'+
+    '<div class="card-label">'+esc(titulo)+'</div>'+cuerpo+'</div>';
+}
+
 function pintaTablero(el){
-  var x=calcular();
-  var h='<div class="cobra-kpis">';
-  h+=tarjeta('Venta contratada', money(x.venta), 'sin IVA');
-  h+=tarjeta('Avance físico', pct(x.avance), money(x.ejecutado)+' ejecutado');
-  h+=tarjeta('Costo proyectado', money(x.costoProy),
-       (x.costoProy>x.costoBase?'▲ ':'')+money(x.costoProy-x.costoBase)+' vs base',
-       x.costoProy>x.costoBase?'var(--danger)':'#10B981');
-  h+=tarjeta('Utilidad proyectada', money(x.utilProy), 'base '+money(x.utilBase));
-  h+=tarjeta('Margen proyectado', pct(x.margenProy),
-       'base '+pct(x.margenBase), semaforoMargen(x.margenProy));
-  h+=tarjeta('Caja de la obra', money(x.caja),
-       x.caja<0?'la financiamos nosotros':'cobrado − pagado',
-       x.caja<0?'var(--danger)':'#10B981');
-  h+=tarjeta('Comprometido', money(x.totComp),
-       x.costoProy?pct(x.totComp/x.costoProy)+' del proyectado':'');
-  h+=tarjeta('Pagado', money(x.totPag), 'cobrado '+money(x.cobrado));
+  var x=calcular(), c=CONTRATO||{};
+
+  // ── fila 1: las tres cifras que mandan ──
+  var h='<div class="cobra-hero">';
+  h+='<div class="card cobra-hero-c">'+
+       '<div class="card-label">MARGEN PROYECTADO</div>'+svgMargen(x.margenProy)+
+       '<div class="cobra-sub" style="text-align:center">base '+pct(x.margenBase)+
+       ' · utilidad '+money(x.utilProy)+'</div></div>';
+  h+='<div class="card cobra-hero-c"><div class="card-label">CAJA DE LA OBRA</div>'+
+       '<div class="cobra-grande" style="color:'+(x.caja<0?ROJO:VERDE)+'">'+money(x.caja)+'</div>'+
+       '<div class="cobra-sub">'+(x.caja<0
+          ? 'la obra avanza con dinero de la empresa'
+          : 'cobrado sin IVA menos pagado')+'</div>'+
+       '<div class="cobra-sub">cobrado '+money(x.cobrado)+' · pagado '+money(x.totPag)+'</div></div>';
+  h+='<div class="card cobra-hero-c"><div class="card-label">AVANCE FÍSICO</div>'+
+       '<div class="cobra-grande" style="color:'+AMBAR+'">'+pct(x.avance)+'</div>'+
+       '<div class="cobra-sub">'+money(x.ejecutado)+' ejecutado de '+money(x.venta)+'</div>'+
+       '<div class="cobra-sub">por estimar '+money(x.porEstimar)+'</div></div>';
   h+='</div>';
 
+  // ── fila 2: a dónde se va la venta ──
+  var utilPos=Math.max(0, x.utilProy);
+  h+=panel('A DÓNDE SE VA LA VENTA · '+money(x.venta),
+      svgApilada([
+        {n:'Costo proyectado '+money(x.costoProy), v:x.costoProy, c:AZUL},
+        {n:'Utilidad '+money(x.utilProy), v:utilPos, c:VERDE},
+        {n:'', v:Math.max(0, x.venta-x.costoProy-utilPos), c:'#8B949E', op:.25}
+      ], x.venta)+
+      '<div class="cobra-ayuda" style="margin-top:6px">El costo proyectado incluye indirectos. '+
+      'La franja gris son financiamiento y cargos adicionales.</div>', 'ancho');
+
+  // ── fila 3: dos paneles lado a lado ──
+  h+=panel('COSTO POR TIPO DE INSUMO', svgTipos(x));
+  h+=panel('AVANCE DE OBRA CONTRA AVANCE DEL DINERO', svgAvance(x)+
+      '<div class="cobra-ayuda" style="margin-top:8px">Si el dinero va por delante de la obra, '+
+      'estás financiando al cliente.</div>');
+
+  // ── fila 4: estimaciones ──
+  h+=panel('ESTIMACIONES Y COBRANZA', svgEstim(), 'ancho');
+
+  // ── rendimiento de mano de obra, sólo si hay jornadas pagadas ──
   if(x.rendimiento!==null){
-    var col=x.rendimiento<0.90?'var(--danger)':(x.rendimiento>=1?'#10B981':'#F59E0B');
-    h+='<div class="card" style="margin-bottom:12px"><div class="card-label">RENDIMIENTO DE MANO DE OBRA</div>'+
-       '<div style="font-size:26px;font-weight:800;color:'+col+'">'+pct(x.rendimiento)+'</div>'+
-       '<div class="item-sub">'+x.jornadasPag.toFixed(2)+' jornadas pagadas de '+
-       n((CONTRATO||{}).jornadas_base).toFixed(2)+' presupuestadas · avance '+pct(x.avance)+'</div></div>';
+    var col=x.rendimiento<0.90?ROJO:(x.rendimiento>=1?VERDE:AMBAR);
+    h+=panel('RENDIMIENTO DE MANO DE OBRA',
+      '<div class="cobra-grande" style="color:'+col+'">'+pct(x.rendimiento)+'</div>'+
+      '<div class="cobra-sub">'+x.jornadasPag.toFixed(2)+' jornadas pagadas de '+
+      n(c.jornadas_base).toFixed(2)+' presupuestadas, con '+pct(x.avance)+' de avance</div>');
   }
 
-  h+='<div class="card"><div class="card-label">CÓMO SE LEE</div><div class="item-sub" style="line-height:1.7">'+
-     'El <b>margen</b> compara la venta contra el costo proyectado, no contra lo que llevas gastado: '+
-     'se mueve cuando cambia la ingeniería o un precio, no cuando llega una factura.<br>'+
-     'La <b>caja</b> es lo cobrado sin IVA menos lo pagado. En rojo significa que la obra '+
-     'avanza con dinero de la empresa.<br>'+
-     'El <b>comprometido</b> ya incluye lo autorizado aunque todavía no se pague.'+
-     '</div></div>';
-  el.innerHTML=h;
+  // ── pendientes de prioridad alta: lo que frena ──
+  var altas=PENDS.filter(function(p){
+    return low(p.prioridad)==='alta' && low(p.estado)!=='cerrado'; });
+  if(altas.length){
+    var li='';
+    altas.slice(0,5).forEach(function(p){
+      li+='<div class="cobra-alerta">⚠️ '+esc(String(p.descripcion).slice(0,120))+
+          '<span class="cobra-sub"> — '+esc(p.responsable||'sin responsable')+'</span></div>';
+    });
+    h+=panel('LO QUE FRENA LA OBRA · '+altas.length+' de prioridad alta', li, 'ancho');
+  }
+
+  h+=panel('CÓMO SE LEE',
+    '<div class="cobra-ayuda">'+
+    'El <b>margen</b> compara la venta contra el costo proyectado, no contra lo que llevas gastado: '+
+    'se mueve cuando cambia la ingeniería o un precio, no cuando llega una factura.<br>'+
+    'La <b>caja</b> es lo cobrado sin IVA menos lo pagado. En rojo, la obra avanza con dinero propio.<br>'+
+    'El <b>comprometido</b> ya incluye lo autorizado aunque todavía no se pague.'+
+    '</div>', 'ancho');
+
+  el.innerHTML='<div class="cobra-grid">'+h+'</div>';
 }
 
 // ── 2. CONTRATO Y AVANCE ─────────────────────────────────────────────
