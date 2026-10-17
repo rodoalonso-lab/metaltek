@@ -9526,7 +9526,20 @@ function pintaCosto(el){
   h+='</table></div>';
   h+='<div class="item-sub" style="margin-top:8px">Rojo en <b>desviación</b>: cuesta más que lo cotizado. '+
      'Rojo en <b>por comprar</b>: ya comprometiste más de lo proyectado.</div></div>';
+
+  // Lo que quedo sin clasificar de antes de la regla. Se ofrece arreglarlo
+  // aqui, que es donde duele: sin tipo, esa compra no se compara contra nada.
+  var sinCl=(x.comp.SIN_CLASIFICAR||0)+(x.pag.SIN_CLASIFICAR||0);
+  if(sinCl>0 && puede('costo')){
+    h+='<div class="card"><div class="card-label">SIN CLASIFICAR</div>'+
+       '<div class="cobra-ayuda" style="margin-bottom:10px">Hay '+money(sinCl)+
+       ' en compras sin tipo de insumo. Son de antes de que fuera obligatorio: '+
+       'mientras no se clasifiquen, no se pueden comparar contra el presupuesto.</div>'+
+       '<button id="cobra-reclasificar" class="btn-secondary">Clasificar ahora</button></div>';
+  }
   el.innerHTML=h;
+  var br=$('cobra-reclasificar');
+  if(br) br.addEventListener('click', abrirReclasificar);
 
   Array.prototype.forEach.call(el.querySelectorAll('.cobra-proy'), function(inp){
     var previo=inp.value;
@@ -9535,6 +9548,81 @@ function pintaCosto(el){
         if(!ok) inp.value=previo;
       });
     });
+  });
+}
+
+// ── Reclasificar compras viejas ──────────────────────────────────────
+// Lista las requisiciones de la obra sin tipo de insumo y deja asignarlas
+// en lote. Es el unico camino para arreglar lo anterior a la regla: la
+// pantalla de autorizar ya no se vuelve a abrir una vez autorizada.
+function abrirReclasificar(){
+  db('GET','requisiciones?obra_id=eq.'+OBRA.id+
+     '&tipo_insumo=is.null&select=id,folio,partida,proveedor,monto_cotizado,notas,estado&order=fecha')
+  .then(function(reqs){
+    if(!reqs || !reqs.length){
+      if(typeof showToast==='function') showToast('No hay requisiciones sin clasificar');
+      return;
+    }
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+      'display:flex;align-items:flex-end;justify-content:center';
+    var card=document.createElement('div');
+    card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:640px;'+
+      'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:88vh;overflow:auto';
+    var g='<div style="font-weight:800;font-size:15px;margin-bottom:4px">Clasificar compras</div>'+
+      '<div class="cobra-ayuda" style="margin-bottom:12px">'+reqs.length+
+      ' requisición(es) sin tipo de insumo. Se guardan también en su cuenta por pagar, '+
+      'para que el comprometido y el pagado coincidan.</div>';
+    reqs.forEach(function(r){
+      var opts=TIPOS.filter(function(t){
+        return !r.partida || String(t.partida).toUpperCase()===String(r.partida).toUpperCase(); });
+      if(!opts.length) opts=TIPOS;
+      g+='<div style="border-bottom:1px solid var(--border);padding:9px 0">'+
+         '<div style="font-size:12px;font-weight:700">'+esc(r.folio||'')+' · '+money(r.monto_cotizado)+
+         ' <span style="font-weight:400;color:var(--dim)">'+esc(r.partida||'sin partida')+'</span></div>'+
+         '<div class="cobra-sub" style="margin-bottom:5px">'+
+         esc(String(r.notas||r.proveedor||'').slice(0,80))+'</div>'+
+         '<select class="rc-sel form-input" data-id="'+r.id+'" style="width:100%;font-size:12px">'+
+         '<option value="">— sin clasificar —</option>'+
+         opts.map(function(t){ return '<option value="'+t.clave+'">'+esc(t.nombre)+'</option>'; }).join('')+
+         '</select></div>';
+    });
+    g+='<div style="display:flex;gap:8px;margin-top:14px">'+
+       '<button id="rc-ok" class="btn-primary" style="flex:1">Guardar</button>'+
+       '<button id="rc-no" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+    card.innerHTML=g; ov.appendChild(card); document.body.appendChild(ov);
+
+    var cerrar=function(){ document.body.removeChild(ov); };
+    card.querySelector('#rc-no').addEventListener('click', cerrar);
+    ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+    card.querySelector('#rc-ok').addEventListener('click', function(){
+      var cambios=[];
+      Array.prototype.forEach.call(card.querySelectorAll('.rc-sel'), function(sel){
+        if(sel.value) cambios.push({id:sel.getAttribute('data-id'), tipo:sel.value});
+      });
+      if(!cambios.length){ cerrar(); return; }
+      var btn=card.querySelector('#rc-ok'); btn.disabled=true; btn.textContent='Guardando…';
+      // la requisicion y su CxP llevan el mismo tipo: si solo fuera a una,
+      // el comprometido y el pagado dejarian de cuadrar entre si
+      Promise.all(cambios.map(function(c){
+        return db('PATCH','requisiciones?id=eq.'+c.id, {tipo_insumo:c.tipo})
+          .then(function(){
+            return db('PATCH','cuentas_por_pagar?requisicion_id=eq.'+c.id, {tipo_insumo:c.tipo})
+                   .catch(function(){ return null; });   // puede no tener CxP
+          });
+      })).then(function(){ cerrar(); return cargar(OBRA.id); })
+        .then(function(){
+          if(typeof showToast==='function') showToast(cambios.length+' compra(s) clasificada(s)');
+          pinta();
+        })
+        .catch(function(e){
+          btn.disabled=false; btn.textContent='Guardar';
+          if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+        });
+    });
+  })
+  .catch(function(e){
+    if(typeof showToast==='function') showToast('No se pudo leer: '+e.message, true);
   });
 }
 
