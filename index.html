@@ -8922,6 +8922,7 @@ return {
 window.COBRA = (function(){
 'use strict';
 
+var PROCESOS=[];
 var OBRA=null, CONTRATO=null, CONCEPTOS=[], BASE=[], PROY=[], ESTIM=[],
     CAMBIOS=[], PENDS=[], PAGADO=[], COBRADO=null, COMPROM=[], NOMINA=[],
     TIPOS=[], TAB='tablero', ROL='capturista', MONTADO=false;
@@ -8971,13 +8972,15 @@ function cargar(obraId){
     g('v_obra_cobrado?obra_id=eq.'+obraId),
     g('v_obra_comprometido?obra_id=eq.'+obraId),
     g('cat_tipo_insumo?activo=is.true&order=orden'),
+    g('cat_procesos?activo=is.true&order=orden'),
     g('nomina_detalle?select=*,nomina_semanas!inner(obra_id)&nomina_semanas.obra_id=eq.'+obraId)
   ]).then(function(r){
+    PROCESOS=r[11]||[];
     CONTRATO = (r[0]&&r[0][0]) || null;
     CONCEPTOS=r[1]||[]; BASE=r[2]||[]; PROY=r[3]||[]; ESTIM=r[4]||[];
     CAMBIOS=r[5]||[]; PENDS=r[6]||[]; PAGADO=r[7]||[];
     COBRADO=(r[8]&&r[8][0])||null; COMPROM=r[9]||[]; TIPOS=r[10]||[];
-    NOMINA=r[11]||[];
+    NOMINA=r[12]||[];
   });
 }
 
@@ -9589,17 +9592,146 @@ function nuevaEstimacion(){
 }
 
 // ── 5. PROGRAMA ──────────────────────────────────────────────────────
-// Se reusa el Gantt que ya existe. No se crea otra tabla de programa.
+// Matriz de concepto por proceso. Cada palomita es un paso terminado y el
+// avance del concepto sale de la SUMA DE PESOS de lo palomeado, no de
+// contar casillas: fabricar pesa 30% y entregar 5%, así que marcar
+// "entrega" no puede valer lo mismo que fabricar.
+//
+// El avance del concepto escribe en obra_conceptos.avance_fisico, que es de
+// donde ya salían el ejecutado y las estimaciones. Es decir: el taller
+// marca casillas y la cobranza se mueve sola, sin capturar porcentajes.
+
+function pesoDe(clave){
+  var p=PROCESOS.filter(function(x){ return x.clave===clave; })[0];
+  return p ? n(p.peso) : 0;
+}
+function avanceDeProcesos(obj){
+  var a=0;
+  PROCESOS.forEach(function(p){
+    var v=obj&&obj[p.clave];
+    if(v && (v===true || v.ok)) a+=n(p.peso);
+  });
+  return Math.min(1, a);
+}
+
 function pintaPrograma(el){
-  el.innerHTML='<div class="card"><div class="card-label">PROGRAMA DE OBRA</div>'+
-    '<div class="item-sub" style="margin:4px 0 10px">Verde: terminada. Rojo: atrasada contra el programa.</div>'+
-    '<div id="cobra-gantt" style="min-height:60px"></div></div>';
+  if(!PROCESOS.length){
+    el.innerHTML='<div class="card"><div class="item-sub">No se pudo leer el catálogo de procesos.</div></div>';
+    return;
+  }
+  var x=calcular();
+
+  // ── resumen por proceso: cuántos conceptos llevan cada paso ──
+  var h='<div class="cobra-kpis">';
+  PROCESOS.forEach(function(p){
+    var hechos=CONCEPTOS.filter(function(k){
+      var v=(k.procesos||{})[p.clave]; return v && (v===true||v.ok); }).length;
+    var tot=CONCEPTOS.length||1;
+    var col = hechos===0 ? null : (hechos===tot ? '#10B981' : '#F0A500');
+    h+='<div class="kpi-card"'+(col?' style="border-color:'+col+'55"':'')+'>'+
+       '<div class="kpi-val"'+(col?' style="color:'+col+'"':'')+'>'+hechos+'/'+tot+'</div>'+
+       '<div class="kpi-label">'+esc(p.nombre)+'</div>'+
+       '<div class="cobra-sub">peso '+(n(p.peso)*100).toFixed(0)+'%</div></div>';
+  });
+  h+='</div>';
+
+  // ── la matriz ──
+  var puedeMarcar=puede('avance');
+  h+='<div class="card cobra-panel ancho"><div class="card-label">CONCEPTOS Y PROCESOS</div>'+
+     '<div class="cobra-ayuda" style="margin-bottom:10px">Marca cada paso conforme se termina. '+
+     'El avance del concepto es la suma de los pesos de lo marcado, y de ahí sale el '+
+     'ejecutado de la obra.</div>'+
+     '<div class="cobra-tabla"><table class="cobra-matriz"><tr>'+
+     '<th style="text-align:left;min-width:150px">Concepto</th>';
+  PROCESOS.forEach(function(p){
+    h+='<th title="peso '+(n(p.peso)*100).toFixed(0)+'%">'+esc(p.nombre)+
+       '<div style="font-weight:400;opacity:.6">'+(n(p.peso)*100).toFixed(0)+'%</div></th>';
+  });
+  h+='<th style="min-width:110px">Avance</th><th style="text-align:right">Ejecutado</th></tr>';
+
+  CONCEPTOS.forEach(function(k){
+    var pr=k.procesos||{};
+    var av=avanceDeProcesos(pr);
+    h+='<tr><td style="text-align:left">'+
+       '<div style="font-weight:700">'+esc(k.clave||'')+'</div>'+
+       '<div class="cobra-sub">'+esc(String(k.descripcion||'').slice(0,46))+'</div></td>';
+    PROCESOS.forEach(function(p){
+      var v=pr[p.clave], ok=!!(v && (v===true||v.ok));
+      var f=(v&&v.f)?v.f:null;
+      h+='<td style="text-align:center">'+
+         '<input type="checkbox" class="cobra-paso" data-c="'+k.id+'" data-p="'+p.clave+'"'+
+         (ok?' checked':'')+(puedeMarcar?'':' disabled')+
+         ' style="width:17px;height:17px;cursor:'+(puedeMarcar?'pointer':'default')+'">'+
+         (f?'<div class="cobra-fecha">'+fecha(f).slice(0,5)+'</div>':'')+'</td>';
+    });
+    var col = av>=1 ? '#10B981' : (av>0 ? '#F0A500' : 'var(--dim)');
+    h+='<td><div class="cobra-mini"><i style="width:'+(av*100).toFixed(0)+'%;background:'+col+'"></i></div>'+
+       '<div class="cobra-sub" style="text-align:center">'+pct(av)+'</div></td>'+
+       '<td style="text-align:right">'+money(n(k.importe)*av)+'</td></tr>';
+  });
+
+  h+='<tr class="cobra-tot"><td style="text-align:left">TOTAL</td>';
+  PROCESOS.forEach(function(p){
+    var hechos=CONCEPTOS.filter(function(k){
+      var v=(k.procesos||{})[p.clave]; return v && (v===true||v.ok); }).length;
+    h+='<td style="text-align:center">'+hechos+'</td>';
+  });
+  h+='<td style="text-align:center">'+pct(x.avance)+'</td>'+
+     '<td style="text-align:right">'+money(x.ejecutado)+'</td></tr>';
+  h+='</table></div></div>';
+
+  // ── el Gantt que ya existía, debajo ──
+  h+='<div class="card cobra-panel ancho"><div class="card-label">PROGRAMA DE OBRA</div>'+
+     '<div class="cobra-ayuda" style="margin-bottom:8px">Verde: terminada. Rojo: atrasada contra el programa.</div>'+
+     '<div id="cobra-gantt" style="min-height:40px"></div></div>';
+
+  el.innerHTML='<div class="cobra-grid">'+h+'</div>';
+
+  Array.prototype.forEach.call(el.querySelectorAll('.cobra-paso'), function(cb){
+    cb.addEventListener('change', function(){
+      marcarProceso(cb.getAttribute('data-c'), cb.getAttribute('data-p'), cb.checked, cb);
+    });
+  });
+
   if(typeof renderGantt==='function'){
     var cont=document.createElement('div');
     cont.id='gantt-container-'+OBRA.id;
-    $('cobra-gantt').appendChild(cont);
+    var g=$('cobra-gantt'); if(g) g.appendChild(cont);
     setTimeout(function(){ try{ renderGantt(OBRA.id); }catch(e){} }, 60);
   }
+}
+
+// Marca o desmarca un paso. Guarda la fecha del día: sirve para saber
+// cuándo se fabricó algo sin ir a preguntar al taller.
+function marcarProceso(conceptoId, paso, marcado, cb){
+  var k=CONCEPTOS.filter(function(c){ return c.id===conceptoId; })[0];
+  if(!k) return;
+  var pr=JSON.parse(JSON.stringify(k.procesos||{}));
+  if(marcado) pr[paso]={ ok:true, f:new Date().toISOString().slice(0,10) };
+  else delete pr[paso];
+  var av=avanceDeProcesos(pr);
+
+  if(cb) cb.disabled=true;
+  db('PATCH','obra_conceptos?id=eq.'+conceptoId, { procesos:pr, avance_fisico:av })
+    .then(function(){
+      k.procesos=pr; k.avance_fisico=av;
+      // el avance de la obra lo manda el ejecutado, no una captura aparte
+      var nuevo=Math.round(calcular().avance*100);
+      return db('PATCH','obras?id=eq.'+OBRA.id, { avance:nuevo }).then(function(){
+        OBRA.avance=nuevo;
+      });
+    })
+    .then(function(){
+      if(typeof showToast==='function'){
+        var nom=(PROCESOS.filter(function(p){return p.clave===paso;})[0]||{}).nombre||paso;
+        showToast((marcado?'✅ ':'↩️ ')+esc(k.clave)+' · '+nom);
+      }
+      pinta();
+    })
+    .catch(function(e){
+      if(cb){ cb.disabled=false; cb.checked=!marcado; }
+      if(typeof showToast==='function') showToast('No se guardó: '+e.message, true);
+    });
 }
 
 // ── 6. CAMBIOS ───────────────────────────────────────────────────────
