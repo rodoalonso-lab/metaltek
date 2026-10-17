@@ -135,6 +135,19 @@
   #cobra-host .cobra-alerta:last-child { border-bottom:none; }
   #cobra-host svg text { font-family:inherit; }
 
+  /* Matriz concepto × proceso */
+  #cobra-host table.cobra-matriz { min-width:700px; }
+  #cobra-host table.cobra-matriz th { text-align:center; font-size:9.5px; line-height:1.3; }
+  #cobra-host table.cobra-matriz td { padding:8px 6px; vertical-align:middle; }
+  #cobra-host table.cobra-matriz tr:hover td { background:rgba(255,255,255,.025); }
+  #cobra-host .cobra-fecha { font-size:9px; color:var(--dim); margin-top:2px; }
+  #cobra-host .cobra-mini { height:6px; background:rgba(255,255,255,.08); border-radius:99px;
+    overflow:hidden; }
+  #cobra-host .cobra-mini i { display:block; height:100%; border-radius:99px;
+    transition:width .25s ease; }
+  #cobra-host input[type=checkbox] { accent-color:var(--accent,#5BC4C0); }
+  #cobra-host input[type=checkbox]:disabled { opacity:.35; }
+
   @media (max-width: 760px) {
     #cobra-host .cobra-grid { grid-template-columns:1fr; }
     #cobra-host .cobra-grande { font-size:26px; }
