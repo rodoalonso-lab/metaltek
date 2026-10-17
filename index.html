@@ -114,6 +114,34 @@
   #cobra-host input[type=number]:focus, #cobra-host select:focus { outline:none;
     border-color:var(--accent); }
   #cobra-host .cobra-ayuda { font-size:11px; color:var(--dim); line-height:1.7; }
+
+  /* ── Tablero ──────────────────────────────────────────────────────
+     Dos columnas en computadora, una sola en celular. Los paneles que
+     llevan 'ancho' ocupan la fila completa en los dos casos. */
+  #cobra-host .cobra-grid { display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+  #cobra-host .cobra-grid > .cobra-panel { margin-bottom:0; }
+  #cobra-host .cobra-panel.ancho, #cobra-host .cobra-hero { grid-column:1 / -1; }
+  #cobra-host .cobra-hero { display:grid; gap:12px;
+    grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  #cobra-host .cobra-hero-c { margin-bottom:0; display:flex; flex-direction:column; }
+  #cobra-host .cobra-grande { font-size:30px; font-weight:800; letter-spacing:-.5px;
+    line-height:1.15; margin:2px 0 4px; }
+  #cobra-host .cobra-leyenda { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px;
+    font-size:10px; color:var(--dim); align-items:center; }
+  #cobra-host .cobra-leyenda i { display:inline-block; width:10px; height:10px;
+    border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  #cobra-host .cobra-alerta { font-size:12px; line-height:1.6; padding:7px 0;
+    border-bottom:1px solid var(--border); }
+  #cobra-host .cobra-alerta:last-child { border-bottom:none; }
+  #cobra-host svg text { font-family:inherit; }
+
+  @media (max-width: 760px) {
+    #cobra-host .cobra-grid { grid-template-columns:1fr; }
+    #cobra-host .cobra-grande { font-size:26px; }
+    /* en celular las gráficas de barras necesitan más alto relativo para
+       que las etiquetas no se encimen */
+    #cobra-host .cobra-panel svg { min-height:0; }
+  }
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: #000; font-weight: 700; padding: 10px 20px; border-radius: 99px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); color: #fff; }
