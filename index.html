@@ -1783,29 +1783,15 @@ async function showObra(id) {
         referrerpolicy="no-referrer-when-downgrade">
       </iframe>
     </div>` : ''}
-    ${window._obraTieneControl ? '' : `
-    <!-- Con control de obra este bloque sobra: el mismo Gantt vive dentro de
-         Control de obra → Programa, y ahi ademas esta la matriz de conceptos
-         por proceso, que es de donde sale el avance de verdad. -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="section-title" style="margin:0">Programa de obra</div>
-      <button class="add-btn" onclick="abrirNuevaEtapaGantt('${o.id}')">+ Etapa</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="chip active" onclick="setGanttZoom('semanas','${o.id}')">Por semanas</button>
-      <button class="chip" onclick="setGanttZoom('dias','${o.id}')">Por días</button>
-    </div>
-    <div id="gantt-container-${o.id}" style="min-height:60px"></div>
-    `}
+    <!-- Gantt retirado: una sola etapa capturada en toda la base en meses
+         de uso. El avance se lleva en Control de obra → Programa. -->
     <div id="cobra-host"></div>
     <div style="height:20px"></div>`;
   document.getElementById('obras-list-view').style.display='none';
   document.getElementById('obras-detail-view').style.display='block';
   document.getElementById('obras-detail-view').innerHTML=html;
   document.getElementById('screen-obras').scrollTop=0;
-  // solo si el contenedor de la ficha existe; con control de obra el Gantt
-  // lo dibuja la pestaña Programa, que crea el suyo
-  if(!window._obraTieneControl) setTimeout(function(){ renderGantt(id); }, 80);
+
   // Control de obra. Va aparte, en su propio contenedor: si algo falla ahí
   // dentro, la ficha de la obra sigue funcionando como siempre.
   if(window.COBRA){
@@ -9918,11 +9904,9 @@ function pintaPrograma(el){
      '<td style="text-align:right">'+money(x.ejecutado)+'</td></tr>';
   h+='</table></div></div>';
 
-  // ── el Gantt que ya existía, debajo ──
-  h+='<div class="card cobra-panel ancho"><div class="card-label">PROGRAMA DE OBRA</div>'+
-     '<div class="cobra-ayuda" style="margin-bottom:8px">Verde: terminada. Rojo: atrasada contra el programa.</div>'+
-     '<div id="cobra-gantt" style="min-height:40px"></div></div>';
-
+  // El Gantt se quito: en meses de uso se capturo UNA etapa en toda la base.
+  // La matriz de conceptos por proceso dice lo mismo y mejor, porque sale
+  // de lo que el taller ya marca.
   el.innerHTML='<div class="cobra-grid">'+h+'</div>';
 
   Array.prototype.forEach.call(el.querySelectorAll('.cobra-paso'), function(cb){
@@ -9931,12 +9915,6 @@ function pintaPrograma(el){
     });
   });
 
-  if(typeof renderGantt==='function'){
-    var cont=document.createElement('div');
-    cont.id='gantt-container-'+OBRA.id;
-    var g=$('cobra-gantt'); if(g) g.appendChild(cont);
-    setTimeout(function(){ try{ renderGantt(OBRA.id); }catch(e){} }, 60);
-  }
 }
 
 // Marca o desmarca un paso. Guarda la fecha del día: sirve para saber
