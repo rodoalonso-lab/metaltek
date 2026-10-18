@@ -9511,12 +9511,20 @@ function pintaCosto(el){
     '<div class="cobra-tabla"><table>'+
     '<tr style="text-align:right"><th style="text-align:left;padding:4px">Tipo de insumo</th>'+
     '<th>Base</th><th style="width:110px">Proyectado</th><th>Desviación</th><th>Comprometido</th>'+
-    '<th>Pagado</th><th>Por comprar</th><th>%&nbsp;comp.</th></tr>';
+    '<th>Pagado</th><th>Por ejercer</th><th>%&nbsp;ejerc.</th></tr>';
 
   tiposPresentes(x).forEach(function(t){
     var b=x.base[t]||0, p=x.proy[t]||0, c=x.comp[t]||0, g=x.pag[t]||0;
     if(!b && !p && !c && !g) return;
-    var desv=p-b, porComprar=p-c;
+    // Lo EJERCIDO no es solo lo comprometido: la nomina y los egresos
+    // manuales se pagan sin pasar por requisicion, asi que aparecen en
+    // pagado con comprometido en cero. Restando solo lo comprometido, el
+    // "por comprar" decia que faltaba gastar todo cuando ya habia salido
+    // dinero. Se toma el mayor de los dos: si todo paso por requisicion,
+    // pagado <= comprometido y manda el comprometido; si se pago directo,
+    // manda el pagado.
+    var ejercido=Math.max(c, g);
+    var desv=p-b, porComprar=p-ejercido;
     h+='<tr style="text-align:right;border-bottom:1px solid var(--border)">'+
       '<td style="text-align:left;padding:5px 4px;font-weight:700">'+esc(nombreTipo(t))+'</td>'+
       '<td>'+money(b)+'</td>'+
@@ -9528,19 +9536,27 @@ function pintaCosto(el){
       '<td>'+money(c)+'</td><td>'+money(g)+'</td>'+
       '<td style="color:'+(porComprar<0?'var(--danger)':'inherit')+';font-weight:'+(porComprar<0?'700':'400')+'">'+
         money(porComprar)+'</td>'+
-      '<td>'+(p?pct(c/p):'—')+'</td></tr>';
+      '<td>'+(p?pct(ejercido/p):'—')+'</td></tr>';
   });
+  // el total se suma por tipo con el mismo criterio, no restando los
+  // totales: si no, vuelve a aparecer el mismo error en el renglon de abajo
+  var ejercidoT=0;
+  tiposPresentes(x).forEach(function(t){
+    ejercidoT+=Math.max(x.comp[t]||0, x.pag[t]||0); });
   var desvT=x.costoProy-x.costoBase;
   h+='<tr class="cobra-tot" style="text-align:right">'+
      '<td style="text-align:left;padding:8px 4px">TOTAL (con indirectos)</td>'+
      '<td>'+money(x.costoBase)+'</td><td>'+money(x.costoProy)+'</td>'+
      '<td style="color:'+(desvT>0?'var(--danger)':'inherit')+'">'+money(desvT)+'</td>'+
      '<td>'+money(x.totComp)+'</td><td>'+money(x.totPag)+'</td>'+
-     '<td>'+money(x.costoProy-x.totComp)+'</td><td>'+
-     (x.costoProy?pct(x.totComp/x.costoProy):'—')+'</td></tr>';
+     '<td style="color:'+((x.costoProy-ejercidoT)<0?'var(--danger)':'inherit')+'">'+
+     money(x.costoProy-ejercidoT)+'</td><td>'+
+     (x.costoProy?pct(ejercidoT/x.costoProy):'—')+'</td></tr>';
   h+='</table></div>';
   h+='<div class="item-sub" style="margin-top:8px">Rojo en <b>desviación</b>: cuesta más que lo cotizado. '+
-     'Rojo en <b>por comprar</b>: ya comprometiste más de lo proyectado.</div></div>';
+     'Rojo en <b>por ejercer</b>: ya gastaste o comprometiste más de lo proyectado. '+
+     'Se cuenta el mayor entre comprometido y pagado, porque la nómina y los egresos '+
+     'directos no pasan por requisición.</div></div>';
 
   // Lo que quedo sin clasificar de antes de la regla. Se ofrece arreglarlo
   // aqui, que es donde duele: sin tipo, esa compra no se compara contra nada.
