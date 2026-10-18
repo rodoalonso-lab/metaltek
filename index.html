@@ -1704,10 +1704,16 @@ function renderObras() {
   }).join('');
 }
 
-function showObra(id) {
+// Saber si la obra tiene control de obra decide que se muestra arriba.
+// Se consulta solo el id de su contrato: es una fila o ninguna.
+async function showObra(id) {
   const o = obrasData.find(x=>x.id===id);
   if(!o) return;
   currentObraId = id;
+  try {
+    var _ct = await db('GET','obra_contratos?obra_id=eq.'+id+'&select=id&limit=1');
+    window._obraTieneControl = !!(_ct && _ct.length);
+  } catch(e) { window._obraTieneControl = false; }
   const ts = tareasData.filter(t=>t.obra_id===id);
   const comp = ts.filter(t=>t.completada).length;
   const tot = ts.length;
