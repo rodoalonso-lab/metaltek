@@ -9043,6 +9043,13 @@ function calcular(){
   var indirectos=cdBase*n(c.pct_indirectos);
   var costoBase=cdBase+indirectos;
 
+  // El indirecto no tiene renglon en la linea base: se calcula como % del
+  // costo directo. Pero el PROYECTADO si trae un renglon INDIRECTOS, asi
+  // que la tabla comparaba cero contra un valor y pintaba una desviacion
+  // roja que no existe. Se mete el calculado en la base para que la
+  // comparacion sea contra lo mismo.
+  if(indirectos > 0) base.INDIRECTOS = (base.INDIRECTOS||0) + indirectos;
+
   var proy=porLlave(PROY,'tipo_insumo','importe');
   var costoProy=0; for(var k2 in proy) costoProy+=proy[k2];
   if(!PROY.length) costoProy=costoBase;      // sin proyectado capturado, manda la base
