@@ -1783,6 +1783,10 @@ async function showObra(id) {
         referrerpolicy="no-referrer-when-downgrade">
       </iframe>
     </div>` : ''}
+    ${window._obraTieneControl ? '' : `
+    <!-- Con control de obra este bloque sobra: el mismo Gantt vive dentro de
+         Control de obra → Programa, y ahi ademas esta la matriz de conceptos
+         por proceso, que es de donde sale el avance de verdad. -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div class="section-title" style="margin:0">Programa de obra</div>
       <button class="add-btn" onclick="abrirNuevaEtapaGantt('${o.id}')">+ Etapa</button>
@@ -1792,13 +1796,16 @@ async function showObra(id) {
       <button class="chip" onclick="setGanttZoom('dias','${o.id}')">Por días</button>
     </div>
     <div id="gantt-container-${o.id}" style="min-height:60px"></div>
+    `}
     <div id="cobra-host"></div>
     <div style="height:20px"></div>`;
   document.getElementById('obras-list-view').style.display='none';
   document.getElementById('obras-detail-view').style.display='block';
   document.getElementById('obras-detail-view').innerHTML=html;
   document.getElementById('screen-obras').scrollTop=0;
-  setTimeout(function(){ renderGantt(id); }, 80);
+  // solo si el contenedor de la ficha existe; con control de obra el Gantt
+  // lo dibuja la pestaña Programa, que crea el suyo
+  if(!window._obraTieneControl) setTimeout(function(){ renderGantt(id); }, 80);
   // Control de obra. Va aparte, en su propio contenedor: si algo falla ahí
   // dentro, la ficha de la obra sigue funcionando como siempre.
   if(window.COBRA){
