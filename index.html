@@ -3763,12 +3763,10 @@ async function confirmarAutorizacion() {
     closeSheet('autorizar-pago');
     await loadMateriales();
     hideMatDetail();
-    // El mensaje de pago NO sale de aqui: lo manda quien levanto la
-    // requisicion, desde la app de Requisiciones, en cuanto ve la suya
-    // autorizada. Asi ellos gestionan con el proveedor y la direccion solo
-    // autoriza.
+    // La solicitud de pago NO sale de aqui: la manda quien levanto la
+    // requisicion, desde su app, al grupo de pagos. La direccion autoriza.
     showToast('✅ Autorizada. '+((reqFull&&reqFull.solicitante)||'Quien la levantó')+
-              ' ya puede enviar el pago al proveedor.');
+              ' ya puede enviarla al grupo de pagos.');
   } catch(e){ showToast('Error: '+e.message,true); }
   btn.textContent='Autorizar'; btn.disabled=false;
 }
