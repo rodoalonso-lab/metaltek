@@ -3618,6 +3618,18 @@ async function confirmarAutorizacion() {
   }
   if(tiSel) tiSel.style.borderColor = '';
 
+  var _v = function(id){ var e=document.getElementById(id); return e ? e.value.trim() : ''; };
+  var pago = { titular:_v('fap-titular'), banco:_v('fap-banco'), cuenta:_v('fap-cuenta'),
+               clabe:_v('fap-clabe').replace(/\D/g,''), referencia:_v('fap-referencia') };
+  var avisoCl = document.getElementById('fap-clabe-aviso');
+  if(!clabeValida(pago.clabe)){
+    if(avisoCl){ avisoCl.textContent = 'La CLABE debe tener 18 dígitos (lleva '+pago.clabe.length+').'; avisoCl.style.display=''; }
+    var ce=document.getElementById('fap-clabe'); if(ce){ ce.style.borderColor='#EF4444'; ce.focus(); }
+    return;
+  }
+  if(avisoCl) avisoCl.style.display='none';
+  var ce2=document.getElementById('fap-clabe'); if(ce2) ce2.style.borderColor='';
+
   var ivaPct   = parseFloat(document.getElementById('fap-iva-pct')?.value)||0;
   // Bloquear si el monto parece ser el total con IVA (solo cuando IVA > 0%; con 0% subtotal=total es correcto)
   var refConIva = montoInput ? parseFloat(montoInput.dataset.refConIva) || 0 : 0;
@@ -3669,6 +3681,11 @@ async function confirmarAutorizacion() {
       estado:              'autorizada',
       proveedor:           window._autorizarProveedor || '',
       tipo_insumo:         tipoInsumoSel,
+      pago_titular:        pago.titular    || null,
+      pago_banco:          pago.banco      || null,
+      pago_cuenta:         pago.cuenta     || null,
+      pago_clabe:          pago.clabe      || null,
+      pago_referencia:     pago.referencia || null,
       monto_cotizado:      subtotal,
       iva_pct:             ivaPct,
       iva_cotizado:        ivaMonto,
