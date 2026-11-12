@@ -1711,6 +1711,37 @@ function toggleFormaPagoAut(){
 
 // La CLABE son 18 digitos. Validarla aqui evita un rechazo del banco el dia
 // del pago, que es cuando ya nadie se acuerda de donde salio el dato.
+// ── SOLICITUD DE PAGO (PDF) ───────────────────────────────────────────
+// Mismo documento que genera Requisiciones (vive en procepal-lib.js): el
+// respaldo no debe depender de desde que app se imprimio.
+async function solicitudPagoPDFMetaltek(reqId){
+  var r = (requisicionesData||[]).find(function(x){ return x.id===reqId; });
+  if(!r){
+    try { var rr = await db('GET','requisiciones?id=eq.'+reqId+'&select=*'); r = rr && rr[0]; } catch(e){}
+  }
+  if(!r){ showToast('No se encontró la requisición', true); return; }
+  var obra = (obrasData||[]).find(function(o){ return o.id===r.obra_id; });
+  var items = [];
+  try { items = await db('GET','requisicion_items?requisicion_id=eq.'+reqId+'&order=created_at') || []; } catch(e){}
+
+  var fp = (r.forma_pago || 'transferencia');
+  var b = { titular:r.pago_titular, banco:r.pago_banco, clabe:r.pago_clabe,
+            cuenta:r.pago_cuenta, referencia:r.pago_referencia };
+  if(fp !== 'transferencia'){
+    b = { titular:null, banco:null, clabe:null, cuenta:null, referencia:r.pago_referencia };
+  } else if(!b.clabe && r.proveedor){
+    try {
+      var cat = await db('GET','proveedores_bancos?proveedor=eq.'+encodeURIComponent(r.proveedor)+'&limit=1');
+      if(cat && cat[0]) b = { titular:cat[0].titular, banco:cat[0].banco,
+                              clabe:cat[0].clabe, cuenta:cat[0].cuenta, referencia:b.referencia };
+    } catch(e){}
+  }
+  var folio = r.folio ? (String(r.folio).indexOf('REQ-')===0 ? r.folio : 'REQ-'+r.folio)
+                      : 'REQ-'+String(r.id).slice(0,6).toUpperCase();
+  var w = solicitudPagoHTML(r, obra, items, b, fp, folio);
+  if(!w) showToast('Permite las ventanas emergentes para generar el PDF', true);
+}
+
 function clabeValida(c){
   var d = String(c||'').replace(/\D/g,'');
   return d.length===0 || d.length===18;
@@ -2616,6 +2647,7 @@ async function showRequisicion(id) {
     html+=`</div>`;
   }
   if(_est==='autorizada' || _est==='comprada') {
+    html+=`<button class="btn-primary" style="margin-bottom:8px" onclick="event.stopPropagation();solicitudPagoPDFMetaltek(currentReqId)">🧾 Solicitud de pago (PDF)</button>`;
     html+=`<button class="btn-info" onclick="event.stopPropagation();openRecepSheet(currentReqId)">📦 Registrar recepción</button>`;
   }
 
