@@ -961,6 +961,24 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       </select>
       <div id="fap-tipo-insumo-ayuda" style="font-size:11px;color:var(--dim);margin-top:5px"></div>
     </div>
+    <!-- Datos de pago. Se autollenan del catalogo del proveedor y se
+         guardan de vuelta, asi se capturan una sola vez por proveedor.
+         Ademas se copian a la requisicion: si el proveedor cambia de cuenta
+         el año que viene, el historico debe decir a donde se pago. -->
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <label class="form-label" style="margin:0">Datos de pago</label>
+        <span id="fap-banco-origen" style="font-size:10px;color:var(--dim)"></span>
+      </div>
+      <input class="form-input" id="fap-titular" placeholder="Titular de la cuenta" style="margin-top:6px">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="form-input" id="fap-banco" placeholder="Banco" style="flex:1">
+        <input class="form-input" id="fap-cuenta" placeholder="Cuenta" style="flex:1">
+      </div>
+      <input class="form-input" id="fap-clabe" placeholder="CLABE (18 dígitos)" inputmode="numeric" style="margin-top:8px">
+      <input class="form-input" id="fap-referencia" placeholder="Referencia de pago (opcional)" style="margin-top:8px">
+      <div id="fap-clabe-aviso" style="font-size:11px;color:#EF4444;margin-top:5px;display:none"></div>
+    </div>
     <div class="form-group">
       <label class="form-label" for="fap-iva-pct">IVA (%)</label>
       <select class="form-input" id="fap-iva-pct" onchange="calcTotalAutorizacion()">
@@ -1601,6 +1619,45 @@ async function getOrCreateTipo() {
   }
   const opt = sel.options[sel.selectedIndex];
   return opt ? (opt.dataset.nombre || '') : '';
+}
+
+// ── DATOS DE PAGO DEL PROVEEDOR ───────────────────────
+// Se capturan una vez por proveedor y se reusan. La requisicion guarda su
+// propia copia para que el historico no cambie si el proveedor cambia de
+// cuenta despues.
+async function cargarDatosBanco(proveedor, reqObj){
+  var set = function(id,v){ var e=document.getElementById(id); if(e) e.value = v||''; };
+  var origen = document.getElementById('fap-banco-origen');
+  // si la requisicion ya trae datos, mandan esos
+  if(reqObj && (reqObj.pago_clabe || reqObj.pago_banco || reqObj.pago_titular)){
+    set('fap-titular', reqObj.pago_titular); set('fap-banco', reqObj.pago_banco);
+    set('fap-cuenta', reqObj.pago_cuenta);   set('fap-clabe', reqObj.pago_clabe);
+    set('fap-referencia', reqObj.pago_referencia);
+    if(origen) origen.textContent = 'capturados en esta requisición';
+    return;
+  }
+  set('fap-titular',''); set('fap-banco',''); set('fap-cuenta','');
+  set('fap-clabe',''); set('fap-referencia','');
+  if(origen) origen.textContent = '';
+  if(!proveedor) return;
+  try {
+    var rows = await db('GET','proveedores_bancos?proveedor=eq.'+encodeURIComponent(proveedor)+'&limit=1');
+    var b = rows && rows[0];
+    if(b){
+      set('fap-titular', b.titular); set('fap-banco', b.banco);
+      set('fap-cuenta', b.cuenta);   set('fap-clabe', b.clabe);
+      if(origen) origen.textContent = 'del catálogo de ' + proveedor;
+    } else if(origen){
+      origen.textContent = 'primera vez con ' + proveedor + ': se guardarán';
+    }
+  } catch(e){}
+}
+
+// La CLABE son 18 digitos. Validarla aqui evita un rechazo del banco el dia
+// del pago, que es cuando ya nadie se acuerda de donde salio el dato.
+function clabeValida(c){
+  var d = String(c||'').replace(/\D/g,'');
+  return d.length===0 || d.length===18;
 }
 
 // ── TIPO DE INSUMO ────────────────────────────────────
@@ -3377,6 +3434,7 @@ async function autorizarReq(reqId) {
   // Si la partida viene vacía se ofrecen todos, para no dejar al usuario
   // sin opciones por un dato que no capturó nadie.
   await poblarTipoInsumo(reqObj && reqObj.partida, reqObj && reqObj.tipo_insumo);
+  await cargarDatosBanco(proveedorResuelto, reqObj);
 
   if(comps.length) {
     try {
