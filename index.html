@@ -966,6 +966,15 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
          Ademas se copian a la requisicion: si el proveedor cambia de cuenta
          el año que viene, el historico debe decir a donde se pago. -->
     <div class="form-group">
+      <label class="form-label" for="fap-forma-pago">Forma de pago</label>
+      <select class="form-input" id="fap-forma-pago" onchange="toggleFormaPagoAut()">
+        <option value="transferencia">🏦 Transferencia</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="efectivo">💵 Efectivo</option>
+      </select>
+      <div id="fap-forma-nota" style="font-size:11px;color:var(--dim);margin-top:5px;display:none"></div>
+    </div>
+    <div class="form-group" id="fap-banco-wrap">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <label class="form-label" style="margin:0">Datos de pago</label>
         <span id="fap-banco-origen" style="font-size:10px;color:var(--dim)"></span>
@@ -1628,6 +1637,9 @@ async function getOrCreateTipo() {
 async function cargarDatosBanco(proveedor, reqObj){
   var set = function(id,v){ var e=document.getElementById(id); if(e) e.value = v||''; };
   var origen = document.getElementById('fap-banco-origen');
+  var fpSel = document.getElementById('fap-forma-pago');
+  if(fpSel) fpSel.value = (reqObj && reqObj.forma_pago) || 'transferencia';
+  toggleFormaPagoAut();
   // si la requisicion ya trae datos, mandan esos
   if(reqObj && (reqObj.pago_clabe || reqObj.pago_banco || reqObj.pago_titular)){
     set('fap-titular', reqObj.pago_titular); set('fap-banco', reqObj.pago_banco);
@@ -1651,6 +1663,30 @@ async function cargarDatosBanco(proveedor, reqObj){
       origen.textContent = 'primera vez con ' + proveedor + ': se guardarán';
     }
   } catch(e){}
+}
+
+// Forma de pago: con tarjeta o efectivo no hay cuenta destino, asi que el
+// bloque bancario se esconde y deja de estorbar.
+function formaPagoAut(){
+  var e = document.getElementById('fap-forma-pago');
+  return (e && e.value) ? e.value : 'transferencia';
+}
+function toggleFormaPagoAut(){
+  var f = formaPagoAut();
+  var esTransf = (f === 'transferencia');
+  var wrap = document.getElementById('fap-banco-wrap');
+  var nota = document.getElementById('fap-forma-nota');
+  if(wrap) wrap.style.display = esTransf ? '' : 'none';
+  if(nota){
+    nota.style.display = esTransf ? 'none' : '';
+    nota.textContent = f==='tarjeta'
+      ? 'Tarjeta: no se piden datos bancarios.'
+      : 'Efectivo: no se piden datos bancarios.';
+  }
+  if(esTransf){
+    var av = document.getElementById('fap-clabe-aviso');
+    if(av) av.style.display = 'none';
+  }
 }
 
 // La CLABE son 18 digitos. Validarla aqui evita un rechazo del banco el dia
@@ -3619,10 +3655,14 @@ async function confirmarAutorizacion() {
   if(tiSel) tiSel.style.borderColor = '';
 
   var _v = function(id){ var e=document.getElementById(id); return e ? e.value.trim() : ''; };
+  var formaPago = formaPagoAut();
   var pago = { titular:_v('fap-titular'), banco:_v('fap-banco'), cuenta:_v('fap-cuenta'),
                clabe:_v('fap-clabe').replace(/\D/g,''), referencia:_v('fap-referencia') };
+  if(formaPago !== 'transferencia'){
+    pago = { titular:'', banco:'', cuenta:'', clabe:'', referencia:_v('fap-referencia') };
+  }
   var avisoCl = document.getElementById('fap-clabe-aviso');
-  if(!clabeValida(pago.clabe)){
+  if(formaPago === 'transferencia' && !clabeValida(pago.clabe)){
     if(avisoCl){ avisoCl.textContent = 'La CLABE debe tener 18 dígitos (lleva '+pago.clabe.length+').'; avisoCl.style.display=''; }
     var ce=document.getElementById('fap-clabe'); if(ce){ ce.style.borderColor='#EF4444'; ce.focus(); }
     return;
@@ -3681,6 +3721,7 @@ async function confirmarAutorizacion() {
       estado:              'autorizada',
       proveedor:           window._autorizarProveedor || '',
       tipo_insumo:         tipoInsumoSel,
+      forma_pago:          formaPago,
       pago_titular:        pago.titular    || null,
       pago_banco:          pago.banco      || null,
       pago_cuenta:         pago.cuenta     || null,
@@ -3718,6 +3759,7 @@ async function confirmarAutorizacion() {
         monto:             totalConIva,
         partida:           reqFull.partida || 'MATERIAL',
         tipo_insumo:       tipoInsumoSel,
+        forma_pago:        formaPago,
         requisicion_id:    id,
         estatus:           'PENDIENTE',
         prioridad:         urgToPriv[reqFull.urgencia] || 'MEDIA',
@@ -3738,7 +3780,7 @@ async function confirmarAutorizacion() {
 
     // El catalogo del proveedor se actualiza con lo que se acaba de usar:
     // la proxima requisicion a ese proveedor ya viene llena.
-    if(window._autorizarProveedor && (pago.clabe || pago.banco || pago.titular)){
+    if(formaPago === 'transferencia' && window._autorizarProveedor && (pago.clabe || pago.banco || pago.titular)){
       // db() no acepta cabeceras (su 4o argumento son reintentos), asi que
       // no se puede usar el upsert de PostgREST. Se hace a mano: PATCH si
       // ya existe, POST si no. 'proveedor' es unico, asi que no hay riesgo
