@@ -3736,11 +3736,90 @@ async function confirmarAutorizacion() {
       showToast('✅ Compra autorizada · Total con IVA: $'+totalConIva.toLocaleString('es-MX',{minimumFractionDigits:2}));
     }
 
+    // El catalogo del proveedor se actualiza con lo que se acaba de usar:
+    // la proxima requisicion a ese proveedor ya viene llena.
+    if(window._autorizarProveedor && (pago.clabe || pago.banco || pago.titular)){
+      try {
+        await db('POST','proveedores_bancos', {
+          proveedor: window._autorizarProveedor,
+          titular: pago.titular||null, banco: pago.banco||null,
+          cuenta: pago.cuenta||null,   clabe: pago.clabe||null,
+          created_by: currentUser ? currentUser.nombre : null,
+          updated_at: new Date().toISOString()
+        }, {headers:{'Prefer':'resolution=merge-duplicates'}});
+      } catch(e){ /* el catalogo es comodidad, no bloquea la autorizacion */ }
+    }
+
     closeSheet('autorizar-pago');
     await loadMateriales();
     hideMatDetail();
+    abrirWhatsAppPago(id, reqFull, pago, subtotal, ivaMonto, totalConIva, tipoPago, vencimiento);
   } catch(e){ showToast('Error: '+e.message,true); }
   btn.textContent='Autorizar'; btn.disabled=false;
+}
+
+// Mensaje de pago por WhatsApp. No se abre solo: se ofrece, porque a veces
+// se autoriza en lote y no se quiere mandar nada todavia.
+async function abrirWhatsAppPago(reqId, req, pago, subtotal, iva, total, tipoPago, vencimiento){
+  var items = [];
+  try { items = await db('GET','requisicion_items?requisicion_id=eq.'+reqId+'&order=created_at') || []; } catch(e){}
+  var obra = (obrasData||[]).find(function(o){ return o.id===(req&&req.obra_id); });
+  var folio = (req && req.folio) || 'REQ';
+  var money = function(n){ return '$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2}); };
+
+  var lineas = items.map(function(it,i){
+    var c = parseFloat(it.cantidad)||0, pu = parseFloat(it.precio_unitario)||0;
+    return (i+1)+'. '+(it.nombre_material||'—')+' — '+c+' '+(it.unidad||'pza')+
+           (pu?' x '+money(pu)+' = '+money(c*pu):'');
+  }).join('\n');
+
+  var msg = '✅ *REQUISICIÓN AUTORIZADA*\n'+
+    '*'+folio+'*'+(obra?' · '+obra.nombre:'')+'\n'+
+    '🏪 Proveedor: '+(window._autorizarProveedor||'—')+'\n\n'+
+    (lineas?'📦 *Materiales*\n'+lineas+'\n\n':'')+
+    '💵 Subtotal: '+money(subtotal)+'\n'+
+    'IVA: '+money(iva)+'\n'+
+    '*TOTAL: '+money(total)+'*\n'+
+    (tipoPago==='credito'
+      ? '🗓 Crédito'+(vencimiento?' · vence '+vencimiento:'')+'\n'
+      : '💵 Pago de contado\n')+
+    (pago.titular||pago.banco||pago.clabe||pago.cuenta
+      ? '\n🏦 *Datos de pago*\n'+
+        (pago.titular?'Titular: '+pago.titular+'\n':'')+
+        (pago.banco?'Banco: '+pago.banco+'\n':'')+
+        (pago.clabe?'CLABE: '+pago.clabe+'\n':'')+
+        (pago.cuenta?'Cuenta: '+pago.cuenta+'\n':'')+
+        (pago.referencia?'Referencia: '+pago.referencia+'\n':'')
+      : '\n⚠️ Sin datos bancarios capturados\n');
+
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card = document.createElement('div');
+  card.style.cssText = 'background:var(--surface);color:var(--text);width:100%;max-width:520px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:85vh;overflow:auto';
+  card.innerHTML =
+    '<div style="font-weight:800;font-size:15px;margin-bottom:4px">Compra autorizada</div>'+
+    '<div class="item-sub" style="margin-bottom:12px">Puedes enviar la requisición con los datos de pago.</div>'+
+    '<pre style="white-space:pre-wrap;font-family:inherit;font-size:12px;background:var(--bg);'+
+      'border:1px solid var(--border);border-radius:10px;padding:10px;max-height:38vh;overflow:auto;margin:0 0 12px">'+
+      msg.replace(/[<>&]/g, function(c){ return ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]; })+'</pre>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="wa-send" class="btn-primary" style="flex:1">📲 Enviar por WhatsApp</button>'+
+      '<button id="wa-copy" class="btn-secondary" style="flex:1">Copiar</button>'+
+      '<button id="wa-no" class="btn-secondary" style="flex:0 0 auto">Cerrar</button>'+
+    '</div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+  var cerrar = function(){ document.body.removeChild(ov); };
+  card.querySelector('#wa-no').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+  card.querySelector('#wa-send').addEventListener('click', function(){
+    window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+    cerrar();
+  });
+  card.querySelector('#wa-copy').addEventListener('click', function(){
+    try { navigator.clipboard.writeText(msg); showToast('Copiado'); } catch(e){}
+  });
 }
 
 function toggleVencimiento(val) {
