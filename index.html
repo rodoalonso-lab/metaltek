@@ -2237,7 +2237,7 @@ function renderRequisiciones() {
   // Build filter options
   const obras = [...new Map(obrasData.map(o=>[o.id,o])).values()];
   const solicitantes = [...new Set(requisicionesData.map(r=>r.solicitante||r.solicitante_nombre).filter(Boolean))].sort();
-  const estados = ['pendiente','en comparativa','autorizada','comprada','recibida','rechazada'];
+  const estados = ['pendiente','en comparativa','cotizada','autorizada','comprada','recibida','rechazada'];
   const tipos = ['campo','taller'];
 
   let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
