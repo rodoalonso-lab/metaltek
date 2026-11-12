@@ -199,4 +199,158 @@ function isoToSemana(fechaISO) {
   return `${d.getFullYear()}-S${String(weekNum).padStart(2, '0')}`;
 }
 
+// ── SOLICITUD DE PAGO (documento de respaldo) ────────────────────────
+// La comparte Requisiciones y Metaltek para que el papel sea el mismo
+// salga de donde salga. Recibe los datos ya resueltos; no consulta nada.
+//   r     : renglon de requisiciones
+//   obra  : renglon de obras (o null)
+//   items : requisicion_items
+//   b     : {titular, banco, clabe, cuenta, referencia}
+//   fp    : 'transferencia' | 'tarjeta' | 'efectivo'
+//   folio : texto del folio ya formateado
+function solicitudPagoHTML(r, obra, items, b, fp, folio){
+  items = items || [];
+  b = b || {};
+  fp = fp || 'transferencia';
+  var E = function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var M = function(n){ return '$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var D = function(d){ if(!d) return '—'; var q=(d+'').substring(0,10).split('-'); return q[2]+'/'+q[1]+'/'+q[0]; };
+
+  var sub = 0, ivaT = 0;
+  var filas = items.map(function(it,i){
+    var c  = parseFloat(it.cantidad)||0;
+    var pu = parseFloat(it.precio_unitario)||0;
+    var dp = Math.min(100, Math.max(0, parseFloat(it.descuento_pct)||0));
+    var ip = (it.iva_pct===null||it.iva_pct===undefined) ? 16 : parseFloat(it.iva_pct);
+    var imp = c*pu*(1-dp/100);
+    sub += imp; ivaT += imp*ip/100;
+    return '<tr>'
+      +'<td class="num">'+(i+1)+'</td>'
+      +'<td><b>'+E(it.nombre_material||it.descripcion||'—')+'</b>'
+        +(it.especificaciones?'<div class="esp">'+E(it.especificaciones)+'</div>':'')+'</td>'
+      +'<td class="num">'+c+' '+E(it.unidad||'pza')+'</td>'
+      +'<td class="num">'+M(pu)+'</td>'
+      +'<td class="num">'+(dp?dp+'%':'—')+'</td>'
+      +'<td class="num">'+ip+'%</td>'
+      +'<td class="num"><b>'+M(imp)+'</b></td>'
+      +'</tr>';
+  }).join('');
+
+  // Si no hay renglones con precio, mandan los totales guardados en la req.
+  if(!items.length || sub<=0){
+    sub  = parseFloat(r.monto_cotizado)||0;
+    ivaT = parseFloat(r.iva_cotizado)||0;
+    if(!filas) filas = '<tr><td colspan="7" class="vacio">Sin desglose de materiales — monto global cotizado</td></tr>';
+  }
+  var total = parseFloat(r.monto_total_con_iva)||(sub+ivaT);
+
+  var fpTxt = fp==='tarjeta' ? 'TARJETA' : fp==='efectivo' ? 'EFECTIVO' : 'TRANSFERENCIA';
+
+  var bloquePago;
+  if(fp === 'transferencia'){
+    var fila = function(et,v,grande){
+      if(!v) return '';
+      return '<div class="bfila"><span class="bet">'+et+'</span>'
+        +'<span class="bval'+(grande?' big':'')+'">'+E(v)+'</span></div>';
+    };
+    bloquePago = (b.titular||b.banco||b.clabe||b.cuenta)
+      ? '<div class="pago">'
+        + '<div class="pago-tit">DATOS PARA TRANSFERENCIA</div>'
+        + fila('Titular', b.titular)
+        + fila('Banco', b.banco)
+        + fila('CLABE', b.clabe, true)
+        + fila('Cuenta', b.cuenta)
+        + fila('Referencia', b.referencia)
+        + '</div>'
+      : '<div class="pago alerta"><div class="pago-tit">DATOS PARA TRANSFERENCIA</div>'
+        + '<div class="falta">⚠ Esta solicitud no tiene cuenta destino capturada. No la pagues hasta que se complete.</div></div>';
+  } else {
+    bloquePago = '<div class="pago"><div class="pago-tit">FORMA DE PAGO</div>'
+      + '<div class="bfila"><span class="bet">Método</span><span class="bval big">'+fpTxt+'</span></div>'
+      + '<div class="falta ok">No requiere transferencia. Adjunta ticket o factura al recibir.</div></div>';
+  }
+
+  var hoy = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+  var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+   +'<title>Solicitud de pago '+E(folio)+'</title><style>'
+   +'*{box-sizing:border-box;margin:0;padding:0}'
+   +'body{font-family:Arial,Helvetica,sans-serif;font-size:11.5px;color:#111;padding:26px 30px;background:#fff}'
+   +'.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0A1628;padding-bottom:10px;margin-bottom:6px}'
+   +'.marca{font-size:21px;font-weight:900;letter-spacing:.02em;color:#0A1628}'
+   +'.sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6B7280;margin-top:2px}'
+   +'.folio{font-size:19px;font-weight:900;color:#0A1628;text-align:right}'
+   +'.fecha{font-size:10px;color:#6B7280;text-align:right;margin-top:2px}'
+   +'.chip{display:inline-block;margin-top:5px;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:.06em;background:#0A1628;color:#fff}'
+   +'.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px 14px;margin:14px 0 4px}'
+   +'.c-et{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;margin-bottom:2px}'
+   +'.c-v{font-size:12px;font-weight:700;color:#111}'
+   +'table{width:100%;border-collapse:collapse;margin-top:14px}'
+   +'thead tr{background:#0A1628;color:#fff}'
+   +'th{padding:6px 8px;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;text-align:left}'
+   +'th.num,td.num{text-align:right}'
+   +'td{padding:6px 8px;border-bottom:1px solid #E5E7EB;vertical-align:top}'
+   +'tbody tr:nth-child(even) td{background:#F9FAFB}'
+   +'.esp{font-size:10px;color:#6B7280;margin-top:2px}'
+   +'.vacio{text-align:center;color:#9CA3AF;padding:14px}'
+   +'.tot{margin-top:12px;margin-left:auto;width:270px}'
+   +'.tot .f{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}'
+   +'.tot .g{border-top:2px solid #0A1628;margin-top:4px;padding-top:7px;font-size:16px;font-weight:900}'
+   +'.pago{margin-top:16px;border:2px solid #0A1628;border-radius:8px;padding:12px 14px;page-break-inside:avoid}'
+   +'.pago.alerta{border-color:#B91C1C}'
+   +'.pago-tit{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:#6B7280;font-weight:800;margin-bottom:8px}'
+   +'.bfila{display:flex;align-items:baseline;gap:12px;padding:3px 0;border-bottom:1px dotted #D1D5DB}'
+   +'.bfila:last-child{border-bottom:none}'
+   +'.bet{width:95px;flex:none;font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:.05em}'
+   +'.bval{font-family:"Courier New",monospace;font-size:13px;font-weight:700;color:#111;user-select:all;-webkit-user-select:all}'
+   +'.bval.big{font-size:19px;letter-spacing:.06em}'
+   +'.falta{font-size:11px;color:#B91C1C;font-weight:700;margin-top:6px}'
+   +'.falta.ok{color:#15803D}'
+   +'.firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px;margin-top:40px;page-break-inside:avoid}'
+   +'.fm{border-top:1px solid #111;padding-top:5px;text-align:center;font-size:9.5px;color:#6B7280;letter-spacing:.05em;text-transform:uppercase}'
+   +'.pie{margin-top:22px;border-top:1px solid #E5E7EB;padding-top:7px;font-size:9px;color:#9CA3AF;display:flex;justify-content:space-between}'
+   +'@page{size:letter portrait;margin:12mm}'
+   +'@media print{body{padding:0}.noimp{display:none}}'
+   +'.noimp{position:fixed;top:10px;right:12px;display:flex;gap:8px}'
+   +'.noimp button{font-family:inherit;font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;background:#0A1628;color:#fff}'
+   +'</style></head><body>'
+   +'<div class="noimp"><button onclick="window.print()">🖨️ Guardar como PDF</button></div>'
+   +'<div class="hd">'
+     +'<div><div class="marca">PROCEPAL</div><div class="sub">Solicitud de pago</div>'
+       +'<div class="chip">'+fpTxt+'</div></div>'
+     +'<div><div class="folio">'+E(folio)+'</div><div class="fecha">Emitida '+hoy+'</div>'
+       +'<div class="fecha">Estado: '+E((r.estado||'').toUpperCase())+'</div></div>'
+   +'</div>'
+   +'<div class="grid">'
+     +'<div><div class="c-et">Proveedor</div><div class="c-v">'+E(r.proveedor||'—')+'</div></div>'
+     +'<div><div class="c-et">Obra</div><div class="c-v">'+E(obra?obra.nombre:'—')+'</div></div>'
+     +'<div><div class="c-et">Solicitó</div><div class="c-v">'+E(r.solicitante||r.solicitante_nombre||'—')+'</div></div>'
+     +'<div><div class="c-et">Fecha requerida</div><div class="c-v">'+D(r.fecha_requerida||r.created_at)+'</div></div>'
+     +'<div><div class="c-et">Partida</div><div class="c-v">'+E(r.partida||'—')+'</div></div>'
+     +'<div><div class="c-et">Tipo de insumo</div><div class="c-v">'+E(r.tipo_insumo||'sin clasificar')+'</div></div>'
+     +'<div><div class="c-et">Entrega</div><div class="c-v">'+E(r.tiempo_entrega||'—')+'</div></div>'
+     +'<div><div class="c-et">Urgencia</div><div class="c-v">'+E((r.urgencia||'media').toUpperCase())+'</div></div>'
+   +'</div>'
+   +'<table><thead><tr>'
+     +'<th class="num">#</th><th>Material</th><th class="num">Cantidad</th>'
+     +'<th class="num">P. unitario</th><th class="num">Desc.</th><th class="num">IVA</th><th class="num">Importe</th>'
+   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +'<div class="tot">'
+     +'<div class="f"><span>Subtotal</span><span>'+M(sub)+'</span></div>'
+     +'<div class="f"><span>IVA</span><span>'+M(ivaT)+'</span></div>'
+     +'<div class="f g"><span>TOTAL A PAGAR</span><span>'+M(total)+'</span></div>'
+   +'</div>'
+   + bloquePago
+   +(r.notas?'<div style="margin-top:14px;font-size:11px"><b>Notas:</b> '+E(r.notas)+'</div>':'')
+   +'<div class="firmas">'
+     +'<div class="fm">Solicita</div><div class="fm">Autoriza</div><div class="fm">Pagó</div>'
+   +'</div>'
+   +'<div class="pie"><span>PROCEPAL · '+E(folio)+'</span><span>Documento de respaldo — conservar con el comprobante de pago</span></div>'
+   +'</body></html>';
+  var w = window.open('', '_blank', 'width=900,height=1000');
+  if(!w) return null;
+  w.document.write(doc); w.document.close(); w.focus();
+  return w;
+}
+
 console.log('[Procepal] procepal-lib.js cargado ✓');
