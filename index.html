@@ -3662,6 +3662,20 @@ async function confirmarAutorizacion() {
     pago = { titular:'', banco:'', cuenta:'', clabe:'', referencia:_v('fap-referencia') };
   }
   var avisoCl = document.getElementById('fap-clabe-aviso');
+  // Ultima reja: si va por transferencia, no se autoriza sin cuenta destino.
+  // Antes solo se pedia al cotizar, asi que una requi vieja (o cotizada por
+  // la ruta directa, que no los guardaba) llegaba aqui en blanco y se
+  // autorizaba igual; el dia del pago no habia a donde transferir.
+  if(formaPago === 'transferencia' && (!pago.titular || !pago.banco || !pago.clabe)){
+    if(avisoCl){ avisoCl.textContent = 'Captura titular, banco y CLABE, o cambia la forma de pago a tarjeta/efectivo.'; avisoCl.style.display=''; }
+    var pf = !pago.titular ? 'fap-titular' : (!pago.banco ? 'fap-banco' : 'fap-clabe');
+    var pe = document.getElementById(pf); if(pe){ pe.style.borderColor='#EF4444'; pe.focus(); }
+    showToast('Faltan los datos de pago del proveedor', true);
+    return;
+  }
+  ['fap-titular','fap-banco','fap-clabe'].forEach(function(_id){
+    var _e=document.getElementById(_id); if(_e) _e.style.borderColor='';
+  });
   if(formaPago === 'transferencia' && !clabeValida(pago.clabe)){
     if(avisoCl){ avisoCl.textContent = 'La CLABE debe tener 18 dígitos (lleva '+pago.clabe.length+').'; avisoCl.style.display=''; }
     var ce=document.getElementById('fap-clabe'); if(ce){ ce.style.borderColor='#EF4444'; ce.focus(); }
