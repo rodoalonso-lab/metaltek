@@ -1471,7 +1471,7 @@ async function authFetch(endpoint, body) {
 
 // fmt, fmtDate, showToast → de procepal-lib.js
 const estadoColor = {'En progreso':'#3B9EBF','Completada':'#5BC4C0','Iniciando':'#F0A500','Pausada':'#EF4444'};
-const reqColor = {'pendiente':'#F59E0B','en comparativa':'#3B82F6','autorizada':'#10B981','comprada':'#A78BFA','recibida':'#8B949E','rechazada':'#EF4444'};
+const reqColor = {'pendiente':'#F59E0B','en comparativa':'#3B82F6','cotizada':'#3B9EBF','autorizada':'#10B981','comprada':'#A78BFA','recibida':'#8B949E','rechazada':'#EF4444'};
 function prioBadge(p) {
   var colors = {baja:'#10B981',media:'#F0A500',alta:'#EF4444'};
   var labels = {baja:'🟢 Baja',media:'🟠 Media',alta:'🔴 Alta'};
@@ -2190,7 +2190,7 @@ function imprimirReqsMetaltek() {
   var filtroStr = filtros.length ? filtros.join(' · ') : 'Todas las requisiciones';
   var fmtM = function(n){ return n!=null&&n!=='' ? '$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2}) : '—'; };
   var fmtD = function(d){ if(!d) return '—'; var p=(d+'').substring(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
-  var estColor = {pendiente:'#F0A500','en comparativa':'#3B82F6',autorizada:'#10B981',comprada:'#8B5CF6',recibida:'#14B8A6',rechazada:'#EF4444'};
+  var estColor = {pendiente:'#F0A500','en comparativa':'#3B82F6',cotizada:'#3B9EBF',autorizada:'#10B981',comprada:'#8B5CF6',recibida:'#14B8A6',rechazada:'#EF4444'};
   var rows = reqs.map(function(r){
     var obra = (obrasData.find(function(o){return o.id===r.obra_id;})||{}).nombre||'—';
     var sol  = r.solicitante||r.solicitante_nombre||'—';
@@ -6107,7 +6107,7 @@ async function generarPDFRequisicion(reqId) {
 
   const folio = fmtFolio(r);
   const _estadoNorm = (r.estado||'Pendiente');
-  const _estadoMap = {'pendiente':'#F59E0B','en comparativa':'#3B82F6','autorizada':'#10B981','recibida':'#6B7280','rechazada':'#EF4444'};
+  const _estadoMap = {'pendiente':'#F59E0B','en comparativa':'#3B82F6','cotizada':'#3B9EBF','autorizada':'#10B981','recibida':'#6B7280','rechazada':'#EF4444'};
   const estadoColor = _estadoMap[_estadoNorm.toLowerCase()] || '#F59E0B';
   const estadoLabel = _estadoNorm.charAt(0).toUpperCase() + _estadoNorm.slice(1);
 
