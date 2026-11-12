@@ -3739,14 +3739,24 @@ async function confirmarAutorizacion() {
     // El catalogo del proveedor se actualiza con lo que se acaba de usar:
     // la proxima requisicion a ese proveedor ya viene llena.
     if(window._autorizarProveedor && (pago.clabe || pago.banco || pago.titular)){
+      // db() no acepta cabeceras (su 4o argumento son reintentos), asi que
+      // no se puede usar el upsert de PostgREST. Se hace a mano: PATCH si
+      // ya existe, POST si no. 'proveedor' es unico, asi que no hay riesgo
+      // de duplicar.
       try {
-        await db('POST','proveedores_bancos', {
-          proveedor: window._autorizarProveedor,
+        var _datos = {
           titular: pago.titular||null, banco: pago.banco||null,
           cuenta: pago.cuenta||null,   clabe: pago.clabe||null,
-          created_by: currentUser ? currentUser.nombre : null,
           updated_at: new Date().toISOString()
-        }, {headers:{'Prefer':'resolution=merge-duplicates'}});
+        };
+        var _pv = encodeURIComponent(window._autorizarProveedor);
+        var _ex = await db('GET','proveedores_bancos?proveedor=eq.'+_pv+'&select=id&limit=1');
+        if(_ex && _ex.length) await db('PATCH','proveedores_bancos?proveedor=eq.'+_pv, _datos);
+        else {
+          _datos.proveedor = window._autorizarProveedor;
+          _datos.created_by = currentUser ? currentUser.nombre : null;
+          await db('POST','proveedores_bancos', _datos);
+        }
       } catch(e){ /* el catalogo es comodidad, no bloquea la autorizacion */ }
     }
 
