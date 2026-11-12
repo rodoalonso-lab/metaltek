@@ -1651,7 +1651,7 @@ async function cargarDatosBanco(proveedor, reqObj){
   set('fap-titular',''); set('fap-banco',''); set('fap-cuenta','');
   set('fap-clabe',''); set('fap-referencia','');
   if(origen) origen.textContent = '';
-  if(!proveedor) return;
+  if(!proveedor){ avisoSinBanco(true); return; }
   try {
     var rows = await db('GET','proveedores_bancos?proveedor=eq.'+encodeURIComponent(proveedor)+'&limit=1');
     var b = rows && rows[0];
@@ -1659,10 +1659,28 @@ async function cargarDatosBanco(proveedor, reqObj){
       set('fap-titular', b.titular); set('fap-banco', b.banco);
       set('fap-cuenta', b.cuenta);   set('fap-clabe', b.clabe);
       if(origen) origen.textContent = 'del catálogo de ' + proveedor;
-    } else if(origen){
-      origen.textContent = 'primera vez con ' + proveedor + ': se guardarán';
+      avisoSinBanco(false);
+    } else {
+      if(origen) origen.textContent = 'primera vez con ' + proveedor + ': se guardarán';
+      avisoSinBanco(true);
     }
-  } catch(e){}
+  } catch(e){ avisoSinBanco(true); }
+}
+
+// Si la requisicion llega sin cuenta y el proveedor tampoco esta en el
+// catalogo, no hay de donde sacarla: hay que decirlo, no dejar los campos
+// vacios en silencio.
+function avisoSinBanco(mostrar){
+  var av = document.getElementById('fap-clabe-aviso');
+  if(!av) return;
+  if(mostrar && formaPagoAut()==='transferencia'){
+    av.textContent = 'Esta requisición llegó sin datos bancarios. Captúralos aquí (se guardan para este proveedor) o cambia la forma de pago.';
+    av.style.color = '#F0A500';
+    av.style.display = '';
+  } else if(av.style.color === 'rgb(240, 165, 0)' || av.style.color === '#F0A500'){
+    av.style.display = 'none';
+    av.style.color = '';
+  }
 }
 
 // Forma de pago: con tarjeta o efectivo no hay cuenta destino, asi que el
@@ -1683,9 +1701,11 @@ function toggleFormaPagoAut(){
       ? 'Tarjeta: no se piden datos bancarios.'
       : 'Efectivo: no se piden datos bancarios.';
   }
+  var av = document.getElementById('fap-clabe-aviso');
+  if(av){ av.style.display = 'none'; av.style.color = ''; }
   if(esTransf){
-    var av = document.getElementById('fap-clabe-aviso');
-    if(av) av.style.display = 'none';
+    var cl = document.getElementById('fap-clabe');
+    if(cl && !cl.value) avisoSinBanco(true);
   }
 }
 
@@ -3667,7 +3687,7 @@ async function confirmarAutorizacion() {
   // la ruta directa, que no los guardaba) llegaba aqui en blanco y se
   // autorizaba igual; el dia del pago no habia a donde transferir.
   if(formaPago === 'transferencia' && (!pago.titular || !pago.banco || !pago.clabe)){
-    if(avisoCl){ avisoCl.textContent = 'Captura titular, banco y CLABE, o cambia la forma de pago a tarjeta/efectivo.'; avisoCl.style.display=''; }
+    if(avisoCl){ avisoCl.textContent = 'Captura titular, banco y CLABE, o cambia la forma de pago a tarjeta/efectivo.'; avisoCl.style.color='#EF4444'; avisoCl.style.display=''; }
     var pf = !pago.titular ? 'fap-titular' : (!pago.banco ? 'fap-banco' : 'fap-clabe');
     var pe = document.getElementById(pf); if(pe){ pe.style.borderColor='#EF4444'; pe.focus(); }
     showToast('Faltan los datos de pago del proveedor', true);
