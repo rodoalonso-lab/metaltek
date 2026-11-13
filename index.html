@@ -11449,7 +11449,12 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
       if(ev.key === 'Enter'){
         ev.preventDefault();
-        inp.blur();            // el blur dispara el change y el formateo
+        // Se confirma de forma explicita en vez de confiar en que el blur
+        // dispare 'change': el navegador solo lo lanza si considera "sucio"
+        // el campo, y eso no siempre coincide con lo que el usuario escribio.
+        var tr = inp.closest('tr[data-id]');
+        if(tr) NOM.editar(tr.getAttribute('data-id'), inp.getAttribute('data-k'), inp);
+        inp.blur();
         return;
       }
 
