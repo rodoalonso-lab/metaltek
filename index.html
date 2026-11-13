@@ -4936,35 +4936,93 @@ function renderTrabajadores(){
     el.innerHTML='<div class="empty"><div class="empty-icon">👷</div><div class="empty-title">Sin trabajadores</div><div class="empty-sub">Toca "+ Trabajador" para agregar</div></div>';
     return;
   }
-  const activos=trabajadoresData.filter(t=>t.activo!==false);
-  const byObra={};
-  activos.forEach(t=>{
-    const k=t.todos_proyectos?'🏢 Oficina (Todos los proyectos)':(obrasData.find(o=>o.id===t.obra_id)?.nombre||'Sin obra asignada');
-    if(!byObra[k]) byObra[k]=[];
-    byObra[k].push(t);
-  });
-  let h='';
-  Object.keys(byObra).forEach(obraNom=>{
-    h+=`<div class="section-title">${obraNom}</div>`;
-    byObra[obraNom].forEach(t=>{
-      h+=`<div class="card clickable" onclick="editTrabajador('${t.id}')" style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:14px;font-weight:700">${t.nombre}</div>
-            <div class="item-sub">${t.puesto||'—'} · ${t.telefono||'—'}</div>
-          <div class="item-sub" style="margin-top:2px">${t.area==='taller'?'🔧 Taller':t.area==='oficina'?'🏢 Oficina':'🏗 Campo'}</div>
-            <div class="item-sub" style="margin-top:4px">${t.forma_pago==='tarjeta'?'💳 '+t.banco:(t.forma_pago==='ambos'?'💵💳 Efectivo + Tarjeta '+(t.banco||''):('💵 Efectivo'))} · $${t.sueldo_diario||0}/día</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:11px;color:var(--dim);margin-bottom:4px">PIN</div>
-            <div style="font-size:18px;font-weight:800;color:var(--accent)">${t.pin_checador||'—'}</div>
-          </div>
+  const esc2 = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const dinero = v => '$'+(parseFloat(v)||0).toLocaleString('es-MX',
+                      {minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Activos arriba agrupados por equipo; los inactivos hasta el fondo, juntos.
+  // No se borran: si un dia regresan, se vuelve a palomear y ya.
+  const activos  = trabajadoresData.filter(t=>t.activo!==false);
+  const inactivos= trabajadoresData.filter(t=>t.activo===false);
+
+  const tarjeta = (t, apagado) => {
+    const eq = t.cuadrilla || t.area || 'Sin equipo';
+    const pago = t.forma_pago==='tarjeta' ? '💳 Tarjeta'
+               : t.forma_pago==='ambos'   ? '💵💳 Efectivo + Tarjeta'
+               : '💵 Efectivo';
+    const sueldo = parseFloat(t.sueldo_semanal)>0
+      ? dinero(t.sueldo_semanal)+'/semana'
+      : (parseFloat(t.sueldo_diario)>0 ? dinero(t.sueldo_diario)+'/día' : 'sin sueldo base');
+    return `<div class="card trab-card${apagado?' trab-off':''}" data-trab="${t.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <label class="trab-sw" title="${apagado?'Activar':'Dar de baja'}">
+          <input type="checkbox" data-trab-activo="${t.id}"${apagado?'':' checked'}>
+          <span>${apagado?'Inactivo':'Activo'}</span>
+        </label>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700">${esc2(t.nombre)}</div>
+          <div class="item-sub">${esc2(eq)}${t.puesto?' · '+esc2(t.puesto):''}</div>
+          <div class="item-sub" style="margin-top:3px">${pago} · ${sueldo}</div>
         </div>
-      </div>`;
-    });
+        <div style="text-align:right;flex:none">
+          <div style="font-size:10px;color:var(--dim);margin-bottom:2px">PIN</div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent)">${t.pin_checador||'—'}</div>
+          <button class="trab-edit" data-trab-edit="${t.id}">✏️ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  const porEquipo={};
+  activos.forEach(t=>{
+    const k=t.cuadrilla || t.area || 'Sin equipo';
+    (porEquipo[k]=porEquipo[k]||[]).push(t);
   });
+
+  let h=`<div class="item-sub" style="margin-bottom:10px">
+    <b style="color:var(--accent)">${activos.length} activos</b> · ${inactivos.length} inactivos.
+    A la nómina semanal sólo entran los activos.</div>`;
+  Object.keys(porEquipo).sort().forEach(eq=>{
+    h+=`<div class="section-title">${esc2(eq)}</div>`;
+    porEquipo[eq].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)))
+                 .forEach(t=>{ h+=tarjeta(t,false); });
+  });
+  if(inactivos.length){
+    h+=`<div class="section-title" style="margin-top:18px;color:var(--dim)">⏸ INACTIVOS</div>`;
+    inactivos.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)))
+             .forEach(t=>{ h+=tarjeta(t,true); });
+  }
   el.innerHTML=h;
+
+  // REGLAS.md: nada de onclick dentro de innerHTML.
+  if(!el.dataset.trabLigado){
+    el.dataset.trabLigado='1';
+    el.addEventListener('change', async function(ev){
+      const chk=ev.target.closest('[data-trab-activo]');
+      if(!chk) return;
+      const id=chk.getAttribute('data-trab-activo');
+      const t=trabajadoresData.find(x=>x.id===id);
+      if(!t) return;
+      const nuevoEstado=chk.checked;
+      try {
+        await db('PATCH','trabajadores?id=eq.'+id,{activo:nuevoEstado});
+        t.activo=nuevoEstado;
+        showToast(nuevoEstado ? '✅ '+t.nombre+' activo'
+                              : '⏸ '+t.nombre+' dado de baja · ya no entra a la nómina');
+        renderTrabajadores();
+      } catch(e){
+        chk.checked=!nuevoEstado;
+        showToast('No se pudo cambiar: '+e.message, true);
+      }
+    });
+    el.addEventListener('click', function(ev){
+      const b=ev.target.closest('[data-trab-edit]');
+      if(b) editTrabajador(b.getAttribute('data-trab-edit'));
+    });
+  }
 }
+
 
 function abrirNuevoTrabajador(){
   document.getElementById('trab-sheet-title').textContent='Asignar Trabajador';
