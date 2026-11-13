@@ -10210,49 +10210,154 @@ function nuevaEstimacion(){
     'display:flex;align-items:flex-end;justify-content:center';
   var card=document.createElement('div');
   card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
-    'border-radius:16px 16px 0 0;padding:18px 16px 22px';
-  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:10px">Nueva estimación</div>'+
-    '<label class="cobra-lbl">Importe ejecutado del periodo (sin IVA)</label>'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:92vh;overflow:auto';
+
+  // El anticipo no es obra ejecutada: es dinero que entra por adelantado y se
+  // amortiza en las estimaciones siguientes. Por eso no lleva amortizacion ni
+  // retencion, y no cuenta como avance.
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:12px">Nuevo documento de cobro</div>'+
+    '<label class="cobra-lbl">Tipo</label>'+
+    '<select id="cobra-tipo" class="form-input" style="width:100%;margin-bottom:10px">'+
+      '<option value="estimacion">📄 Estimación — obra ejecutada del periodo</option>'+
+      '<option value="anticipo">💰 Anticipo — pago por adelantado</option>'+
+      '<option value="finiquito">🏁 Finiquito — cierre y devolución de retenciones</option>'+
+    '</select>'+
+    '<label class="cobra-lbl" id="cobra-lbl-imp">Importe ejecutado del periodo (sin IVA)</label>'+
     '<input type="number" step="0.01" id="cobra-imp" class="form-input" style="width:100%;margin-bottom:4px" value="'+sug.toFixed(2)+'">'+
-    '<div class="item-sub" style="margin-bottom:10px">Por estimar hoy: '+money(x.porEstimar)+'</div>'+
-    '<label class="cobra-lbl">Periodo</label>'+
+    '<div class="item-sub" id="cobra-ayuda" style="margin-bottom:10px">Por estimar hoy: '+money(x.porEstimar)+'</div>'+
+    '<label class="cobra-lbl">Periodo o concepto</label>'+
     '<input id="cobra-per" class="form-input" style="width:100%;margin-bottom:10px" placeholder="Ej. 1 al 15 de noviembre">'+
+    '<label class="cobra-lbl">Fecha de presentación (opcional)</label>'+
+    '<input id="cobra-fp" type="date" class="form-input" style="width:100%;margin-bottom:10px">'+
     '<div id="cobra-prev" class="item-sub" style="margin-bottom:12px"></div>'+
     '<div style="display:flex;gap:8px">'+
       '<button id="cobra-ok2" class="btn-primary" style="flex:1">Crear</button>'+
       '<button id="cobra-c2" class="btn-secondary" style="flex:1">Cancelar</button></div>';
   ov.appendChild(card); document.body.appendChild(ov);
 
+  var tipoDe=function(){ return card.querySelector('#cobra-tipo').value; };
+
   var calc=function(){
+    var t=tipoDe();
     var imp=Number(card.querySelector('#cobra-imp').value)||0;
-    var am=-imp*n(c.pct_amortizacion), re=-imp*n(c.pct_retencion);
+    var am=0, re=0;
+    if(t==='estimacion'){ am=-imp*n(c.pct_amortizacion); re=-imp*n(c.pct_retencion); }
     var st=imp+am+re;
-    card.querySelector('#cobra-prev').innerHTML=
-      'Amortización '+money(am)+' · Retención '+money(re)+
-      '<br>Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+' · Total a cobrar <b>'+money(st*1.16)+'</b>';
+    var txt;
+    if(t==='anticipo'){
+      txt='El anticipo entra completo: no lleva amortización ni retención.<br>'+
+          'Se irá descontando a razón de '+pct(c.pct_amortizacion)+' en cada estimación.<br>'+
+          'Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+' · <b>Total a cobrar '+money(st*1.16)+'</b>';
+    } else if(t==='finiquito'){
+      txt='Finiquito: captura aquí la devolución de retenciones u otros conceptos de cierre.<br>'+
+          'Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+' · <b>Total '+money(st*1.16)+'</b>';
+    } else {
+      txt='Amortización '+money(am)+' · Retención '+money(re)+
+          '<br>Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+' · <b>Total a cobrar '+money(st*1.16)+'</b>';
+    }
+    card.querySelector('#cobra-prev').innerHTML=txt;
   };
-  card.querySelector('#cobra-imp').addEventListener('input', calc); calc();
+
+  var ajustaTipo=function(){
+    var t=tipoDe();
+    var lbl=card.querySelector('#cobra-lbl-imp');
+    var ayu=card.querySelector('#cobra-ayuda');
+    var imp=card.querySelector('#cobra-imp');
+    if(t==='anticipo'){
+      lbl.textContent='Importe del anticipo (sin IVA)';
+      var sugA = n(c.monto_contrato) * n(c.pct_anticipo);
+      ayu.innerHTML = sugA>0
+        ? 'El contrato marca '+pct(c.pct_anticipo)+' de anticipo: '+money(sugA)
+        : 'El contrato no tiene porcentaje de anticipo capturado.';
+      if(sugA>0) imp.value = sugA.toFixed(2);
+    } else if(t==='finiquito'){
+      lbl.textContent='Importe del finiquito (sin IVA)';
+      ayu.innerHTML='Retenido hasta hoy: '+money(Math.abs(x.retenido||0));
+      imp.value = Math.abs(x.retenido||0).toFixed(2);
+    } else {
+      lbl.textContent='Importe ejecutado del periodo (sin IVA)';
+      ayu.textContent='Por estimar hoy: '+money(x.porEstimar);
+      imp.value = sug.toFixed(2);
+    }
+    calc();
+  };
+
+  card.querySelector('#cobra-imp').addEventListener('input', calc);
+  card.querySelector('#cobra-tipo').addEventListener('change', ajustaTipo);
+  ajustaTipo();
 
   var cerrar=function(){ document.body.removeChild(ov); };
   card.querySelector('#cobra-c2').addEventListener('click', cerrar);
   ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
   card.querySelector('#cobra-ok2').addEventListener('click', function(){
+    var t=tipoDe();
     var imp=Number(card.querySelector('#cobra-imp').value)||0;
     if(imp<=0) return;
+    var am = t==='estimacion' ? -imp*n(c.pct_amortizacion) : 0;
+    var re = t==='estimacion' ? -imp*n(c.pct_retencion)    : 0;
     var maxNo=ESTIM.reduce(function(a,e){ return Math.max(a, n(e.no)); }, 0);
     db('POST','obra_estimaciones', {
-      obra_id:OBRA.id, no:maxNo+1, tipo:'estimacion',
+      obra_id:OBRA.id, no:maxNo+1, tipo:t,
       periodo: card.querySelector('#cobra-per').value || null,
       importe_ejecutado: imp,
-      amortizacion: -imp*n(c.pct_amortizacion),
-      retencion:    -imp*n(c.pct_retencion)
+      amortizacion: am,
+      retencion: re,
+      fecha_presentada: card.querySelector('#cobra-fp').value || null
     }).then(function(){ cerrar(); return cargar(OBRA.id); })
       .then(function(){
-        if(typeof showToast==='function') showToast('Estimación creada');
+        if(typeof showToast==='function')
+          showToast(t==='anticipo' ? '💰 Anticipo registrado'
+                   : t==='finiquito' ? '🏁 Finiquito registrado' : 'Estimación creada');
         pinta();
       })
       .catch(function(e){
         if(typeof showToast==='function') showToast('No se creó: '+e.message, true);
+      });
+  });
+}
+
+// Registrar el cobro de una estimación. Es el momento en que deja de ser un
+// derecho de cobro y se vuelve dinero: hasta aquí no tocaba nada.
+function registrarCobro(estimId){
+  var e = ESTIM.find(function(x){ return x.id===estimId; });
+  if(!e) return;
+  var pendiente = n(e.total) - n(e.importe_cobrado);
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:480px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px';
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:4px">Registrar cobro</div>'+
+    '<div class="item-sub" style="margin-bottom:12px">'+esc(String(e.tipo).toUpperCase())+
+      ' No. '+esc(e.no)+' · total '+money(e.total)+
+      (n(e.importe_cobrado)>0 ? ' · ya cobrado '+money(e.importe_cobrado) : '')+'</div>'+
+    '<label class="cobra-lbl">Importe cobrado (acumulado)</label>'+
+    '<input type="number" step="0.01" id="cob-imp" class="form-input" style="width:100%;margin-bottom:4px" value="'+n(e.total).toFixed(2)+'">'+
+    '<div class="item-sub" style="margin-bottom:10px">Pendiente: '+money(pendiente)+'</div>'+
+    '<label class="cobra-lbl">Fecha de pago</label>'+
+    '<input id="cob-fec" type="date" class="form-input" style="width:100%;margin-bottom:12px" value="'+
+      new Date().toISOString().slice(0,10)+'">'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="cob-ok" class="btn-primary" style="flex:1">Guardar</button>'+
+      '<button id="cob-x" class="btn-secondary" style="flex:1">Cancelar</button></div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+  var cerrar=function(){ document.body.removeChild(ov); };
+  card.querySelector('#cob-x').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+  card.querySelector('#cob-ok').addEventListener('click', function(){
+    var imp=Number(card.querySelector('#cob-imp').value)||0;
+    var fec=card.querySelector('#cob-fec').value || null;
+    db('PATCH','obra_estimaciones?id=eq.'+estimId, {
+      importe_cobrado: imp,
+      fecha_pagada: imp >= n(e.total)-0.01 ? fec : null
+    }).then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('✅ Cobro registrado');
+        pinta();
+      })
+      .catch(function(err){
+        if(typeof showToast==='function') showToast('No se guardó: '+err.message, true);
       });
   });
 }
