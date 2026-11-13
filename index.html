@@ -10372,36 +10372,16 @@ function registrarCobro(estimId){
         fecha_pagada: imp >= n(e.total)-0.01 ? fec : null
       });
 
-      // El cobro genera el ingreso en Finanzas, igual que autorizar una
-      // requisicion genera su CxP. Se captura en un solo lugar y aparece en
-      // los dos; la liga estimacion_id evita que se cuente dos veces.
-      if(delta > 0.01){
-        var prop = n(e.total) > 0 ? delta / n(e.total) : 0;
-        var subt = Math.round(n(e.subtotal) * prop * 100) / 100;
-        var ivaM = Math.round(delta - subt);
-        ivaM = Math.round((delta - subt) * 100) / 100;
-        var esAnt = String(e.tipo).toLowerCase() === 'anticipo';
-        await db('POST','movimientos', {
-          tipo: 'ingreso',
-          categoria: esAnt ? 'Anticipo' : 'Estimación',
-          descripcion: (esAnt ? 'ANTICIPO' : 'ESTIMACIÓN ' + e.no)
-                     + (e.periodo ? ' · ' + e.periodo : ''),
-          monto: subt,
-          iva: ivaM,
-          obra_id: OBRA.id,
-          proveedor_cliente: (OBRA.cliente || null),
-          fecha: fec,
-          forma_pago: 'transferencia',
-          estimacion_id: estimId,
-          created_by: (typeof currentUser!=='undefined' && currentUser) ? currentUser.nombre : null
-        });
-      }
+      // El ingreso lo genera Finanzas al registrar el pago de la CxC, no
+      // aquí: MetalTek no escribe tablas de Finanzas. Este cobro es el
+      // registro de obra; si la estimación ya tiene CxC, captúralo allá y
+      // llega solo al Control Presupuestal.
 
       cerrar();
       await cargar(OBRA.id);
       if(typeof showToast==='function'){
         showToast(delta > 0.01
-          ? '✅ Cobro registrado · ' + money(delta) + ' entró a Finanzas'
+          ? '✅ Cobro registrado · genera su CxC en Finanzas para el balance'
           : '✅ Cobro actualizado');
       }
       pinta();
