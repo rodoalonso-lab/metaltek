@@ -414,6 +414,9 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-nom-v select.nom-in option:checked{ font-weight:700 }
 #nom-nom-v select.nom-in{ color-scheme:light }
 #nom-res-v select option{ color:#111827;background:#ffffff }
+
+#nom-nom-v .nom-ver{margin-left:8px;font-size:9px;letter-spacing:0;color:var(--dim);
+  opacity:.65;font-weight:600;cursor:help}
 </style>
 </head>
 <body>
@@ -10878,7 +10881,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
     var h = '';
     h += '<div class="nom-barra">';
     h +=   '<div class="nom-sel">';
-    h +=     '<label>SEMANA</label>';
+    h +=     '<label>SEMANA <span class="nom-ver" title="Versión del archivo que está corriendo. Si no coincide con la publicada, es caché: Ctrl+F5.">v'
+         +     esc(String(document.lastModified).replace(/:\d\d$/,'')) + '</span></label>';
     h +=     '<select id="nom-sel-semana">';
     if(!NOM.semanas.length) h += '<option value="">— sin semanas —</option>';
     NOM.semanas.forEach(function(s){
