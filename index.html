@@ -288,15 +288,17 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-nom-v .nom-kpi-v{font-size:17px;font-weight:800;white-space:nowrap}
 #nom-nom-v .nom-grid-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);
   border-radius:10px;background:var(--surface)}
-#nom-nom-v .nom-grid{border-collapse:separate;border-spacing:0;font-size:11.5px;width:max-content}
+#nom-nom-v .nom-grid{border-collapse:separate;border-spacing:0;font-size:11.5px;
+  width:max-content;table-layout:fixed}
 #nom-nom-v .nom-grid th{position:sticky;top:0;z-index:3;background:#0A1628;color:#fff;
   padding:5px 4px;font-size:8.5px;letter-spacing:.02em;text-align:center;
   line-height:1.15;white-space:normal;border-bottom:1px solid #1e293b}
 #nom-nom-v .nom-grid th.nom-fijo{left:0;z-index:5;text-align:left}
 #nom-nom-v .nom-cell{padding:0;border-bottom:1px solid var(--border);
-  border-right:1px solid rgba(255,255,255,.04)}
+  border-right:1px solid rgba(255,255,255,.04);overflow:hidden}
 #nom-nom-v .nom-cell.nom-fijo{position:sticky;left:0;z-index:2;background:var(--surface)}
-#nom-nom-v .nom-in{width:100%;background:transparent;border:none;outline:none;
+#nom-nom-v .nom-in{width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  background:transparent;border:none;outline:none;text-overflow:ellipsis;
   color:var(--text);font-family:Barlow,sans-serif;font-size:11.5px;padding:5px 5px}
 #nom-nom-v .nom-in-num{text-align:right;font-variant-numeric:tabular-nums}
 #nom-nom-v .nom-in-txt{font-weight:700;font-size:11px}
@@ -10749,7 +10751,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
     // Rejilla
     h += '<div class="nom-grid-wrap"><table class="nom-grid"><thead><tr>';
     COLS.forEach(function(c){
-      h += '<th'+(c.fijo?' class="nom-fijo"':'')+' style="min-width:'+c.w+'px">'+c.t+'</th>';
+      h += '<th'+(c.fijo?' class="nom-fijo"':'')
+         + ' style="width:'+c.w+'px;min-width:'+c.w+'px;max-width:'+c.w+'px">'+c.t+'</th>';
     });
     h += '<th style="min-width:26px"></th></tr></thead><tbody>';
 
