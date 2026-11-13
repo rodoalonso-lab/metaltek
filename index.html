@@ -400,6 +400,20 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
   border-radius:8px;padding:8px 16px;font-size:12px;font-weight:800;color:#0A1628;
   font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
 #nom-nom-v .nom-aviso-btn:hover{filter:brightness(1.1)}
+
+/* El popup nativo del <select> lo pinta el sistema con fondo claro, y las
+   opciones heredaban el color de texto de la celda (claro sobre claro: no se
+   leia nada). Se fuerza el contraste dentro de la lista. */
+#nom-nom-v select.nom-in option,
+#nom-nom-v select.nom-in optgroup{
+  color:#111827;
+  background:#ffffff;
+  font-size:13px;
+  padding:4px 6px;
+}
+#nom-nom-v select.nom-in option:checked{ font-weight:700 }
+#nom-nom-v select.nom-in{ color-scheme:light }
+#nom-res-v select option{ color:#111827;background:#ffffff }
 </style>
 </head>
 <body>
