@@ -10767,15 +10767,25 @@ return { montar:montar, calcular:calcular, recargar:function(){
   // ── Carga ───────────────────────────────────────────────────────
   NOM.cargar = async function(semanaId){
     NOM.cargando = true;
+    var el0 = $('nom-nom-v');
+    if(el0 && !el0.innerHTML) el0.innerHTML = '<div class="item-sub" style="padding:18px">Cargando…</div>';
+
+    // Las cuatro consultas no dependen entre si: en fila sumaban cuatro
+    // viajes al servidor y el cierre de semana se sentia eterno.
+    var _sem, _obr, _pre;
     try {
-      NOM.semanas = await db('GET','nom_semana?order=anio.desc,semana.desc') || [];
-    } catch(e){ NOM.semanas = []; }
-    try {
-      NOM.obras = (obrasData||[]).slice();
-      if(!NOM.obras.length) NOM.obras = await db('GET','obras?select=id,nombre,estado,archivada&order=nombre') || [];
-    } catch(e){ NOM.obras = []; }
-    try { NOM.prestamos = await db('GET','nom_prestamo?activo=is.true') || []; }
-    catch(e){ NOM.prestamos = []; }
+      var res = await Promise.all([
+        db('GET','nom_semana?order=anio.desc,semana.desc'),
+        (obrasData && obrasData.length)
+          ? Promise.resolve(obrasData.slice())
+          : db('GET','obras?select=id,nombre,estado,archivada&order=nombre'),
+        db('GET','nom_prestamo?activo=is.true')
+      ]);
+      _sem = res[0]; _obr = res[1]; _pre = res[2];
+    } catch(e){ _sem = _sem||[]; _obr = _obr||[]; _pre = _pre||[]; }
+    NOM.semanas   = _sem || [];
+    NOM.obras     = _obr || [];
+    NOM.prestamos = _pre || [];
 
     // Si el id pedido ya no esta en la lista (se borro, o se recargo con
     // otro estado), cae en la mas reciente en vez de quedarse sin semana.
@@ -11289,17 +11299,32 @@ return { montar:montar, calcular:calcular, recargar:function(){
       var ok = await hojaConfirmar('Cerrar semana ' + NOM.sem.semana, msg, 'Cerrar semana');
       if(!ok) return;
     }
+    // Aviso inmediato: el PATCH tarda lo que tarde, pero el boton deja de
+    // verse muerto y no se vuelve a picar.
+    var btn = document.querySelector('#nom-nom-v [data-nom="cerrar"], #nom-nom-v [data-nom="abrir"]');
+    if(btn){ btn.textContent = estado==='cerrada' ? 'Cerrando…' : 'Reabriendo…'; btn.disabled = true; }
+
     try {
       await db('PATCH','nom_semana?id=eq.'+NOM.sem.id, {
         estado: estado,
         cerrada_por: estado==='cerrada' && currentUser ? currentUser.nombre : null,
         cerrada_at: estado==='cerrada' ? new Date().toISOString() : null
       });
-    } catch(e){ showToast('No se pudo: '+e.message, true); return; }
+    } catch(e){
+      showToast('No se pudo: '+e.message, true);
+      NOM.pintar();
+      return;
+    }
+    // Lo unico que cambio es el estado. Recargar las cuatro consultas de
+    // nuevo era lo que hacia lento el cierre: basta con repintar.
+    NOM.sem.estado = estado;
+    var enLista = NOM.semanas.find(function(x){ return x.id === NOM.sem.id; });
+    if(enLista) enLista.estado = estado;
+    NOM.editable = false;
+    NOM.pintar();
     showToast(estado==='cerrada'
       ? '🔒 Semana cerrada · ya se refleja en Control de Obra'
       : '🔓 Semana reabierta · se retiró del Control de Obra');
-    await NOM.cargar(NOM.sem.id);
   };
 
   function sumaSinObra(rows){
