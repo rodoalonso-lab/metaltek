@@ -10578,6 +10578,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
   function forzado(r, campo){
     return !!(r.forzados && r.forzados[campo]);
   }
+  // Expuesto a proposito: permite recalcular un renglon desde fuera y hace
+  // verificable la aritmetica sin tener que capturar a mano.
+  NOM.recalcular = function(r){ return recalcular(r); };
+  NOM.formulas   = CALC;
   function recalcular(r){
     ORDEN_CALC.forEach(function(c){
       if(!forzado(r, c)) r[c] = CALC[c](r);
