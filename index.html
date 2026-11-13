@@ -10200,8 +10200,9 @@ function pintaEstim(el){
         money(e.importe_cobrado)+'</td>'+
       '<td style="text-align:right">'+
         (puede('estimaciones')
-          ? '<button class="cobra-mini" data-cobro="'+e.id+'">'+
-            (n(e.importe_cobrado)>=n(e.total)-0.01 && n(e.total)>0 ? '✎' : '💵 Cobro')+'</button>'
+          ? '<button class="cobra-mini" data-edit-est="'+e.id+'" title="Revisar y corregir los importes">✎</button> '+
+            '<button class="cobra-mini" data-cobro="'+e.id+'">'+
+            (n(e.importe_cobrado)>=n(e.total)-0.01 && n(e.total)>0 ? '💵 ✓' : '💵 Cobro')+'</button>'
           : '')+'</td></tr>';
   });
   h+='</table></div>';
@@ -10216,6 +10217,9 @@ function pintaEstim(el){
   // REGLAS.md: nada de onclick dentro de innerHTML.
   el.querySelectorAll('[data-cobro]').forEach(function(b){
     b.addEventListener('click', function(){ registrarCobro(b.getAttribute('data-cobro')); });
+  });
+  el.querySelectorAll('[data-edit-est]').forEach(function(b){
+    b.addEventListener('click', function(){ editarEstimacion(b.getAttribute('data-edit-est')); });
   });
 }
 
