@@ -345,6 +345,32 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
   #nom-nom-v .nom-kpis-2{grid-template-columns:repeat(2,1fr)}
   #nom-nom-v .nom-grid-wrap{max-height:60vh}
 }
+
+#nom-res-v .nom-kpis-res{grid-template-columns:repeat(5,1fr);margin-bottom:18px}
+#nom-res-v .nom-kpi{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px}
+#nom-res-v .nom-kpi-l{font-size:9px;letter-spacing:.09em;color:var(--dim);
+  font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nom-res-v .nom-kpi-v{font-size:18px;font-weight:800;white-space:nowrap}
+#nom-res-v .nom-kpis{display:grid;gap:8px}
+#nom-res-v .nom-bloque{margin-bottom:18px}
+#nom-res-v .nom-bloque-tit{font-size:10px;letter-spacing:.13em;font-weight:800;
+  color:var(--dim);margin-bottom:7px}
+#nom-res-v .nom-tabla-wrap{overflow:auto;max-height:46vh;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface)}
+#nom-res-v .nom-tabla{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+#nom-res-v .nom-tabla th{position:sticky;top:0;z-index:2;background:#0A1628;color:#fff;
+  padding:7px 10px;font-size:9px;letter-spacing:.05em;text-align:left;white-space:nowrap}
+#nom-res-v .nom-tabla th.nom-num{text-align:right}
+#nom-res-v .nom-tabla td{padding:6px 10px;border-bottom:1px solid var(--border);
+  white-space:nowrap}
+#nom-res-v .nom-tabla td.nom-num{text-align:right;font-variant-numeric:tabular-nums}
+#nom-res-v .nom-tabla tbody tr:hover td{background:rgba(255,255,255,.03)}
+#nom-res-v .nom-tabla tr.nom-tr-tot td{background:#0A1628;color:#fff;font-weight:900;
+  position:sticky;bottom:0}
+#nom-res-v .nom-vacio{padding:20px;text-align:center;color:var(--dim)}
+#nom-res-v .nom-pie{font-size:11px;color:var(--dim);line-height:1.5}
+@media (max-width:900px){ #nom-res-v .nom-kpis-res{grid-template-columns:repeat(2,1fr)} }
 </style>
 </head>
 <body>
