@@ -451,11 +451,11 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
         <button class="chip active" id="ntab-trab" onclick="setNTab(0)">👷 Trabajadores</button>
         <button class="chip" id="ntab-nom"  onclick="setNTab(1)">💰 Nómina</button>
-        <button class="chip" id="ntab-asis" onclick="setNTab(2)">📍 Asistencias</button>
-        <button class="chip" id="ntab-desc" onclick="setNTab(3)">🗓 Descansos</button>
+        <button class="chip" id="ntab-res"  onclick="setNTab(2)">📊 Resumen</button>
       </div>
       <div id="nom-trab-v"></div>
       <div id="nom-nom-v"  style="display:none"></div>
+      <div id="nom-res-v"  style="display:none"></div>
       <div id="nom-asis-v" style="display:none"></div>
       <div id="nom-desc-v" style="display:none"></div>
     </div>
@@ -4881,9 +4881,17 @@ async function loadNominas(){
 
 function setNTab(n){
   curNTab=n;
-  ['trab','nom','asis','desc'].forEach((t,i)=>{
-    document.getElementById('ntab-'+t).className='chip'+(n===i?' active':'');
-    document.getElementById('nom-'+t+'-v').style.display=n===i?'block':'none';
+  // Asistencias y descansos salieron del menu; sus contenedores siguen ahi
+  // pero ocultos, para no romper el codigo viejo que los referencia.
+  ['trab','nom','res'].forEach((t,i)=>{
+    const chip=document.getElementById('ntab-'+t);
+    if(chip) chip.className='chip'+(n===i?' active':'');
+    const v=document.getElementById('nom-'+t+'-v');
+    if(v) v.style.display=n===i?'block':'none';
+  });
+  ['asis','desc'].forEach(t=>{
+    const v=document.getElementById('nom-'+t+'-v');
+    if(v) v.style.display='none';
   });
   renderNTab();
 }
@@ -4892,8 +4900,7 @@ function renderNTab(){
   if(curNTab===0) renderTrabajadores();
   // La nomina vieja (renderNomina) queda dormida: el modulo NOM la sustituye.
   else if(curNTab===1) { if(window.NOM) NOM.cargar(); else renderNomina(); }
-  else if(curNTab===2) renderAsistencias().catch(()=>{});
-  else renderDescansos();
+  else if(curNTab===2) { if(window.NOM) NOM.resumen(); }
 }
 
 // ─ TRABAJADORES ─
