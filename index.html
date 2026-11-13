@@ -10691,9 +10691,14 @@ return { montar:montar, calcular:calcular, recargar:function(){
   // verificable la aritmetica sin tener que capturar a mano.
   NOM.recalcular = function(r){ return recalcular(r); };
   NOM.formulas   = CALC;
+  // Se redondea a centavos al calcular, no solo al mostrar: 3535 - 3255.6 da
+  // 279.40000000000009 en coma flotante, y ese numero acababa guardado en la
+  // base y saliendo en los reportes.
+  var cent = function(v){ return Math.round((n(v) + Number.EPSILON) * 100) / 100; };
   function recalcular(r){
     ORDEN_CALC.forEach(function(c){
-      if(!forzado(r, c)) r[c] = CALC[c](r);
+      if(!forzado(r, c)) r[c] = cent(CALC[c](r));
+      else               r[c] = cent(r[c]);
     });
     return r;
   }
