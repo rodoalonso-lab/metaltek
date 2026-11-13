@@ -263,6 +263,86 @@ body.tema-claro .theme-track{background:var(--accent)}
 body.tema-claro .theme-thumb{left:16px}
 .theme-icon{font-size:14px;color:var(--dim);transition:color .2s}
 body.tema-claro .theme-icon-sol{color:var(--accent)}
+
+/* ── NOMINA SEMANAL (modulo NOM) ─────────────────────────────── */
+#nom-nom-v .nom-barra{display:flex;justify-content:space-between;align-items:flex-end;
+  gap:12px;flex-wrap:wrap;margin-bottom:14px}
+#nom-nom-v .nom-sel label{display:block;font-size:10px;letter-spacing:.1em;
+  color:var(--dim);font-weight:700;margin-bottom:4px}
+#nom-nom-v .nom-sel select{background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;font-size:14px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;min-width:230px}
+#nom-nom-v .nom-acc{display:flex;gap:8px;flex-wrap:wrap}
+#nom-nom-v .nom-btn{background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
+#nom-nom-v .nom-btn:hover{border-color:var(--accent);color:var(--accent)}
+#nom-nom-v .nom-btn-ok{background:rgba(16,185,129,.12);border-color:#10B98155;color:#10B981}
+#nom-nom-v .nom-btn-warn{background:rgba(240,165,0,.12);border-color:#F0A50055;color:#F0A500}
+#nom-nom-v .nom-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:8px}
+#nom-nom-v .nom-kpis-2{grid-template-columns:repeat(5,1fr);margin-bottom:14px}
+#nom-nom-v .nom-kpi{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px}
+#nom-nom-v .nom-kpi-l{font-size:9px;letter-spacing:.09em;color:var(--dim);
+  font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nom-nom-v .nom-kpi-v{font-size:17px;font-weight:800;white-space:nowrap}
+#nom-nom-v .nom-grid-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface)}
+#nom-nom-v .nom-grid{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content}
+#nom-nom-v .nom-grid th{position:sticky;top:0;z-index:3;background:#0A1628;color:#fff;
+  padding:7px 8px;font-size:9px;letter-spacing:.05em;text-align:center;white-space:nowrap;
+  border-bottom:1px solid #1e293b}
+#nom-nom-v .nom-grid th.nom-fijo{left:0;z-index:5;text-align:left}
+#nom-nom-v .nom-cell{padding:0;border-bottom:1px solid var(--border);
+  border-right:1px solid rgba(255,255,255,.04)}
+#nom-nom-v .nom-cell.nom-fijo{position:sticky;left:0;z-index:2;background:var(--surface)}
+#nom-nom-v .nom-in{width:100%;background:transparent;border:none;outline:none;
+  color:var(--text);font-family:Barlow,sans-serif;font-size:12px;padding:7px 8px}
+#nom-nom-v .nom-in-num{text-align:right;font-variant-numeric:tabular-nums}
+#nom-nom-v .nom-in-txt{font-weight:700}
+#nom-nom-v .nom-in-sel{cursor:pointer;font-size:11px}
+#nom-nom-v .nom-in:focus{background:rgba(91,196,192,.13);box-shadow:inset 0 0 0 1px var(--accent)}
+#nom-nom-v .nom-in:disabled{color:var(--dim);cursor:not-allowed}
+#nom-nom-v .nom-in::-webkit-outer-spin-button,
+#nom-nom-v .nom-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#nom-nom-v .nom-fuerte .nom-in{font-weight:800;color:var(--accent)}
+#nom-nom-v .nom-forzado{box-shadow:inset 3px 0 0 #F0A500;background:rgba(240,165,0,.07)}
+#nom-nom-v .nom-chk{text-align:center}
+#nom-nom-v .nom-chk .nom-in{width:17px;height:17px;accent-color:#10B981;cursor:pointer;padding:0}
+#nom-nom-v tr.nom-eq td{background:rgba(91,196,192,.09);color:var(--accent);
+  font-weight:800;font-size:10px;letter-spacing:.12em;padding:6px 9px;
+  border-bottom:1px solid var(--border);position:sticky;left:0}
+#nom-nom-v tr.nom-sub td{background:rgba(255,255,255,.035);font-weight:700;font-size:11px;
+  padding:6px 8px;border-bottom:1px solid var(--border);color:var(--dim)}
+#nom-nom-v tr.nom-sub td.nom-fijo{position:sticky;left:0;z-index:2;
+  background:#16233a;color:var(--text);white-space:nowrap}
+#nom-nom-v tr.nom-total td{background:#0A1628;color:#fff;font-weight:900;font-size:12px;
+  padding:9px 8px;position:relative}
+#nom-nom-v tr.nom-total td.nom-fijo{position:sticky;left:0;z-index:2;background:#0A1628}
+#nom-nom-v .nom-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#nom-nom-v .nom-del{background:none;border:none;color:#EF4444;font-size:13px;
+  cursor:pointer;padding:6px 8px;opacity:.5}
+#nom-nom-v .nom-del:hover{opacity:1}
+#nom-nom-v .nom-vacio{padding:26px;text-align:center;color:var(--dim)}
+#nom-nom-v .nom-pie{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
+.nom-modal{position:fixed;inset:0;background:rgba(5,10,20,.72);z-index:9000;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.nom-modal-caja{background:var(--bg);border:1px solid var(--border);border-radius:14px;
+  padding:20px;max-width:440px;width:100%;max-height:80vh;overflow:auto}
+.nom-modal-tit{font-size:16px;font-weight:800;margin-bottom:10px}
+.nom-modal-txt{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:16px}
+.nom-modal-lista{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.nom-modal-op{display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:11px 13px;font-size:13px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;text-align:left}
+.nom-modal-op:hover{border-color:var(--accent);color:var(--accent)}
+.nom-modal-op span{font-size:10px;color:var(--dim);font-weight:600;letter-spacing:.06em}
+@media (max-width:900px){
+  #nom-nom-v .nom-kpis{grid-template-columns:repeat(3,1fr)}
+  #nom-nom-v .nom-kpis-2{grid-template-columns:repeat(2,1fr)}
+  #nom-nom-v .nom-grid-wrap{max-height:60vh}
+}
 </style>
 </head>
 <body>
@@ -4808,7 +4888,8 @@ function setNTab(n){
 
 function renderNTab(){
   if(curNTab===0) renderTrabajadores();
-  else if(curNTab===1) renderNomina();
+  // La nomina vieja (renderNomina) queda dormida: el modulo NOM la sustituye.
+  else if(curNTab===1) { if(window.NOM) NOM.cargar(); else renderNomina(); }
   else if(curNTab===2) renderAsistencias().catch(()=>{});
   else renderDescansos();
 }
@@ -10448,6 +10529,641 @@ function montar(obra, contenedor){
 
 return { montar:montar, calcular:calcular, recargar:function(){
   return cargar(OBRA.id).then(pinta); } };
+})();
+
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  NÓMINA SEMANAL  ·  window.NOM                                   ║
+// ║  Replica la hoja SEMANA del Excel de Rodolfo: mismas columnas,   ║
+// ║  mismo orden, agrupada por equipo con subtotales. Todo el PAGO   ║
+// ║  carga a MANO_DE_OBRA de la obra del renglón.                    ║
+// ║  Todos los campos son editables, incluidos los calculados: a     ║
+// ║  veces hay variables que la fórmula no contempla. Cuando se      ║
+// ║  fuerza uno, queda marcado para que se note que no salió solo.   ║
+// ╚══════════════════════════════════════════════════════════════════╝
+(function(){
+  'use strict';
+
+  var NOM = window.NOM = {
+    semanas: [], sem: null, rows: [], obras: [], prestamos: [],
+    guardando: {}, cargando: false
+  };
+
+  var n  = function(v){ var x = parseFloat(v); return isFinite(x) ? x : 0; };
+  var $  = function(id){ return document.getElementById(id); };
+  var money = function(v){
+    return '$' + (n(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  };
+  var money0 = function(v){
+    return '$' + Math.round(n(v)).toLocaleString('es-MX');
+  };
+  var esc = function(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  };
+
+  // ── Campos calculados y su fórmula ──────────────────────────────
+  // Son los mismos que el Excel. Si el renglón trae el campo en
+  // `forzados`, la fórmula no lo pisa.
+  var CALC = {
+    total_horas: function(r){ return n(r.horas) * n(r.tarifa_hora); },
+    pago:        function(r){ return n(r.sueldo) + n(r.pp) + n(r.total_horas) +
+                                     n(r.viaticos) + n(r.reembolso); },
+    abono:       function(r){ return n(r.descuentos); },
+    por_pagar:   function(r){ return n(r.pago) - n(r.tarjeta) - n(r.descuentos) - n(r.abonos); },
+    nuevo_saldo: function(r){ return n(r.saldo) - n(r.abono); }
+  };
+  var ORDEN_CALC = ['total_horas','pago','abono','por_pagar','nuevo_saldo'];
+
+  function forzado(r, campo){
+    return !!(r.forzados && r.forzados[campo]);
+  }
+  function recalcular(r){
+    ORDEN_CALC.forEach(function(c){
+      if(!forzado(r, c)) r[c] = CALC[c](r);
+    });
+    return r;
+  }
+
+  // ── Columnas, en el orden de la hoja SEMANA ─────────────────────
+  var COLS = [
+    {k:'personal',    t:'PERSONAL',       tipo:'texto', w:188, fijo:true},
+    {k:'obra_id',     t:'OBRA',           tipo:'obra',  w:170},
+    {k:'sueldo',      t:'SUELDO',         tipo:'num',   w:92},
+    {k:'viaticos',    t:'VIATICOS',       tipo:'num',   w:88},
+    {k:'pp',          t:'P/P',            tipo:'num',   w:74},
+    {k:'horas',       t:'HORAS',          tipo:'num',   w:72},
+    {k:'tarifa_hora', t:'HORA EXTRA',     tipo:'num',   w:92},
+    {k:'total_horas', t:'TOTAL DE HORAS', tipo:'num',   w:100, calc:true},
+    {k:'reembolso',   t:'REEMBOLSO',      tipo:'num',   w:94},
+    {k:'descuentos',  t:'DESCUENTOS',     tipo:'num',   w:98},
+    {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:94},
+    {k:'pago',        t:'PAGO',           tipo:'num',   w:100, calc:true, fuerte:true},
+    {k:'por_pagar',   t:'POR PAGAR',      tipo:'num',   w:100, calc:true, fuerte:true},
+    {k:'saldo',       t:'SALDO',          tipo:'num',   w:88},
+    {k:'abono',       t:'ABONO',          tipo:'num',   w:84, calc:true},
+    {k:'nuevo_saldo', t:'NUEVO SALDO',    tipo:'num',   w:98, calc:true},
+    {k:'pag_tarjeta', t:'PAG. TARJETA',   tipo:'check', w:92},
+    {k:'pag_efectivo',t:'PAG. EFECTIVO',  tipo:'check', w:96}
+  ];
+  // Columnas que suman en los subtotales
+  var SUMABLES = ['sueldo','viaticos','pp','horas','total_horas','reembolso',
+                  'descuentos','tarjeta','pago','por_pagar','saldo','abono','nuevo_saldo'];
+
+  // ── Semana ISO → rango de fechas, igual que la fórmula del Excel ─
+  function rangoSemana(anio, semana){
+    var ene4 = new Date(anio, 0, 4);
+    var dow  = (ene4.getDay() + 6) % 7;              // lunes = 0
+    var lun  = new Date(anio, 0, 4 - dow + (semana-1)*7);
+    var dom  = new Date(lun.getTime() + 6*86400000);
+    var f = function(d){ return d.toISOString().slice(0,10); };
+    return { ini:f(lun), fin:f(dom) };
+  }
+  function etiquetaSemana(s){
+    if(!s) return '—';
+    var m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    var d = function(iso){
+      if(!iso) return '';
+      var p = String(iso).slice(0,10).split('-');
+      return parseInt(p[2],10) + ' ' + m[parseInt(p[1],10)-1];
+    };
+    return 'SEM ' + s.semana + '  ·  ' + d(s.fecha_inicio) + ' – ' + d(s.fecha_fin);
+  }
+
+  // ── Carga ───────────────────────────────────────────────────────
+  NOM.cargar = async function(semanaId){
+    NOM.cargando = true;
+    try {
+      NOM.semanas = await db('GET','nom_semana?order=anio.desc,semana.desc') || [];
+    } catch(e){ NOM.semanas = []; }
+    try {
+      NOM.obras = (obrasData||[]).slice();
+      if(!NOM.obras.length) NOM.obras = await db('GET','obras?select=id,nombre,estado,archivada&order=nombre') || [];
+    } catch(e){ NOM.obras = []; }
+    try { NOM.prestamos = await db('GET','nom_prestamo?activo=is.true') || []; }
+    catch(e){ NOM.prestamos = []; }
+
+    var id = semanaId || (NOM.sem && NOM.sem.id) ||
+             (NOM.semanas[0] && NOM.semanas[0].id);
+    NOM.sem = NOM.semanas.find(function(s){ return s.id === id; }) || null;
+    NOM.rows = [];
+    if(NOM.sem){
+      try {
+        NOM.rows = await db('GET','nom_renglon?semana_id=eq.'+NOM.sem.id+
+                            '&order=equipo,orden,personal') || [];
+      } catch(e){ NOM.rows = []; }
+      NOM.rows.forEach(function(r){
+        if(!r.forzados) r.forzados = {};
+        recalcular(r);
+      });
+    }
+    NOM.cargando = false;
+    NOM.pintar();
+  };
+
+  // ── Totales ─────────────────────────────────────────────────────
+  function totales(rows){
+    var t = {};
+    SUMABLES.forEach(function(k){ t[k] = 0; });
+    t.n = 0; t.tarjetaPagada = 0; t.efectivoPagado = 0;
+    rows.forEach(function(r){
+      SUMABLES.forEach(function(k){ t[k] += n(r[k]); });
+      t.n++;
+      if(r.pag_tarjeta)  t.tarjetaPagada  += n(r.tarjeta);
+      if(r.pag_efectivo) t.efectivoPagado += n(r.por_pagar);
+    });
+    return t;
+  }
+
+  // ── Pintado ─────────────────────────────────────────────────────
+  NOM.pintar = function(){
+    var el = $('nom-nom-v');
+    if(!el) return;
+
+    var h = '';
+    h += '<div class="nom-barra">';
+    h +=   '<div class="nom-sel">';
+    h +=     '<label>SEMANA</label>';
+    h +=     '<select id="nom-sel-semana">';
+    if(!NOM.semanas.length) h += '<option value="">— sin semanas —</option>';
+    NOM.semanas.forEach(function(s){
+      h += '<option value="'+s.id+'"'+(NOM.sem && s.id===NOM.sem.id?' selected':'')+'>'
+         + esc(etiquetaSemana(s)) + (String(s.estado).toLowerCase()==='cerrada'?'  🔒':'') + '</option>';
+    });
+    h +=     '</select>';
+    h +=   '</div>';
+    h +=   '<div class="nom-acc">';
+    h +=     '<button class="nom-btn" data-nom="nueva">+ Nueva semana</button>';
+    if(NOM.sem){
+      var cerrada = String(NOM.sem.estado).toLowerCase()==='cerrada';
+      h +=   '<button class="nom-btn" data-nom="agregar">+ Persona</button>';
+      h +=   '<button class="nom-btn" data-nom="imprimir">🖨️ Imprimir</button>';
+      h +=   '<button class="nom-btn '+(cerrada?'nom-btn-warn':'nom-btn-ok')+'" data-nom="'+(cerrada?'abrir':'cerrar')+'">'
+           + (cerrada ? '🔓 Reabrir semana' : '🔒 Cerrar semana') + '</button>';
+    }
+    h +=   '</div>';
+    h += '</div>';
+
+    if(!NOM.sem){
+      h += '<div class="empty"><div class="empty-icon">💰</div>'
+         + '<div class="empty-title">Sin semanas de nómina</div>'
+         + '<div class="empty-sub">Toca “+ Nueva semana” para abrir la primera. '
+         + 'Llega precargada con el personal dado de alta.</div></div>';
+      el.innerHTML = h;
+      conectar(el);
+      return;
+    }
+
+    var T = totales(NOM.rows);
+    var tarjPend = T.tarjeta   - T.tarjetaPagada;
+    var efecPend = T.por_pagar - T.efectivoPagado;
+    var disp = (T.tarjeta + T.por_pagar) > 0
+             ? (T.tarjetaPagada + T.efectivoPagado) / (T.tarjeta + T.por_pagar) : 0;
+
+    // KPIs — los mismos de las filas 3 a 6 de la hoja SEMANA
+    h += '<div class="nom-kpis">'
+       + kpi('PAGO',        money0(T.pago),       'var(--accent)')
+       + kpi('TARJETA',     money0(T.tarjeta),    '#A78BFA')
+       + kpi('DESCUENTOS',  money0(T.descuentos), '#F0A500')
+       + kpi('POR PAGAR',   money0(T.por_pagar),  '#5BC4C0')
+       + kpi('REEMBOLSOS',  money0(T.reembolso),  '#8B949E')
+       + kpi('# TRAB.',     String(T.n),          '#8B949E')
+       + '</div>';
+
+    h += '<div class="nom-kpis nom-kpis-2">'
+       + kpi('TARJETA PAGADA',    money0(T.tarjetaPagada),  '#10B981')
+       + kpi('TARJETA PENDIENTE', money0(tarjPend),  tarjPend>0?'#EF4444':'#10B981')
+       + kpi('EFECTIVO PAGADO',   money0(T.efectivoPagado), '#10B981')
+       + kpi('EFECTIVO PENDIENTE',money0(efecPend),  efecPend>0?'#EF4444':'#10B981')
+       + kpi('% DISPERSADO', Math.round(disp*100)+'%', disp>=0.999?'#10B981':'#F0A500')
+       + '</div>';
+
+    // Rejilla
+    h += '<div class="nom-grid-wrap"><table class="nom-grid"><thead><tr>';
+    COLS.forEach(function(c){
+      h += '<th'+(c.fijo?' class="nom-fijo"':'')+' style="min-width:'+c.w+'px">'+esc(c.t)+'</th>';
+    });
+    h += '<th style="min-width:40px"></th></tr></thead><tbody>';
+
+    var equipos = [];
+    NOM.rows.forEach(function(r){
+      var e = r.equipo || 'SIN EQUIPO';
+      if(equipos.indexOf(e) < 0) equipos.push(e);
+    });
+    if(!NOM.rows.length){
+      h += '<tr><td colspan="'+(COLS.length+1)+'" class="nom-vacio">'
+         + 'Esta semana no tiene personal. Toca “+ Persona”.</td></tr>';
+    }
+    equipos.forEach(function(eq){
+      var dentro = NOM.rows.filter(function(r){ return (r.equipo||'SIN EQUIPO')===eq; });
+      h += '<tr class="nom-eq"><td colspan="'+(COLS.length+1)+'">'+esc(eq)+'</td></tr>';
+      dentro.forEach(function(r){ h += fila(r); });
+      var st = totales(dentro);
+      h += '<tr class="nom-sub"><td class="nom-fijo">SUBTOTAL '+esc(eq)+'</td><td></td>';
+      COLS.slice(2).forEach(function(c){
+        h += '<td class="nom-num">' + (SUMABLES.indexOf(c.k)>=0 ? money0(st[c.k]) : '') + '</td>';
+      });
+      h += '<td></td></tr>';
+    });
+
+    if(NOM.rows.length){
+      h += '<tr class="nom-total"><td class="nom-fijo">TOTAL GENERAL</td><td></td>';
+      COLS.slice(2).forEach(function(c){
+        h += '<td class="nom-num">' + (SUMABLES.indexOf(c.k)>=0 ? money0(T[c.k]) : '') + '</td>';
+      });
+      h += '<td></td></tr>';
+    }
+    h += '</tbody></table></div>';
+
+    h += '<div class="nom-pie">Las celdas con borde ámbar están forzadas a mano: '
+       + 'la fórmula ya no las toca. Bórralas para que vuelvan a calcularse. '
+       + 'Al cerrar la semana, el PAGO de cada renglón carga a mano de obra de su obra.</div>';
+
+    el.innerHTML = h;
+    conectar(el);
+  };
+
+  function kpi(label, val, color){
+    return '<div class="nom-kpi"><div class="nom-kpi-l">'+esc(label)+'</div>'
+         + '<div class="nom-kpi-v" style="color:'+color+'">'+esc(val)+'</div></div>';
+  }
+
+  function fila(r){
+    var cerrada = NOM.sem && String(NOM.sem.estado).toLowerCase()==='cerrada';
+    var dis = cerrada ? ' disabled' : '';
+    var h = '<tr data-id="'+r.id+'">';
+    COLS.forEach(function(c){
+      var v = r[c.k];
+      var cls = 'nom-cell';
+      if(c.calc && forzado(r, c.k)) cls += ' nom-forzado';
+      if(c.fuerte) cls += ' nom-fuerte';
+      if(c.fijo)   cls += ' nom-fijo';
+      if(c.tipo === 'texto'){
+        h += '<td class="'+cls+'"><input class="nom-in nom-in-txt" data-k="'+c.k+'" '
+           + 'value="'+esc(v)+'"'+dis+'></td>';
+      } else if(c.tipo === 'obra'){
+        h += '<td class="'+cls+'"><select class="nom-in nom-in-sel" data-k="obra_id"'+dis+'>';
+        h += '<option value="">— estructura —</option>';
+        NOM.obras.forEach(function(o){
+          if(o.archivada && o.id !== r.obra_id) return;
+          h += '<option value="'+o.id+'"'+(r.obra_id===o.id?' selected':'')+'>'+esc(o.nombre)+'</option>';
+        });
+        h += '</select></td>';
+      } else if(c.tipo === 'check'){
+        h += '<td class="'+cls+' nom-chk"><input type="checkbox" class="nom-in" data-k="'+c.k+'"'
+           + (v?' checked':'')+dis+'></td>';
+      } else {
+        h += '<td class="'+cls+'"><input class="nom-in nom-in-num" type="number" step="0.01" '
+           + 'data-k="'+c.k+'" value="'+(n(v)===0 && !v ? '' : v)+'"'+dis
+           + (c.calc?' title="Calculado. Si escribes aquí, queda forzado."':'')+'></td>';
+      }
+    });
+    h += '<td class="nom-cell"><button class="nom-del" data-nom="borrar" title="Quitar de la semana"'+dis+'>✕</button></td>';
+    h += '</tr>';
+    return h;
+  }
+
+  // ── Eventos (delegados: la rejilla se repinta entera) ────────────
+  function conectar(el){
+    var sel = $('nom-sel-semana');
+    if(sel) sel.addEventListener('change', function(){ NOM.cargar(this.value); });
+
+    el.addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-nom]');
+      if(!b) return;
+      var acc = b.getAttribute('data-nom');
+      if(acc === 'nueva')     NOM.nuevaSemana();
+      else if(acc === 'agregar')  NOM.agregarPersona();
+      else if(acc === 'cerrar')   NOM.cambiarEstado('cerrada');
+      else if(acc === 'abrir')    NOM.cambiarEstado('abierta');
+      else if(acc === 'imprimir') NOM.imprimir();
+      else if(acc === 'borrar'){
+        var tr = b.closest('tr[data-id]');
+        if(tr) NOM.quitar(tr.getAttribute('data-id'));
+      }
+    });
+
+    el.addEventListener('change', function(ev){
+      var inp = ev.target.closest('.nom-in');
+      if(!inp) return;
+      var tr = inp.closest('tr[data-id]');
+      if(!tr) return;
+      NOM.editar(tr.getAttribute('data-id'), inp.getAttribute('data-k'), inp);
+    });
+  }
+
+  // ── Edición ─────────────────────────────────────────────────────
+  NOM.editar = function(id, campo, inp){
+    var r = NOM.rows.find(function(x){ return x.id === id; });
+    if(!r) return;
+    if(!r.forzados) r.forzados = {};
+
+    if(inp.type === 'checkbox'){
+      r[campo] = inp.checked;
+    } else if(campo === 'obra_id'){
+      r.obra_id = inp.value || null;
+    } else if(campo === 'personal'){
+      r.personal = inp.value.trim();
+    } else {
+      var crudo = inp.value.trim();
+      // Un calculado se fuerza solo si se escribe algo. Vaciarlo lo devuelve
+      // a la formula: es la salida para quien se arrepiente del ajuste.
+      if(ORDEN_CALC.indexOf(campo) >= 0){
+        if(crudo === '') delete r.forzados[campo];
+        else             r.forzados[campo] = true;
+      }
+      r[campo] = crudo === '' ? 0 : n(crudo);
+    }
+    recalcular(r);
+    NOM.guardar(r);
+    NOM.pintar();
+  };
+
+  var _timers = {};
+  NOM.guardar = function(r){
+    clearTimeout(_timers[r.id]);
+    _timers[r.id] = setTimeout(async function(){
+      var p = {
+        personal:r.personal, equipo:r.equipo, obra_id:r.obra_id||null,
+        sueldo:n(r.sueldo), pp:n(r.pp), horas:n(r.horas), tarifa_hora:n(r.tarifa_hora),
+        viaticos:n(r.viaticos), reembolso:n(r.reembolso), descuentos:n(r.descuentos),
+        abonos:n(r.abonos), tarjeta:n(r.tarjeta), total_horas:n(r.total_horas),
+        pago:n(r.pago), por_pagar:n(r.por_pagar), saldo:n(r.saldo), abono:n(r.abono),
+        nuevo_saldo:n(r.nuevo_saldo), forzados:r.forzados||{},
+        pag_tarjeta:!!r.pag_tarjeta, pag_efectivo:!!r.pag_efectivo
+      };
+      try { await db('PATCH','nom_renglon?id=eq.'+r.id, p); }
+      catch(e){ showToast('No se guardó '+r.personal+': '+e.message, true); }
+    }, 500);
+  };
+
+  // ── Nueva semana ────────────────────────────────────────────────
+  // Se precarga con la semana anterior: persona, equipo, obra, sueldo,
+  // viaticos, tarjeta y tarifa. Lo variable (horas, descuentos,
+  // reembolsos) arranca en cero. El saldo de prestamo se arrastra.
+  NOM.nuevaSemana = async function(){
+    var ult = NOM.semanas[0];
+    var anio = ult ? ult.anio : new Date().getFullYear();
+    var num  = ult ? ult.semana + 1 : semanaISOactual();
+    if(num > 53){ num = 1; anio++; }
+
+    var rango = rangoSemana(anio, num);
+    var semNueva;
+    try {
+      var creada = await db('POST','nom_semana', {
+        anio:anio, semana:num, fecha_inicio:rango.ini, fecha_fin:rango.fin,
+        estado:'abierta', created_by: currentUser ? currentUser.nombre : null
+      });
+      semNueva = creada && creada[0];
+    } catch(e){
+      showToast('No se pudo crear la semana: '+e.message, true); return;
+    }
+    if(!semNueva){ showToast('No se pudo crear la semana', true); return; }
+
+    // Plantilla: renglones de la semana anterior; si no hay, el personal activo.
+    var plantilla = [];
+    if(ult){
+      try { plantilla = await db('GET','nom_renglon?semana_id=eq.'+ult.id+'&order=equipo,orden,personal') || []; }
+      catch(e){}
+    }
+    var nuevos;
+    if(plantilla.length){
+      nuevos = plantilla.map(function(p, i){
+        return {
+          semana_id:semNueva.id, trabajador_id:p.trabajador_id, personal:p.personal,
+          equipo:p.equipo, obra_id:p.obra_id, orden:i,
+          sueldo:n(p.sueldo), pp:n(p.pp), tarifa_hora:n(p.tarifa_hora),
+          viaticos:n(p.viaticos), tarjeta:n(p.tarjeta),
+          horas:0, reembolso:0, descuentos:0, abonos:0,
+          saldo:n(p.nuevo_saldo), forzados:{}
+        };
+      });
+    } else {
+      var trabs = [];
+      try {
+        trabs = await db('GET','trabajadores?activo=is.true&cuadrilla=not.is.null&order=cuadrilla,nombre') || [];
+      } catch(e){}
+      var saldos = {};
+      NOM.prestamos.forEach(function(p){ saldos[String(p.personal).toUpperCase().trim()] = n(p.saldo); });
+      nuevos = trabs.map(function(t, i){
+        return {
+          semana_id:semNueva.id, trabajador_id:t.id, personal:t.nombre,
+          equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null, orden:i,
+          sueldo:n(t.sueldo_semanal), pp:n(t.pp_default), tarifa_hora:n(t.tarifa_hora),
+          viaticos:n(t.viaticos_default), tarjeta:0,
+          horas:0, reembolso:0, descuentos:0, abonos:0,
+          saldo:saldos[String(t.nombre).toUpperCase().trim()] || 0, forzados:{}
+        };
+      });
+    }
+    nuevos.forEach(recalcular);
+    if(nuevos.length){
+      try { await db('POST','nom_renglon', nuevos); }
+      catch(e){ showToast('Semana creada, pero el personal no: '+e.message, true); }
+    }
+    showToast('✅ Semana '+num+' abierta con '+nuevos.length+' personas');
+    await NOM.cargar(semNueva.id);
+  };
+
+  function semanaISOactual(){
+    var d = new Date();
+    var j = new Date(d.getFullYear(), 0, 4);
+    var dia = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+    return Math.ceil((dia + ((j.getDay()+6)%7)) / 7);
+  }
+
+  NOM.agregarPersona = async function(){
+    if(!NOM.sem) return;
+    var trabs = [];
+    try { trabs = await db('GET','trabajadores?activo=is.true&order=nombre') || []; }
+    catch(e){}
+    var ya = NOM.rows.map(function(r){ return String(r.personal).toUpperCase().trim(); });
+    var libres = trabs.filter(function(t){ return ya.indexOf(String(t.nombre).toUpperCase().trim()) < 0; });
+    NOM.abrirSelector(libres);
+  };
+
+  NOM.abrirSelector = function(libres){
+    var prev = $('nom-sheet-sel');
+    if(prev) prev.remove();
+    var d = document.createElement('div');
+    d.id = 'nom-sheet-sel';
+    d.className = 'nom-modal';
+    var h = '<div class="nom-modal-caja"><div class="nom-modal-tit">Agregar a la semana</div>';
+    if(!libres.length){
+      h += '<div class="item-sub" style="margin-bottom:12px">Todo el personal activo ya está en esta semana.</div>';
+    } else {
+      h += '<div class="nom-modal-lista">';
+      libres.forEach(function(t){
+        h += '<button class="nom-modal-op" data-t="'+t.id+'" data-nom-add="1">'
+           + esc(t.nombre) + '<span>' + esc(t.cuadrilla||t.area||'') + '</span></button>';
+      });
+      h += '</div>';
+    }
+    h += '<button class="btn-secondary" data-nom-cerrar="1">Cerrar</button></div>';
+    d.innerHTML = h;
+    document.body.appendChild(d);
+    d.addEventListener('click', async function(ev){
+      if(ev.target === d || ev.target.closest('[data-nom-cerrar]')){ d.remove(); return; }
+      var b = ev.target.closest('[data-nom-add]');
+      if(!b) return;
+      var t = libres.find(function(x){ return x.id === b.getAttribute('data-t'); });
+      if(!t) return;
+      d.remove();
+      var saldoPrev = 0;
+      var pr = NOM.prestamos.find(function(p){
+        return String(p.personal).toUpperCase().trim() === String(t.nombre).toUpperCase().trim();
+      });
+      if(pr) saldoPrev = n(pr.saldo);
+      var fila = recalcular({
+        semana_id:NOM.sem.id, trabajador_id:t.id, personal:t.nombre,
+        equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null,
+        orden:NOM.rows.length, sueldo:n(t.sueldo_semanal), pp:n(t.pp_default),
+        tarifa_hora:n(t.tarifa_hora), viaticos:n(t.viaticos_default), tarjeta:0,
+        horas:0, reembolso:0, descuentos:0, abonos:0, saldo:saldoPrev, forzados:{}
+      });
+      try { await db('POST','nom_renglon', fila); showToast('✅ '+t.nombre+' agregado'); }
+      catch(e){ showToast('No se pudo agregar: '+e.message, true); }
+      await NOM.cargar(NOM.sem.id);
+    });
+  };
+
+  NOM.quitar = async function(id){
+    var r = NOM.rows.find(function(x){ return x.id === id; });
+    if(!r) return;
+    try { await db('DELETE','nom_renglon?id=eq.'+id); }
+    catch(e){ showToast('No se pudo quitar: '+e.message, true); return; }
+    showToast(r.personal + ' fuera de la semana');
+    await NOM.cargar(NOM.sem.id);
+  };
+
+  // ── Cerrar / reabrir ────────────────────────────────────────────
+  // Cerrar es lo que manda el costo al Control de Obra. Reabrir lo
+  // retira: la vista solo lee semanas cerradas.
+  NOM.cambiarEstado = async function(estado){
+    if(!NOM.sem) return;
+    if(estado === 'cerrada'){
+      var sinObra = NOM.rows.filter(function(r){ return !r.obra_id; });
+      var T = totales(NOM.rows);
+      var msg = 'Cerrar la semana ' + NOM.sem.semana + ': ' + money(T.pago)
+              + ' de nómina.\n\n' + money(T.pago - sumaSinObra(sinObra))
+              + ' cargan a mano de obra de sus obras.\n'
+              + sinObra.length + ' renglones sin obra (' + money(sumaSinObra(sinObra))
+              + ') quedan como estructura y no cargan a ningún proyecto.';
+      if(!window.confirmarNomina){ /* sin confirm(): hoja propia */ }
+      var ok = await hojaConfirmar('Cerrar semana ' + NOM.sem.semana, msg, 'Cerrar semana');
+      if(!ok) return;
+    }
+    try {
+      await db('PATCH','nom_semana?id=eq.'+NOM.sem.id, {
+        estado: estado,
+        cerrada_por: estado==='cerrada' && currentUser ? currentUser.nombre : null,
+        cerrada_at: estado==='cerrada' ? new Date().toISOString() : null
+      });
+    } catch(e){ showToast('No se pudo: '+e.message, true); return; }
+    showToast(estado==='cerrada'
+      ? '🔒 Semana cerrada · ya se refleja en Control de Obra'
+      : '🔓 Semana reabierta · se retiró del Control de Obra');
+    await NOM.cargar(NOM.sem.id);
+  };
+
+  function sumaSinObra(rows){
+    return rows.reduce(function(s,r){ return s + n(r.pago); }, 0);
+  }
+
+  // REGLAS.md: nada de confirm() del navegador.
+  function hojaConfirmar(titulo, texto, botón){
+    return new Promise(function(res){
+      var d = document.createElement('div');
+      d.className = 'nom-modal';
+      d.innerHTML = '<div class="nom-modal-caja">'
+        + '<div class="nom-modal-tit">'+esc(titulo)+'</div>'
+        + '<div class="nom-modal-txt">'+esc(texto).replace(/\n/g,'<br>')+'</div>'
+        + '<button class="btn-primary" data-ok="1">'+esc(botón)+'</button>'
+        + '<button class="btn-secondary" data-no="1">Cancelar</button></div>';
+      document.body.appendChild(d);
+      d.addEventListener('click', function(ev){
+        if(ev.target.closest('[data-ok]')){ d.remove(); res(true); }
+        else if(ev.target === d || ev.target.closest('[data-no]')){ d.remove(); res(false); }
+      });
+    });
+  }
+
+  // ── Impresión ───────────────────────────────────────────────────
+  NOM.imprimir = function(){
+    if(!NOM.sem) return;
+    var T = totales(NOM.rows);
+    var cols = COLS.filter(function(c){ return c.tipo !== 'check' && c.k !== 'obra_id'; });
+    var obraDe = function(r){
+      var o = NOM.obras.find(function(x){ return x.id === r.obra_id; });
+      return o ? o.nombre : 'Estructura';
+    };
+    var equipos = [];
+    NOM.rows.forEach(function(r){
+      var e = r.equipo || 'SIN EQUIPO';
+      if(equipos.indexOf(e) < 0) equipos.push(e);
+    });
+    var cuerpo = '';
+    equipos.forEach(function(eq){
+      var dentro = NOM.rows.filter(function(r){ return (r.equipo||'SIN EQUIPO')===eq; });
+      cuerpo += '<tr class="eq"><td colspan="'+(cols.length+1)+'">'+esc(eq)+'</td></tr>';
+      dentro.forEach(function(r){
+        cuerpo += '<tr><td>'+esc(r.personal)+'</td><td class="ob">'+esc(obraDe(r))+'</td>';
+        cols.slice(1).forEach(function(c){
+          cuerpo += '<td class="num">'+(n(r[c.k])?money0(r[c.k]):'—')+'</td>';
+        });
+        cuerpo += '</tr>';
+      });
+      var st = totales(dentro);
+      cuerpo += '<tr class="sub"><td colspan="2">SUBTOTAL '+esc(eq)+'</td>';
+      cols.slice(1).forEach(function(c){
+        cuerpo += '<td class="num">'+(SUMABLES.indexOf(c.k)>=0?money0(st[c.k]):'')+'</td>';
+      });
+      cuerpo += '</tr>';
+    });
+    cuerpo += '<tr class="tot"><td colspan="2">TOTAL GENERAL</td>';
+    cols.slice(1).forEach(function(c){
+      cuerpo += '<td class="num">'+(SUMABLES.indexOf(c.k)>=0?money0(T[c.k]):'')+'</td>';
+    });
+    cuerpo += '</tr>';
+
+    var d = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+      +'<title>Nómina semana '+NOM.sem.semana+'</title><style>'
+      +'*{box-sizing:border-box;margin:0;padding:0}'
+      +'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#111;padding:16px 18px}'
+      +'h1{font-size:17px;font-weight:900;color:#0A1628}'
+      +'.sub2{font-size:10px;color:#6B7280;letter-spacing:.12em;text-transform:uppercase}'
+      +'.hd{display:flex;justify-content:space-between;align-items:flex-start;'
+        +'border-bottom:2px solid #0A1628;padding-bottom:7px;margin-bottom:9px}'
+      +'table{width:100%;border-collapse:collapse;margin-top:6px}'
+      +'thead tr{background:#0A1628;color:#fff}'
+      +'th{padding:4px 5px;font-size:8px;text-transform:uppercase;text-align:right}'
+      +'th:first-child,th:nth-child(2){text-align:left}'
+      +'td{padding:3px 5px;border-bottom:1px solid #E5E7EB}'
+      +'td.num,.num{text-align:right}'
+      +'td.ob{font-size:8.5px;color:#6B7280}'
+      +'tr.eq td{background:#E5E7EB;font-weight:800;font-size:9px;letter-spacing:.06em}'
+      +'tr.sub td{background:#F3F4F6;font-weight:700}'
+      +'tr.tot td{background:#0A1628;color:#fff;font-weight:900;font-size:11px}'
+      +'tr{page-break-inside:avoid}thead{display:table-header-group}'
+      +'@page{size:letter landscape;margin:9mm}@media print{body{padding:0}.noimp{display:none}}'
+      +'.noimp{position:fixed;top:8px;right:10px}'
+      +'.noimp button{font:700 12px Arial;padding:7px 13px;border:none;border-radius:7px;'
+        +'background:#0A1628;color:#fff;cursor:pointer}'
+      +'</style></head><body>'
+      +'<div class="noimp"><button onclick="window.print()">🖨️ Guardar como PDF</button></div>'
+      +'<div class="hd"><div><h1>PROCEPAL</h1><div class="sub2">Nómina semanal</div></div>'
+      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900">'
+        +esc(etiquetaSemana(NOM.sem))+'</div>'
+      +'<div class="sub2">'+esc(String(NOM.sem.estado).toUpperCase())+' · '+T.n+' personas</div></div></div>'
+      +'<table><thead><tr><th>Personal</th><th>Obra</th>';
+    cols.slice(1).forEach(function(c){ d += '<th>'+esc(c.t)+'</th>'; });
+    d += '</tr></thead><tbody>'+cuerpo+'</tbody></table></body></html>';
+
+    var w = window.open('','_blank','width=1200,height=800');
+    if(!w){ showToast('Permite las ventanas emergentes', true); return; }
+    w.document.write(d); w.document.close(); w.focus();
+  };
+
 })();
 
 </script>
