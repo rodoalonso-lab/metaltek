@@ -10601,6 +10601,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     {k:'total_horas', t:'TOTAL DE HORAS', tipo:'num',   w:100, calc:true},
     {k:'reembolso',   t:'REEMBOLSO',      tipo:'num',   w:94},
     {k:'descuentos',  t:'DESCUENTOS',     tipo:'num',   w:98},
+    {k:'abonos',      t:'ABONOS',         tipo:'num',   w:88},
     {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:94},
     {k:'pago',        t:'PAGO',           tipo:'num',   w:100, calc:true, fuerte:true},
     {k:'por_pagar',   t:'POR PAGAR',      tipo:'num',   w:100, calc:true, fuerte:true},
@@ -10612,7 +10613,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
   ];
   // Columnas que suman en los subtotales
   var SUMABLES = ['sueldo','viaticos','pp','horas','total_horas','reembolso',
-                  'descuentos','tarjeta','pago','por_pagar','saldo','abono','nuevo_saldo'];
+                  'descuentos','abonos','tarjeta','pago','por_pagar','saldo',
+                  'abono','nuevo_saldo'];
 
   // ── Semana ISO → rango de fechas, igual que la fórmula del Excel ─
   function rangoSemana(anio, semana){
