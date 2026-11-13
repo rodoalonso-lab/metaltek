@@ -371,6 +371,17 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-res-v .nom-vacio{padding:20px;text-align:center;color:var(--dim)}
 #nom-res-v .nom-pie{font-size:11px;color:var(--dim);line-height:1.5}
 @media (max-width:900px){ #nom-res-v .nom-kpis-res{grid-template-columns:repeat(2,1fr)} }
+
+#nom-trab-v .trab-card{margin-bottom:8px}
+#nom-trab-v .trab-off{opacity:.5}
+#nom-trab-v .trab-sw{display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;flex:none;width:58px}
+#nom-trab-v .trab-sw input{width:19px;height:19px;accent-color:#10B981;cursor:pointer}
+#nom-trab-v .trab-sw span{font-size:9px;letter-spacing:.05em;color:var(--dim);font-weight:700}
+#nom-trab-v .trab-edit{margin-top:6px;background:var(--surface);border:1px solid var(--border);
+  border-radius:7px;padding:4px 9px;font-size:10px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
+#nom-trab-v .trab-edit:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -11041,6 +11052,19 @@ return { montar:montar, calcular:calcular, recargar:function(){
       catch(e){}
     }
     var nuevos;
+    if(plantilla.length){
+      // Quien se dio de baja en Trabajadores no se arrastra, aunque estuviera
+      // en la semana anterior. Se compara por nombre porque los renglones
+      // viejos pueden no traer trabajador_id.
+      var bajas = {};
+      try {
+        var inact = await db('GET','trabajadores?activo=is.false&select=id,nombre') || [];
+        inact.forEach(function(t){ bajas[String(t.nombre).toUpperCase().trim()] = true; });
+      } catch(e){}
+      plantilla = plantilla.filter(function(p){
+        return !bajas[String(p.personal).toUpperCase().trim()];
+      });
+    }
     if(plantilla.length){
       nuevos = plantilla.map(function(p, i){
         return {
