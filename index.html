@@ -391,6 +391,15 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-nom-v tr.nom-cambiado .nom-in-txt{color:#F0A500}
 #nom-nom-v .nom-in:disabled{color:var(--text);opacity:.72;cursor:default}
 #nom-nom-v select.nom-in:disabled{appearance:none;-webkit-appearance:none}
+
+#nom-nom-v .nom-aviso{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:rgba(91,196,192,.10);border:1px solid rgba(91,196,192,.35);
+  border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:var(--text)}
+#nom-nom-v .nom-aviso-cer{background:rgba(240,165,0,.10);border-color:rgba(240,165,0,.35)}
+#nom-nom-v .nom-aviso-btn{margin-left:auto;background:var(--accent);border:none;
+  border-radius:8px;padding:8px 16px;font-size:12px;font-weight:800;color:#0A1628;
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
+#nom-nom-v .nom-aviso-btn:hover{filter:brightness(1.1)}
 </style>
 </head>
 <body>
@@ -10870,8 +10879,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
       var cerrada = String(NOM.sem.estado).toLowerCase()==='cerrada';
       var pend = listaCambios().length;
       // Seguro: mientras este puesto, ninguna celda acepta tecleo.
-      h +=   '<button class="nom-btn '+(NOM.editable?'nom-btn-edit':'')+'" data-nom="seguro">'
-           + (NOM.editable ? '🔓 Editando — poner seguro' : '🔒 Seguro puesto — editar') + '</button>';
+      if(!cerrada){
+        h += '<button class="nom-btn '+(NOM.editable?'nom-btn-edit':'nom-btn-ok')+'" data-nom="seguro">'
+           + (NOM.editable ? '🔒 Bloquear hoja' : '✏️ Editar') + '</button>';
+      }
       if(pend > 0){
         h += '<button class="nom-btn nom-btn-danger" data-nom="descartar">'
            + '↩ Cerrar sin cambios ('+pend+')</button>';
@@ -10917,6 +10928,16 @@ return { montar:montar, calcular:calcular, recargar:function(){
        + kpi('EFECTIVO PENDIENTE',money0(efecPend),  efecPend>0?'#EF4444':'#10B981')
        + kpi('% DISPERSADO', Math.round(disp*100)+'%', disp>=0.999?'#10B981':'#F0A500')
        + '</div>';
+
+    var _cer = String(NOM.sem.estado).toLowerCase()==='cerrada';
+    if(_cer){
+      h += '<div class="nom-aviso nom-aviso-cer">🔒 <b>Semana cerrada.</b> '
+         + 'Ya está reflejada en el Control de Obra. Para corregir algo, usa '
+         + '«Reabrir semana».</div>';
+    } else if(!NOM.editable){
+      h += '<div class="nom-aviso">🔒 <b>Hoja bloqueada</b> para que no se escriba por accidente. '
+         + '<button class="nom-aviso-btn" data-nom="seguro">✏️ Editar esta semana</button></div>';
+    }
 
     // Rejilla
     h += '<div class="nom-grid-wrap"><table class="nom-grid"><thead><tr>';
@@ -11207,8 +11228,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
       try { await db('POST','nom_renglon', nuevos); }
       catch(e){ showToast('Semana creada, pero el personal no: '+e.message, true); }
     }
-    showToast('✅ Semana '+num+' abierta con '+nuevos.length+' personas');
     await NOM.cargar(semNueva.id);
+    NOM.editable = true;
+    NOM.pintar();
+    showToast('✅ Semana '+num+' abierta con '+nuevos.length+' personas · ya puedes capturar');
   };
 
   function semanaISOactual(){
