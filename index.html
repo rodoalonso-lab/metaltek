@@ -11693,6 +11693,18 @@ return { montar:montar, calcular:calcular, recargar:function(){
        + '<b>Descuento</b> y <b>abono</b> no son lo mismo: el descuento es lo que se '
        + 'retiene del pago, el abono es lo que se aplica al préstamo.</div>';
     el.innerHTML = h;
+
+    // Listener del botón «Reporte» por proyecto. Va DESPUÉS de pintar y una
+    // sola vez: delegado en el contenedor, que no se reemplaza.
+    if(!el.dataset.resLigado){
+      el.dataset.resLigado = '1';
+      el.addEventListener('click', function(ev){
+        var b = ev.target.closest('[data-nom-obra]');
+        if(!b) return;
+        NOM.imprimirObra(b.getAttribute('data-nom-obra'),
+                         b.getAttribute('data-nom-obra-nom'));
+      });
+    }
   };
 
   function bloque(titulo, cabeceras, filas, totales){
