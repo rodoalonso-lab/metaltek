@@ -11489,6 +11489,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
     try { sems  = await db('GET','nom_semana?order=anio,semana') || []; } catch(e){}
     try { regs  = await db('GET','nom_renglon?select=*&limit=20000') || []; } catch(e){}
     try { prest = await db('GET','nom_prestamo?order=personal') || []; } catch(e){}
+    try { NOM.prorrateo = await db('GET','v_obra_nomina_semana?order=semana') || []; }
+    catch(e){ NOM.prorrateo = []; }
     if(!NOM.obras.length){
       try { NOM.obras = (obrasData||[]).slice(); } catch(e){}
       if(!NOM.obras.length){
@@ -11524,7 +11526,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       porTrab[p].sem[k]=1;
 
       var ob = r.obra_id ? (nombreObra[r.obra_id] || 'Obra desconocida') : 'ESTRUCTURA (sin obra)';
-      if(!porObra[ob]) porObra[ob] = {pago:0, tarjeta:0, por_pagar:0, n:0};
+      if(!porObra[ob]) porObra[ob] = {pago:0, tarjeta:0, por_pagar:0, n:0, id:r.obra_id||null};
       porObra[ob].pago+=n(r.pago); porObra[ob].tarjeta+=n(r.tarjeta);
       porObra[ob].por_pagar+=n(r.por_pagar); porObra[ob].n++;
 
@@ -11558,14 +11560,25 @@ return { montar:montar, calcular:calcular, recargar:function(){
        money0(acc.por_pagar), '', '']);
 
     // ── por proyecto ──
+    // Guardado para los reportes imprimibles por proyecto
+    NOM.resumenDatos = { regs: regs, semDe: semDe, nombreObra: nombreObra, porObra: porObra };
+
     h += bloque('TOTALES POR PROYECTO (CENTRO DE COSTO)',
-      ['Proyecto','Pago','Tarjeta','Efectivo','# Registros'],
+      ['Proyecto','Mano de obra','Indirecto oficina','Total cargado','# Registros',''],
       Object.keys(porObra).sort(function(a,b){ return porObra[b].pago - porObra[a].pago; })
         .map(function(k){
           var v = porObra[k];
           var estr = k.indexOf('ESTRUCTURA') === 0;
+          var ind = (NOM.prorrateo||[]).filter(function(x){
+            return x.obra_id === v.id && x.tipo_insumo === 'INDIRECTOS';
+          }).reduce(function(a,x){ return a + n(x.monto); }, 0);
           return ['<b style="color:'+(estr?'var(--dim)':'var(--text)')+'">'+esc(k)+'</b>',
-                  money0(v.pago), money0(v.tarjeta), money0(v.por_pagar), String(v.n)];
+                  money0(v.pago),
+                  estr ? '<span style="color:var(--dim)">no aplica</span>' : money0(ind),
+                  estr ? '<span style="color:var(--dim)">—</span>' : money0(v.pago + ind),
+                  String(v.n),
+                  v.id ? '<button class="nom-mini" data-nom-obra="'+v.id+'" '
+                       + 'data-nom-obra-nom="'+esc(k)+'">🖨️ Reporte</button>' : ''];
         }), null);
 
     // ── por equipo ──
@@ -11637,6 +11650,15 @@ return { montar:montar, calcular:calcular, recargar:function(){
       h += bloque('PRÉSTAMOS AL PERSONAL',
         ['Personal','Préstamo original','Abonado','Saldo vigente','Últ. mov.'],
         filasP, ['TOTAL', '', money0(sumAbon), money0(sumSaldo), '']);
+    }
+
+    if(!el.dataset.resLigado){
+      el.dataset.resLigado = '1';
+      el.addEventListener('click', function(ev){
+        var b = ev.target.closest('[data-nom-obra]');
+        if(b) NOM.imprimirObra(b.getAttribute('data-nom-obra'),
+                               b.getAttribute('data-nom-obra-nom'));
+      });
     }
 
     h += '<div class="nom-pie">El efectivo es lo que quedó por pagar después de '
