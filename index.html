@@ -11106,6 +11106,163 @@ return { montar:montar, calcular:calcular, recargar:function(){
     });
   }
 
+
+  // ── RESUMEN ──────────────────────────────────────────────────────
+  // La hoja RESUMEN del Excel: acumulado del año, por semana, por
+  // trabajador, por proyecto (centro de costo), por equipo y los
+  // préstamos vivos. Todo sale de los renglones, no se captura nada.
+  NOM.resumen = async function(){
+    var el = $('nom-res-v');
+    if(!el) return;
+    el.innerHTML = '<div class="item-sub" style="padding:18px">Calculando…</div>';
+
+    var sems = [], regs = [], prest = [];
+    try { sems  = await db('GET','nom_semana?order=anio,semana') || []; } catch(e){}
+    try { regs  = await db('GET','nom_renglon?select=*&limit=20000') || []; } catch(e){}
+    try { prest = await db('GET','nom_prestamo?order=personal') || []; } catch(e){}
+    if(!NOM.obras.length){
+      try { NOM.obras = (obrasData||[]).slice(); } catch(e){}
+      if(!NOM.obras.length){
+        try { NOM.obras = await db('GET','obras?select=id,nombre') || []; } catch(e){}
+      }
+    }
+    var nombreObra = {};
+    NOM.obras.forEach(function(o){ nombreObra[o.id] = o.nombre; });
+    var semDe = {};
+    sems.forEach(function(s){ semDe[s.id] = s; });
+
+    // Acumulados
+    var acc = {pago:0, tarjeta:0, por_pagar:0, descuentos:0};
+    var porSem = {}, porTrab = {}, porObra = {}, porEquipo = {};
+    regs.forEach(function(r){
+      acc.pago       += n(r.pago);
+      acc.tarjeta    += n(r.tarjeta);
+      acc.por_pagar  += n(r.por_pagar);
+      acc.descuentos += n(r.descuentos);
+
+      var s = semDe[r.semana_id];
+      var k = s ? (s.anio + '-' + String(s.semana).padStart(2,'0')) : '—';
+      if(!porSem[k]) porSem[k] = {etq:(s?('SEM '+s.semana):'—'), pago:0, tarjeta:0,
+                                  descuentos:0, por_pagar:0, n:0, estado:s?s.estado:''};
+      porSem[k].pago+=n(r.pago); porSem[k].tarjeta+=n(r.tarjeta);
+      porSem[k].descuentos+=n(r.descuentos); porSem[k].por_pagar+=n(r.por_pagar);
+      porSem[k].n++;
+
+      var p = String(r.personal||'—');
+      if(!porTrab[p]) porTrab[p] = {pago:0, tarjeta:0, descuentos:0, por_pagar:0, sem:{}};
+      porTrab[p].pago+=n(r.pago); porTrab[p].tarjeta+=n(r.tarjeta);
+      porTrab[p].descuentos+=n(r.descuentos); porTrab[p].por_pagar+=n(r.por_pagar);
+      porTrab[p].sem[k]=1;
+
+      var ob = r.obra_id ? (nombreObra[r.obra_id] || 'Obra desconocida') : 'ESTRUCTURA (sin obra)';
+      if(!porObra[ob]) porObra[ob] = {pago:0, tarjeta:0, por_pagar:0, n:0};
+      porObra[ob].pago+=n(r.pago); porObra[ob].tarjeta+=n(r.tarjeta);
+      porObra[ob].por_pagar+=n(r.por_pagar); porObra[ob].n++;
+
+      var eq = r.equipo || 'SIN EQUIPO';
+      if(!porEquipo[eq]) porEquipo[eq] = {pago:0, tarjeta:0, por_pagar:0, n:0};
+      porEquipo[eq].pago+=n(r.pago); porEquipo[eq].tarjeta+=n(r.tarjeta);
+      porEquipo[eq].por_pagar+=n(r.por_pagar); porEquipo[eq].n++;
+    });
+
+    var h = '';
+    h += '<div class="nom-kpis nom-kpis-res">'
+       + kpi('NÓMINA ACUMULADA',     money0(acc.pago),       'var(--accent)')
+       + kpi('PAGADO CON TARJETA',   money0(acc.tarjeta),    '#A78BFA')
+       + kpi('PAGADO EN EFECTIVO',   money0(acc.por_pagar),  '#5BC4C0')
+       + kpi('TRABAJADORES',         String(Object.keys(porTrab).length), '#8B949E')
+       + kpi('SEMANAS',              String(Object.keys(porSem).length),  '#8B949E')
+       + '</div>';
+
+    // ── por semana ──
+    h += bloque('TOTALES POR SEMANA',
+      ['Semana','Pago','Tarjeta','Descuentos','Efectivo','# Trab.',''],
+      Object.keys(porSem).sort().map(function(k){
+        var v = porSem[k];
+        var cerrada = String(v.estado).toLowerCase()==='cerrada';
+        return ['<b>'+esc(v.etq)+'</b>', money0(v.pago), money0(v.tarjeta),
+                money0(v.descuentos), money0(v.por_pagar), String(v.n),
+                cerrada ? '<span style="color:#10B981">🔒 cerrada</span>'
+                        : '<span style="color:#F0A500">abierta</span>'];
+      }),
+      ['TOTAL', money0(acc.pago), money0(acc.tarjeta), money0(acc.descuentos),
+       money0(acc.por_pagar), '', '']);
+
+    // ── por proyecto ──
+    h += bloque('TOTALES POR PROYECTO (CENTRO DE COSTO)',
+      ['Proyecto','Pago','Tarjeta','Efectivo','# Registros'],
+      Object.keys(porObra).sort(function(a,b){ return porObra[b].pago - porObra[a].pago; })
+        .map(function(k){
+          var v = porObra[k];
+          var estr = k.indexOf('ESTRUCTURA') === 0;
+          return ['<b style="color:'+(estr?'var(--dim)':'var(--text)')+'">'+esc(k)+'</b>',
+                  money0(v.pago), money0(v.tarjeta), money0(v.por_pagar), String(v.n)];
+        }), null);
+
+    // ── por equipo ──
+    h += bloque('TOTALES POR EQUIPO',
+      ['Equipo','Pago','Tarjeta','Efectivo','# Registros'],
+      Object.keys(porEquipo).sort(function(a,b){ return porEquipo[b].pago - porEquipo[a].pago; })
+        .map(function(k){
+          var v = porEquipo[k];
+          return ['<b>'+esc(k)+'</b>', money0(v.pago), money0(v.tarjeta),
+                  money0(v.por_pagar), String(v.n)];
+        }), null);
+
+    // ── por trabajador ──
+    h += bloque('ACUMULADO POR TRABAJADOR',
+      ['Personal','Total pagado','Tarjeta','Descuentos','Efectivo','Semanas'],
+      Object.keys(porTrab).sort(function(a,b){ return porTrab[b].pago - porTrab[a].pago; })
+        .map(function(k){
+          var v = porTrab[k];
+          return ['<b>'+esc(k)+'</b>', money0(v.pago), money0(v.tarjeta),
+                  money0(v.descuentos), money0(v.por_pagar),
+                  String(Object.keys(v.sem).length)];
+        }), null);
+
+    // ── préstamos ──
+    if(prest.length){
+      h += bloque('PRÉSTAMOS AL PERSONAL',
+        ['Personal','Préstamo original','Abonado','Saldo actual','Últ. sem.'],
+        prest.map(function(p){
+          return ['<b>'+esc(p.personal)+'</b>', money0(p.monto_original),
+                  money0(p.abonado),
+                  '<b style="color:'+(n(p.saldo)>0?'#F0A500':'#10B981')+'">'+money0(p.saldo)+'</b>',
+                  p.ultima_semana ? String(p.ultima_semana) : '—'];
+        }),
+        ['TOTAL', '', '', money0(prest.reduce(function(a,p){ return a+n(p.saldo); },0)), '']);
+    }
+
+    h += '<div class="nom-pie">El efectivo es lo que quedó por pagar después de '
+       + 'tarjeta, descuentos y abonos. «Estructura» son los renglones sin obra: '
+       + 'no cargan a ningún presupuesto.</div>';
+    el.innerHTML = h;
+  };
+
+  function bloque(titulo, cabeceras, filas, totales){
+    var h = '<div class="nom-bloque"><div class="nom-bloque-tit">'+esc(titulo)+'</div>'
+          + '<div class="nom-tabla-wrap"><table class="nom-tabla"><thead><tr>';
+    cabeceras.forEach(function(c, i){
+      h += '<th'+(i?' class="nom-num"':'')+'>'+esc(c)+'</th>';
+    });
+    h += '</tr></thead><tbody>';
+    if(!filas.length){
+      h += '<tr><td colspan="'+cabeceras.length+'" class="nom-vacio">Sin datos</td></tr>';
+    }
+    filas.forEach(function(f){
+      h += '<tr>';
+      f.forEach(function(c, i){ h += '<td'+(i?' class="nom-num"':'')+'>'+c+'</td>'; });
+      h += '</tr>';
+    });
+    if(totales){
+      h += '<tr class="nom-tr-tot">';
+      totales.forEach(function(c, i){ h += '<td'+(i?' class="nom-num"':'')+'>'+c+'</td>'; });
+      h += '</tr>';
+    }
+    h += '</tbody></table></div></div>';
+    return h;
+  }
+
   // ── Impresión ───────────────────────────────────────────────────
   NOM.imprimir = function(){
     if(!NOM.sem) return;
