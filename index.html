@@ -417,6 +417,11 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 
 #nom-nom-v .nom-ver{margin-left:8px;font-size:9px;letter-spacing:0;color:var(--dim);
   opacity:.65;font-weight:600;cursor:help}
+
+#nom-res-v .nom-mini{background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:4px 10px;font-size:10px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
+#nom-res-v .nom-mini:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -11693,6 +11698,196 @@ return { montar:montar, calcular:calcular, recargar:function(){
     h += '</tbody></table></div></div>';
     return h;
   }
+
+
+  // ── REPORTE DE NÓMINA POR PROYECTO ───────────────────────────────
+  // Para presentarlo fuera: desglosa lo pagado semana por semana, quién
+  // estuvo en la obra y cuánto le tocó de estructura. Las cifras salen de
+  // v_obra_nomina_semana, la misma que alimenta el Control de Obra, así que
+  // este papel y el presupuesto no pueden decir cosas distintas.
+  NOM.imprimirObra = function(obraId, obraNom){
+    var D = NOM.resumenDatos;
+    if(!D){ showToast('Abre el Resumen primero', true); return; }
+
+    var pro = (NOM.prorrateo||[]).filter(function(x){ return x.obra_id === obraId; });
+    var regs = D.regs.filter(function(r){ return r.obra_id === obraId; });
+    if(!regs.length && !pro.length){ showToast('Esa obra no tiene nómina', true); return; }
+
+    // ── por semana ──
+    var sem = {};
+    regs.forEach(function(r){
+      var s = D.semDe[r.semana_id];
+      if(!s) return;
+      var k = s.anio + '-' + String(s.semana).padStart(2,'0');
+      if(!sem[k]) sem[k] = { anio:s.anio, semana:s.semana, estado:s.estado,
+                             fin:s.fecha_fin, mo:0, ind:0, personas:{} };
+      sem[k].mo += n(r.pago);
+      sem[k].personas[r.personal] = (sem[k].personas[r.personal]||0) + n(r.pago);
+    });
+    pro.filter(function(x){ return x.tipo_insumo === 'INDIRECTOS'; }).forEach(function(x){
+      var k = x.anio + '-' + String(x.semana).padStart(2,'0');
+      if(!sem[k]) sem[k] = { anio:x.anio, semana:x.semana, estado:'cerrada',
+                             fin:x.fecha_fin, mo:0, ind:0, personas:{} };
+      sem[k].ind += n(x.monto);
+    });
+    var claves = Object.keys(sem).sort();
+
+    var totMO = 0, totIND = 0, acum = 0;
+    claves.forEach(function(k){ totMO += sem[k].mo; totIND += sem[k].ind; });
+
+    var filasSem = claves.map(function(k){
+      var v = sem[k];
+      var tot = v.mo + v.ind;
+      acum += tot;
+      var nPers = Object.keys(v.personas).length;
+      var abierta = String(v.estado).toLowerCase() !== 'cerrada';
+      return '<tr'+(abierta?' class="abierta"':'')+'>'
+        + '<td class="per">Semana '+v.semana + (abierta?' <span class="tag">abierta</span>':'') + '</td>'
+        + '<td class="num">'+nPers+'</td>'
+        + '<td class="num fuerte">'+money0(v.mo)+'</td>'
+        + '<td class="num">'+(v.ind?money0(v.ind):'—')+'</td>'
+        + '<td class="num fuerte">'+money0(tot)+'</td>'
+        + '<td class="num">'+money0(acum)+'</td></tr>';
+    }).join('');
+
+    // ── por persona ──
+    var pers = {};
+    regs.forEach(function(r){
+      var k = r.personal || '—';
+      if(!pers[k]) pers[k] = { eq:r.equipo||'—', pago:0, sueldo:0, viaticos:0, he:0,
+                               reemb:0, semanas:{} };
+      pers[k].pago     += n(r.pago);
+      pers[k].sueldo   += n(r.sueldo) + n(r.pp);
+      pers[k].viaticos += n(r.viaticos);
+      pers[k].he       += n(r.total_horas);
+      pers[k].reemb    += n(r.reembolso);
+      var s = D.semDe[r.semana_id];
+      if(s) pers[k].semanas[s.semana] = 1;
+    });
+    var ordPers = Object.keys(pers).sort(function(a,b){ return pers[b].pago - pers[a].pago; });
+    var tp = {sueldo:0, he:0, viaticos:0, reemb:0, pago:0};
+    var filasPers = ordPers.map(function(k){
+      var v = pers[k];
+      tp.sueldo+=v.sueldo; tp.he+=v.he; tp.viaticos+=v.viaticos;
+      tp.reemb+=v.reemb; tp.pago+=v.pago;
+      return '<tr><td class="per">'+esc(k)+'</td>'
+        + '<td class="ob">'+esc(v.eq)+'</td>'
+        + '<td class="num">'+Object.keys(v.semanas).length+'</td>'
+        + '<td class="num">'+money0(v.sueldo)+'</td>'
+        + '<td class="num">'+(v.he?money0(v.he):'—')+'</td>'
+        + '<td class="num">'+(v.viaticos?money0(v.viaticos):'—')+'</td>'
+        + '<td class="num">'+(v.reemb?money0(v.reemb):'—')+'</td>'
+        + '<td class="num fuerte">'+money0(v.pago)+'</td></tr>';
+    }).join('')
+    + '<tr class="tot"><td colspan="3">TOTAL MANO DE OBRA DIRECTA</td>'
+    + '<td class="num">'+money0(tp.sueldo)+'</td>'
+    + '<td class="num">'+money0(tp.he)+'</td>'
+    + '<td class="num">'+money0(tp.viaticos)+'</td>'
+    + '<td class="num">'+money0(tp.reemb)+'</td>'
+    + '<td class="num">'+money0(tp.pago)+'</td></tr>';
+
+    var sems = claves.map(function(k){ return sem[k].semana; });
+    var rango = sems.length ? ('semanas '+Math.min.apply(null,sems)+' a '+Math.max.apply(null,sems)) : '—';
+    var hoy = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+    var logo = logoProcepal();
+    var kpi = function(l,v,cls){
+      return '<div class="k'+(cls?' '+cls:'')+'"><div class="k-l">'+esc(l)+'</div>'
+           + '<div class="k-v">'+esc(v)+'</div></div>';
+    };
+
+    var d = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+     +'<title>Nómina · '+esc(obraNom)+'</title><style>'
+     +'*{box-sizing:border-box;margin:0;padding:0}'
+     +'body{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;color:#0A1628;padding:18px 22px;background:#fff}'
+     +'.hd{display:flex;align-items:center;gap:14px;background:#0A1628;color:#E8F4F8;'
+       +'border-radius:10px;padding:14px 18px;margin-bottom:12px}'
+     +'.hd img{height:48px;border-radius:6px;object-fit:contain;background:#fff;padding:3px}'
+     +'.hd .marca{font-size:21px;font-weight:900;line-height:1}'
+     +'.hd .sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#5BC4C0;margin-top:3px}'
+     +'.hd .der{margin-left:auto;text-align:right}'
+     +'.hd .obra{font-size:16px;font-weight:900;color:#5BC4C0;line-height:1.15;max-width:330px}'
+     +'.hd .meta{font-size:9px;color:#8BBFD4;margin-top:3px}'
+     +'.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}'
+     +'.k{border:1px solid #D7E3EA;border-left:3px solid #5BC4C0;border-radius:6px;padding:8px 10px}'
+     +'.k-l{font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:#5A8FA8;font-weight:700}'
+     +'.k-v{font-size:15px;font-weight:900;margin-top:2px}'
+     +'.k-ind{border-left-color:#F0A500}.k-tot{border-left-color:#0A1628;background:#F4F9FB}'
+     +'.sec{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:#5A8FA8;'
+       +'font-weight:800;margin:16px 0 6px}'
+     +'table{width:100%;border-collapse:collapse}'
+     +'thead tr{background:#0A1628;color:#E8F4F8}'
+     +'th{padding:6px 7px;font-size:8px;letter-spacing:.04em;text-transform:uppercase;'
+       +'text-align:right;font-weight:700}'
+     +'th:first-child,th:nth-child(2){text-align:left}'
+     +'td{padding:5px 7px;border-bottom:1px solid #E7EEF2}'
+     +'td.num,.num{text-align:right;font-variant-numeric:tabular-nums}'
+     +'td.per{font-weight:700}td.ob{font-size:9px;color:#3B9EBF}'
+     +'td.fuerte{font-weight:800}'
+     +'tr.abierta td{background:#FFF8E8}'
+     +'.tag{font-size:7.5px;background:#F0A500;color:#0A1628;border-radius:8px;'
+       +'padding:1px 6px;font-weight:800;letter-spacing:.05em}'
+     +'tr.tot td{background:#0A1628;color:#fff;font-weight:900;font-size:11px;padding:7px}'
+     +'tr.tot td:first-child{color:#5BC4C0}'
+     +'tr{page-break-inside:avoid}thead{display:table-header-group}'
+     +'.nota{margin-top:12px;background:#F4F9FB;border-left:3px solid #5BC4C0;'
+       +'border-radius:0 6px 6px 0;padding:9px 12px;font-size:9.5px;color:#2C5468;line-height:1.55}'
+     +'.firmas{display:grid;grid-template-columns:repeat(2,1fr);gap:50px;margin-top:34px;page-break-inside:avoid}'
+     +'.fm{border-top:1.5px solid #0A1628;padding-top:5px;text-align:center;font-size:8.5px;'
+       +'color:#5A8FA8;letter-spacing:.08em;text-transform:uppercase;font-weight:700}'
+     +'.pie{margin-top:14px;border-top:1px solid #E7EEF2;padding-top:7px;font-size:8px;'
+       +'color:#9DB3BF;display:flex;justify-content:space-between}'
+     +'@page{size:letter portrait;margin:11mm}'
+     +'@media print{body{padding:0}.noimp{display:none}'
+       +'.hd,thead tr,tr.tot td,.k,.nota,tr.abierta td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+     +'.noimp{position:fixed;top:8px;right:10px;z-index:9}'
+     +'.noimp button{font:800 12px Arial;padding:8px 15px;border:none;border-radius:8px;'
+       +'background:#5BC4C0;color:#0A1628;cursor:pointer}'
+     +'</style></head><body>'
+     +'<div class="noimp"><button onclick="window.print()">🖨️ Guardar como PDF</button></div>'
+     +'<div class="hd">'
+       + (logo ? '<img src="'+logo+'" alt="PROCEPAL">' : '')
+       +'<div><div class="marca">PROCEPAL</div>'
+       +'<div class="sub">Nómina acumulada por proyecto</div></div>'
+       +'<div class="der"><div class="obra">'+esc(obraNom)+'</div>'
+       +'<div class="meta">'+esc(rango)+' · emitido '+esc(hoy)+'</div></div>'
+     +'</div>'
+     +'<div class="kpis">'
+       + kpi('Mano de obra directa', money0(totMO))
+       + kpi('Indirecto de estructura', money0(totIND), 'k-ind')
+       + kpi('Total cargado', money0(totMO+totIND), 'k-tot')
+       + kpi('Semanas', String(claves.length))
+       + kpi('Personas', String(ordPers.length))
+     +'</div>'
+     +'<div class="sec">Desglose por semana</div>'
+     +'<table><thead><tr><th>Semana</th><th class="num">Personas</th>'
+       +'<th class="num">Mano de obra</th><th class="num">Indirecto oficina</th>'
+       +'<th class="num">Total</th><th class="num">Acumulado</th></tr></thead>'
+     +'<tbody>'+filasSem
+     +'<tr class="tot"><td colspan="2">TOTAL</td>'
+       +'<td class="num">'+money0(totMO)+'</td>'
+       +'<td class="num">'+money0(totIND)+'</td>'
+       +'<td class="num">'+money0(totMO+totIND)+'</td>'
+       +'<td class="num">'+money0(totMO+totIND)+'</td></tr>'
+     +'</tbody></table>'
+     +'<div class="sec">Personal que trabajó en el proyecto</div>'
+     +'<table><thead><tr><th>Personal</th><th>Equipo</th><th class="num">Semanas</th>'
+       +'<th class="num">Sueldo + P/P</th><th class="num">Horas extra</th>'
+       +'<th class="num">Viáticos</th><th class="num">Reembolsos</th>'
+       +'<th class="num">Total</th></tr></thead><tbody>'+filasPers+'</tbody></table>'
+     +'<div class="nota"><b>Cómo se calcula el indirecto de estructura.</b> '
+       +'La nómina de oficina no pertenece a un proyecto, pero los sostiene a todos. '
+       +'Cada semana se reparte entre las obras en proporción a la mano de obra que '
+       +'absorbió cada una esa semana. Lo que corresponde a trabajo todavía sin '
+       +'proyecto asignado no se carga a ninguna obra.</div>'
+     +'<div class="firmas"><div class="fm">Elaboró</div><div class="fm">Revisó</div></div>'
+     +'<div class="pie"><span>PROCEPAL · '+esc(obraNom)+'</span>'
+       +'<span>Cifras tomadas de la nómina semanal cerrada</span></div>'
+     +'</body></html>';
+
+    var w = window.open('','_blank','width=1000,height=900');
+    if(!w){ showToast('Permite las ventanas emergentes', true); return; }
+    w.document.write(d); w.document.close(); w.focus();
+  };
 
   // ── Impresión ───────────────────────────────────────────────────
   // Este es el ejemplar de archivo: lleva el logo y la paleta de la casa,
