@@ -10718,11 +10718,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
     total_horas: function(r){ return n(r.horas) * n(r.tarifa_hora); },
     pago:        function(r){ return n(r.sueldo) + n(r.pp) + n(r.total_horas) +
                                      n(r.viaticos) + n(r.reembolso); },
-    abono:       function(r){ return n(r.descuentos); },
     por_pagar:   function(r){ return n(r.pago) - n(r.tarjeta) - n(r.descuentos) - n(r.abonos); },
     nuevo_saldo: function(r){ return n(r.saldo) - n(r.abono); }
   };
-  var ORDEN_CALC = ['total_horas','pago','abono','por_pagar','nuevo_saldo'];
+  var ORDEN_CALC = ['total_horas','pago','por_pagar','nuevo_saldo'];
 
   function forzado(r, campo){
     return !!(r.forzados && r.forzados[campo]);
@@ -10760,7 +10759,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     {k:'pago',        t:'PAGO',           tipo:'num',   w:82, calc:true, fuerte:true},
     {k:'por_pagar',   t:'POR<br>PAGAR',   tipo:'num',   w:82, calc:true, fuerte:true},
     {k:'saldo',       t:'SALDO',          tipo:'num',   w:76},
-    {k:'abono',       t:'ABONO',          tipo:'num',   w:68, calc:true},
+    {k:'abono',       t:'ABONO',          tipo:'num',   w:68},
     {k:'nuevo_saldo', t:'NUEVO<br>SALDO', tipo:'num',   w:76, calc:true},
     {k:'pag_tarjeta', t:'✔<br>TARJ',      tipo:'check', w:40},
     {k:'pag_efectivo',t:'✔<br>EFVO',      tipo:'check', w:40}
