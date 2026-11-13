@@ -11117,8 +11117,18 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   // ── Eventos (delegados: la rejilla se repinta entera) ────────────
   function conectar(el){
-    var sel = $('nom-sel-semana');
-    if(sel) sel.addEventListener('change', function(){ NOM.cargar(this.value); });
+    // Los listeners se registran UNA sola vez. Antes se volvian a registrar en
+    // cada repintado: tras N repintados habia N copias, cada edicion disparaba
+    // N handlers, cada uno repintaba otra vez y la pagina se colgaba.
+    // Van delegados en el contenedor, que nunca se reemplaza, asi que
+    // sobreviven a los repintados sin necesidad de volver a colgarse.
+    if(el.dataset.nomLigado) return;
+    el.dataset.nomLigado = '1';
+
+    el.addEventListener('change', function(ev){
+      var sl = ev.target.closest('#nom-sel-semana');
+      if(sl) NOM.cargar(sl.value);
+    });
 
     el.addEventListener('click', function(ev){
       var b = ev.target.closest('[data-nom]');
@@ -11142,6 +11152,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
       if(!inp) return;
       var tr = inp.closest('tr[data-id]');
       if(!tr) return;
+      // Si el input ya no esta en el documento, el evento viene de un elemento
+      // que se acaba de reemplazar en un repintado: ignorarlo evita el ciclo
+      // repintar -> change -> repintar.
+      if(!document.contains(inp)) return;
       NOM.editar(tr.getAttribute('data-id'), inp.getAttribute('data-k'), inp);
     });
 
