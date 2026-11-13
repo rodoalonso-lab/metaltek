@@ -423,10 +423,13 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
   font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
 #nom-res-v .nom-mini:hover{border-color:var(--accent);color:var(--accent)}
 
-#cobra-host .cobra-mini{background:var(--surface);border:1px solid var(--border);border-radius:7px;
-  padding:3px 9px;font-size:10px;font-weight:700;color:var(--text);
-  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
-#cobra-host .cobra-mini:hover{border-color:var(--accent);color:var(--accent)}
+/* Ojo: .cobra-mini ya existe arriba como barra de progreso (height:6px).
+   Estos botones llevan su propio nombre para no chocar con aquella. */
+#cobra-host .cobra-btn{background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:4px 10px;font-size:11px;font-weight:700;color:var(--text);line-height:1.3;
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap;display:inline-block}
+#cobra-host .cobra-btn:hover{border-color:var(--accent);color:var(--accent)}
+#cobra-host .cobra-btn + .cobra-btn{margin-left:5px}
 </style>
 </head>
 <body>
@@ -10200,8 +10203,8 @@ function pintaEstim(el){
         money(e.importe_cobrado)+'</td>'+
       '<td style="text-align:right">'+
         (puede('estimaciones')
-          ? '<button class="cobra-mini" data-edit-est="'+e.id+'" title="Revisar y corregir los importes">✎</button> '+
-            '<button class="cobra-mini" data-cobro="'+e.id+'">'+
+          ? '<button class="cobra-btn" data-edit-est="'+e.id+'" title="Revisar y corregir los importes">✎ Editar</button>'+
+            '<button class="cobra-btn" data-cobro="'+e.id+'">'+
             (n(e.importe_cobrado)>=n(e.total)-0.01 && n(e.total)>0 ? '💵 ✓' : '💵 Cobro')+'</button>'
           : '')+'</td></tr>';
   });
