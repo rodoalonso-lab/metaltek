@@ -10360,20 +10360,54 @@ function registrarCobro(estimId){
   var cerrar=function(){ document.body.removeChild(ov); };
   card.querySelector('#cob-x').addEventListener('click', cerrar);
   ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
-  card.querySelector('#cob-ok').addEventListener('click', function(){
+  card.querySelector('#cob-ok').addEventListener('click', async function(){
     var imp=Number(card.querySelector('#cob-imp').value)||0;
-    var fec=card.querySelector('#cob-fec').value || null;
-    db('PATCH','obra_estimaciones?id=eq.'+estimId, {
-      importe_cobrado: imp,
-      fecha_pagada: imp >= n(e.total)-0.01 ? fec : null
-    }).then(function(){ cerrar(); return cargar(OBRA.id); })
-      .then(function(){
-        if(typeof showToast==='function') showToast('✅ Cobro registrado');
-        pinta();
-      })
-      .catch(function(err){
-        if(typeof showToast==='function') showToast('No se guardó: '+err.message, true);
+    var fec=card.querySelector('#cob-fec').value || new Date().toISOString().slice(0,10);
+    var yaCobrado = n(e.importe_cobrado);
+    var delta = imp - yaCobrado;            // solo lo nuevo, no el acumulado
+
+    try {
+      await db('PATCH','obra_estimaciones?id=eq.'+estimId, {
+        importe_cobrado: imp,
+        fecha_pagada: imp >= n(e.total)-0.01 ? fec : null
       });
+
+      // El cobro genera el ingreso en Finanzas, igual que autorizar una
+      // requisicion genera su CxP. Se captura en un solo lugar y aparece en
+      // los dos; la liga estimacion_id evita que se cuente dos veces.
+      if(delta > 0.01){
+        var prop = n(e.total) > 0 ? delta / n(e.total) : 0;
+        var subt = Math.round(n(e.subtotal) * prop * 100) / 100;
+        var ivaM = Math.round(delta - subt);
+        ivaM = Math.round((delta - subt) * 100) / 100;
+        var esAnt = String(e.tipo).toLowerCase() === 'anticipo';
+        await db('POST','movimientos', {
+          tipo: 'ingreso',
+          categoria: esAnt ? 'Anticipo' : 'Estimación',
+          descripcion: (esAnt ? 'ANTICIPO' : 'ESTIMACIÓN ' + e.no)
+                     + (e.periodo ? ' · ' + e.periodo : ''),
+          monto: subt,
+          iva: ivaM,
+          obra_id: OBRA.id,
+          proveedor_cliente: (OBRA.cliente || null),
+          fecha: fec,
+          forma_pago: 'transferencia',
+          estimacion_id: estimId,
+          created_by: (typeof currentUser!=='undefined' && currentUser) ? currentUser.nombre : null
+        });
+      }
+
+      cerrar();
+      await cargar(OBRA.id);
+      if(typeof showToast==='function'){
+        showToast(delta > 0.01
+          ? '✅ Cobro registrado · ' + money(delta) + ' entró a Finanzas'
+          : '✅ Cobro actualizado');
+      }
+      pinta();
+    } catch(err){
+      if(typeof showToast==='function') showToast('No se guardó: '+err.message, true);
+    }
   });
 }
 
