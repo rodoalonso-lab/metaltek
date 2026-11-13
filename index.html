@@ -11438,6 +11438,23 @@ return { montar:montar, calcular:calcular, recargar:function(){
       var inp = ev.target.closest('.nom-in-num, .nom-in-txt');
       if(inp && inp.select) setTimeout(function(){ try { inp.select(); } catch(e){} }, 0);
     });
+
+    // Al salir de una celda numerica se reescribe con formato. El evento
+    // 'change' se dispara durante el blur, cuando la celda todavia figura como
+    // la activa, asi que actualizarFila la respetaba para no pisar el cursor y
+    // se quedaba con el texto crudo que se tecleo (2441 en vez de 2,441.00).
+    el.addEventListener('focusout', function(ev){
+      var inp = ev.target.closest('.nom-in-num');
+      if(!inp) return;
+      var tr = inp.closest('tr[data-id]');
+      if(!tr) return;
+      var r = NOM.rows.find(function(x){ return x.id === tr.getAttribute('data-id'); });
+      if(!r) return;
+      setTimeout(function(){
+        if(document.activeElement === inp) return;   // volvio a entrar
+        inp.value = dec2(r[inp.getAttribute('data-k')]);
+      }, 0);
+    });
   }
 
   // ── Edición ─────────────────────────────────────────────────────
