@@ -10975,7 +10975,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       h += '<tr class="nom-eq"><td colspan="'+(COLS.length+1)+'">'+esc(eq)+'</td></tr>';
       dentro.forEach(function(r){ h += fila(r); });
       var st = totales(dentro);
-      h += '<tr class="nom-sub"><td class="nom-fijo" colspan="2">SUBTOTAL '+esc(eq)+'</td>';
+      h += '<tr class="nom-sub" data-eq="'+esc(eq)+'"><td class="nom-fijo" colspan="2">SUBTOTAL '+esc(eq)+'</td>';
       COLS.slice(2).forEach(function(c){
         h += '<td class="nom-num">' + (SUMABLES.indexOf(c.k)>=0 ? money0(st[c.k]) : '') + '</td>';
       });
@@ -10983,7 +10983,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     });
 
     if(NOM.rows.length){
-      h += '<tr class="nom-total"><td class="nom-fijo" colspan="2">TOTAL GENERAL</td>';
+      h += '<tr class="nom-total" data-total="1"><td class="nom-fijo" colspan="2">TOTAL GENERAL</td>';
       COLS.slice(2).forEach(function(c){
         h += '<td class="nom-num">' + (SUMABLES.indexOf(c.k)>=0 ? money0(T[c.k]) : '') + '</td>';
       });
@@ -11006,8 +11006,14 @@ return { montar:montar, calcular:calcular, recargar:function(){
   };
 
   function kpi(label, val, color){
-    return '<div class="nom-kpi"><div class="nom-kpi-l">'+esc(label)+'</div>'
+    return '<div class="nom-kpi" data-kpi="'+esc(label)+'"><div class="nom-kpi-l">'+esc(label)+'</div>'
          + '<div class="nom-kpi-v" style="color:'+color+'">'+esc(val)+'</div></div>';
+  }
+  function setKpi(label, val, color){
+    var e = document.querySelector('#nom-nom-v [data-kpi="'+label+'"] .nom-kpi-v');
+    if(!e) return;
+    e.textContent = val;
+    if(color) e.style.color = color;
   }
 
   function fila(r){
@@ -11043,6 +11049,70 @@ return { montar:montar, calcular:calcular, recargar:function(){
     h += '<td class="nom-cell"><button class="nom-del" data-nom="borrar" title="Quitar de la semana"'+dis+'>✕</button></td>';
     h += '</tr>';
     return h;
+  }
+
+  // ── Actualizacion puntual ────────────────────────────────────────
+  // Repintar la hoja entera en cada tecleo tenia dos defectos: se perdia el
+  // foco (y con el, poder tabular a la celda siguiente) y el renglon completo
+  // se teñia del mismo ambar que marca una celda forzada, asi que parecia que
+  // las demas celdas se habian editado solas.
+  function actualizarFila(r){
+    var tr = document.querySelector('#nom-nom-v tr[data-id="'+r.id+'"]');
+    if(!tr) return;
+    COLS.forEach(function(c){
+      if(c.tipo !== 'num') return;
+      var inp = tr.querySelector('[data-k="'+c.k+'"]');
+      if(!inp) return;
+      // La celda que se esta editando no se toca: el cursor sigue dentro.
+      if(document.activeElement === inp) return;
+      inp.value = dec2(r[c.k]);
+      var td = inp.closest('td');
+      if(td && c.calc) td.classList.toggle('nom-forzado', forzado(r, c.k));
+    });
+    tr.classList.toggle('nom-cambiado', cambiado(r));
+  }
+
+  function actualizarTotales(){
+    var T = totales(NOM.rows);
+    var tarjPend = T.tarjeta   - T.tarjetaPagada;
+    var efecPend = T.por_pagar - T.efectivoPagado;
+    var disp = (T.tarjeta + T.por_pagar) > 0
+             ? (T.tarjetaPagada + T.efectivoPagado) / (T.tarjeta + T.por_pagar) : 0;
+    setKpi('PAGO',        money0(T.pago));
+    setKpi('TARJETA',     money0(T.tarjeta));
+    setKpi('DESCUENTOS',  money0(T.descuentos));
+    setKpi('POR PAGAR',   money0(T.por_pagar));
+    setKpi('REEMBOLSOS',  money0(T.reembolso));
+    setKpi('# TRAB.',     String(T.n));
+    setKpi('TARJETA PAGADA',    money0(T.tarjetaPagada));
+    setKpi('TARJETA PENDIENTE', money0(tarjPend), tarjPend>0?'#EF4444':'#10B981');
+    setKpi('EFECTIVO PAGADO',   money0(T.efectivoPagado));
+    setKpi('EFECTIVO PENDIENTE',money0(efecPend), efecPend>0?'#EF4444':'#10B981');
+    setKpi('% DISPERSADO', Math.round(disp*100)+'%', disp>=0.999?'#10B981':'#F0A500');
+
+    var pintaFila = function(tr, tot){
+      var tds = tr.querySelectorAll('td');
+      // La primera celda lleva colspan=2, asi que los valores arrancan en la 2a
+      COLS.slice(2).forEach(function(c, i){
+        var td = tds[i+1];
+        if(td) td.textContent = (SUMABLES.indexOf(c.k)>=0 ? money0(tot[c.k]) : '');
+      });
+    };
+    document.querySelectorAll('#nom-nom-v tr.nom-sub[data-eq]').forEach(function(tr){
+      var eq = tr.getAttribute('data-eq');
+      pintaFila(tr, totales(NOM.rows.filter(function(r){
+        return (r.equipo||'SIN EQUIPO') === eq;
+      })));
+    });
+    var trT = document.querySelector('#nom-nom-v tr.nom-total[data-total]');
+    if(trT) pintaFila(trT, T);
+
+    // El boton de descartar aparece o desaparece segun haya cambios
+    var pend = listaCambios().length;
+    var bd = document.querySelector('#nom-nom-v [data-nom="descartar"]');
+    if(pend > 0 && !bd) NOM.pintar();
+    else if(pend === 0 && bd) NOM.pintar();
+    else if(bd) bd.textContent = '↩ Cerrar sin cambios ('+pend+')';
   }
 
   // ── Eventos (delegados: la rejilla se repinta entera) ────────────
@@ -11108,7 +11178,9 @@ return { montar:montar, calcular:calcular, recargar:function(){
     }
     recalcular(r);
     NOM.guardar(r);
-    NOM.pintar();
+    // Cambiar de equipo reagrupa la tabla; eso si necesita repintado completo.
+    if(campo === 'equipo') NOM.pintar();
+    else { actualizarFila(r); actualizarTotales(); }
   };
 
   // Cerrar sin cambios: devuelve cada renglon tocado a como estaba al abrir
