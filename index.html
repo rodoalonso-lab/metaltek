@@ -11634,6 +11634,14 @@ return { montar:montar, calcular:calcular, recargar:function(){
   }
 
   // ── Impresión ───────────────────────────────────────────────────
+  // Este es el ejemplar de archivo: lleva el logo y la paleta de la casa,
+  // no el blanco y negro de un volante. El logo se lee del <img> del
+  // encabezado en vez de duplicar sus 51 KB de base64 en el codigo.
+  function logoProcepal(){
+    var el = document.getElementById('logo-procepal');
+    return el && el.src ? el.src : '';
+  }
+
   NOM.imprimir = function(){
     if(!NOM.sem) return;
     var T = totales(NOM.rows);
@@ -11647,19 +11655,24 @@ return { montar:montar, calcular:calcular, recargar:function(){
       var e = r.equipo || 'SIN EQUIPO';
       if(equipos.indexOf(e) < 0) equipos.push(e);
     });
+
     var cuerpo = '';
     equipos.forEach(function(eq){
       var dentro = NOM.rows.filter(function(r){ return (r.equipo||'SIN EQUIPO')===eq; });
       cuerpo += '<tr class="eq"><td colspan="'+(cols.length+1)+'">'+esc(eq)+'</td></tr>';
       dentro.forEach(function(r){
-        cuerpo += '<tr><td>'+esc(r.personal)+'</td><td class="ob">'+esc(obraDe(r))+'</td>';
+        var sinObra = !r.obra_id;
+        cuerpo += '<tr><td class="per">'+esc(r.personal)+'</td>'
+               +  '<td class="ob'+(sinObra?' ob-estr':'')+'">'+esc(obraDe(r))+'</td>';
         cols.slice(1).forEach(function(c){
-          cuerpo += '<td class="num">'+(n(r[c.k])?money0(r[c.k]):'—')+'</td>';
+          var v = n(r[c.k]);
+          cuerpo += '<td class="num'+(c.fuerte?' fuerte':'')+(v?'':' cero')+'">'
+                 +  (v ? money0(r[c.k]) : '—') + '</td>';
         });
         cuerpo += '</tr>';
       });
       var st = totales(dentro);
-      cuerpo += '<tr class="sub"><td colspan="2">SUBTOTAL '+esc(eq)+'</td>';
+      cuerpo += '<tr class="sub"><td colspan="2">Subtotal '+esc(eq)+'</td>';
       cols.slice(1).forEach(function(c){
         cuerpo += '<td class="num">'+(SUMABLES.indexOf(c.k)>=0?money0(st[c.k]):'')+'</td>';
       });
@@ -11671,40 +11684,142 @@ return { montar:montar, calcular:calcular, recargar:function(){
     });
     cuerpo += '</tr>';
 
-    var d = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
-      +'<title>Nómina semana '+NOM.sem.semana+'</title><style>'
-      +'*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#111;padding:16px 18px}'
-      +'h1{font-size:17px;font-weight:900;color:#0A1628}'
-      +'.sub2{font-size:10px;color:#6B7280;letter-spacing:.12em;text-transform:uppercase}'
-      +'.hd{display:flex;justify-content:space-between;align-items:flex-start;'
-        +'border-bottom:2px solid #0A1628;padding-bottom:7px;margin-bottom:9px}'
-      +'table{width:100%;border-collapse:collapse;margin-top:6px}'
-      +'thead tr{background:#0A1628;color:#fff}'
-      +'th{padding:4px 5px;font-size:8px;text-transform:uppercase;text-align:right}'
-      +'th:first-child,th:nth-child(2){text-align:left}'
-      +'td{padding:3px 5px;border-bottom:1px solid #E5E7EB}'
-      +'td.num,.num{text-align:right}'
-      +'td.ob{font-size:8.5px;color:#6B7280}'
-      +'tr.eq td{background:#E5E7EB;font-weight:800;font-size:9px;letter-spacing:.06em}'
-      +'tr.sub td{background:#F3F4F6;font-weight:700}'
-      +'tr.tot td{background:#0A1628;color:#fff;font-weight:900;font-size:11px}'
-      +'tr{page-break-inside:avoid}thead{display:table-header-group}'
-      +'@page{size:letter landscape;margin:9mm}@media print{body{padding:0}.noimp{display:none}}'
-      +'.noimp{position:fixed;top:8px;right:10px}'
-      +'.noimp button{font:700 12px Arial;padding:7px 13px;border:none;border-radius:7px;'
-        +'background:#0A1628;color:#fff;cursor:pointer}'
-      +'</style></head><body>'
-      +'<div class="noimp"><button onclick="window.print()">🖨️ Guardar como PDF</button></div>'
-      +'<div class="hd"><div><h1>PROCEPAL</h1><div class="sub2">Nómina semanal</div></div>'
-      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900">'
-        +esc(etiquetaSemana(NOM.sem))+'</div>'
-      +'<div class="sub2">'+esc(String(NOM.sem.estado).toUpperCase())+' · '+T.n+' personas</div></div></div>'
-      +'<table><thead><tr><th>Personal</th><th>Obra</th>';
-    cols.slice(1).forEach(function(c){ d += '<th>'+esc(c.t)+'</th>'; });
-    d += '</tr></thead><tbody>'+cuerpo+'</tbody></table></body></html>';
+    // Reparto por obra, para que la hoja de archivo diga a que proyecto se
+    // cargo cada peso sin tener que abrir el Control de Obra.
+    var porObra = {};
+    NOM.rows.forEach(function(r){
+      var k = obraDe(r);
+      porObra[k] = (porObra[k]||0) + n(r.pago);
+    });
+    var chips = Object.keys(porObra).sort(function(a,b){ return porObra[b]-porObra[a]; })
+      .map(function(k){
+        return '<div class="chip'+(k==='Estructura'?' chip-estr':'')+'">'
+             + '<span class="chip-n">'+esc(k)+'</span>'
+             + '<span class="chip-v">'+money0(porObra[k])+'</span></div>';
+      }).join('');
 
-    var w = window.open('','_blank','width=1200,height=800');
+    var tarjPend = T.tarjeta - T.tarjetaPagada;
+    var efecPend = T.por_pagar - T.efectivoPagado;
+    var disp = (T.tarjeta + T.por_pagar) > 0
+             ? (T.tarjetaPagada + T.efectivoPagado) / (T.tarjeta + T.por_pagar) : 0;
+    var cerrada = String(NOM.sem.estado).toLowerCase()==='cerrada';
+
+    var kpi = function(l,v,cls){
+      return '<div class="k'+(cls?' '+cls:'')+'"><div class="k-l">'+esc(l)+'</div>'
+           + '<div class="k-v">'+esc(v)+'</div></div>';
+    };
+
+    var hoy = new Date().toLocaleDateString('es-MX',
+                {day:'2-digit', month:'long', year:'numeric'});
+    var logo = logoProcepal();
+
+    var d = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+     +'<title>Nómina '+esc(etiquetaSemana(NOM.sem))+'</title><style>'
+     +'*{box-sizing:border-box;margin:0;padding:0}'
+     +'body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#0A1628;'
+       +'padding:14px 16px;background:#fff}'
+     /* ── Encabezado con la paleta de la casa ── */
+     +'.hd{display:flex;align-items:center;gap:14px;background:#0A1628;color:#E8F4F8;'
+       +'border-radius:10px;padding:12px 16px;margin-bottom:10px}'
+     +'.hd img{height:46px;border-radius:6px;object-fit:contain;background:#fff;padding:3px}'
+     +'.hd .marca{font-size:20px;font-weight:900;letter-spacing:.02em;line-height:1}'
+     +'.hd .sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#5BC4C0;margin-top:3px}'
+     +'.hd .der{margin-left:auto;text-align:right}'
+     +'.hd .sem{font-size:17px;font-weight:900;color:#5BC4C0;line-height:1.1}'
+     +'.hd .meta{font-size:9px;color:#8BBFD4;margin-top:3px}'
+     +'.sello{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:10px;'
+       +'font-size:8.5px;font-weight:800;letter-spacing:.08em}'
+     +'.sello-cer{background:#5BC4C0;color:#0A1628}'
+     +'.sello-abi{background:#F0A500;color:#0A1628}'
+     /* ── Indicadores ── */
+     +'.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:6px}'
+     +'.kpis2{grid-template-columns:repeat(5,1fr);margin-bottom:10px}'
+     +'.k{border:1px solid #D7E3EA;border-left:3px solid #5BC4C0;border-radius:6px;padding:6px 8px}'
+     +'.k-l{font-size:7.5px;letter-spacing:.09em;text-transform:uppercase;color:#5A8FA8;font-weight:700}'
+     +'.k-v{font-size:13px;font-weight:900;margin-top:1px;color:#0A1628}'
+     +'.k-warn{border-left-color:#F0A500}.k-ok{border-left-color:#10B981}'
+     /* ── Reparto por obra ── */
+     +'.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}'
+     +'.chip{display:flex;flex-direction:column;border:1px solid #D7E3EA;border-radius:6px;'
+       +'padding:5px 10px;background:#F4F9FB}'
+     +'.chip-estr{background:#FFF6E5;border-color:#F0C97A}'
+     +'.chip-n{font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:#5A8FA8;font-weight:700}'
+     +'.chip-v{font-size:11.5px;font-weight:800;color:#0A1628}'
+     +'.sec{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#5A8FA8;'
+       +'font-weight:800;margin:0 0 5px}'
+     /* ── Tabla ── */
+     +'table{width:100%;border-collapse:collapse}'
+     +'thead tr{background:#0A1628;color:#E8F4F8}'
+     +'th{padding:5px 4px;font-size:7.5px;letter-spacing:.03em;text-transform:uppercase;'
+       +'text-align:right;font-weight:700;line-height:1.2}'
+     +'th:first-child,th:nth-child(2){text-align:left}'
+     +'td{padding:3.5px 4px;border-bottom:1px solid #E7EEF2}'
+     +'td.num,.num{text-align:right;font-variant-numeric:tabular-nums}'
+     +'td.per{font-weight:700}'
+     +'td.ob{font-size:8px;color:#3B9EBF}'
+     +'td.ob-estr{color:#B98900;font-style:italic}'
+     +'td.cero{color:#C3D2DA}'
+     +'td.fuerte{font-weight:800;color:#0A1628}'
+     +'tr.eq td{background:#E3F1F2;color:#0A1628;font-weight:800;font-size:8.5px;'
+       +'letter-spacing:.1em;text-transform:uppercase;padding:4px 6px;'
+       +'border-top:1px solid #5BC4C0;border-bottom:1px solid #5BC4C0}'
+     +'tr.sub td{background:#F4F9FB;font-weight:700;color:#2C5468;border-bottom:1px solid #D7E3EA}'
+     +'tr.tot td{background:#0A1628;color:#fff;font-weight:900;font-size:10.5px;padding:6px 4px}'
+     +'tr.tot td:first-child{color:#5BC4C0}'
+     +'tr{page-break-inside:avoid}thead{display:table-header-group}'
+     /* ── Firmas y pie ── */
+     +'.firmas{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:34px;'
+       +'page-break-inside:avoid}'
+     +'.fm{border-top:1.5px solid #0A1628;padding-top:4px;text-align:center;font-size:8px;'
+       +'color:#5A8FA8;letter-spacing:.08em;text-transform:uppercase;font-weight:700}'
+     +'.pie{margin-top:14px;border-top:1px solid #E7EEF2;padding-top:6px;font-size:7.5px;'
+       +'color:#9DB3BF;display:flex;justify-content:space-between}'
+     +'@page{size:letter landscape;margin:8mm}'
+     +'@media print{body{padding:0}.noimp{display:none}'
+       +'.hd,tr.eq td,tr.tot td,thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+       +'.k,.chip,tr.sub td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+     +'.noimp{position:fixed;top:8px;right:10px;z-index:9}'
+     +'.noimp button{font:800 12px Arial;padding:8px 15px;border:none;border-radius:8px;'
+       +'background:#5BC4C0;color:#0A1628;cursor:pointer}'
+     +'</style></head><body>'
+     +'<div class="noimp"><button onclick="window.print()">🖨️ Guardar como PDF</button></div>'
+     +'<div class="hd">'
+       + (logo ? '<img src="'+logo+'" alt="PROCEPAL">' : '')
+       +'<div><div class="marca">PROCEPAL</div>'
+       +'<div class="sub">Nómina semanal · ejemplar de archivo</div></div>'
+       +'<div class="der"><div class="sem">'+esc(etiquetaSemana(NOM.sem))+'</div>'
+       +'<div class="meta">'+T.n+' personas · emitida '+esc(hoy)+'</div>'
+       +'<span class="sello '+(cerrada?'sello-cer':'sello-abi')+'">'
+       + (cerrada?'CERRADA':'ABIERTA')+'</span></div>'
+     +'</div>'
+     +'<div class="kpis">'
+       + kpi('Pago',       money0(T.pago))
+       + kpi('Tarjeta',    money0(T.tarjeta))
+       + kpi('Descuentos', money0(T.descuentos), 'k-warn')
+       + kpi('Por pagar',  money0(T.por_pagar))
+       + kpi('Reembolsos', money0(T.reembolso))
+       + kpi('Abonos',     money0(T.abonos))
+     +'</div>'
+     +'<div class="kpis kpis2">'
+       + kpi('Tarjeta pagada',     money0(T.tarjetaPagada), 'k-ok')
+       + kpi('Tarjeta pendiente',  money0(tarjPend), tarjPend>0?'k-warn':'k-ok')
+       + kpi('Efectivo pagado',    money0(T.efectivoPagado), 'k-ok')
+       + kpi('Efectivo pendiente', money0(efecPend), efecPend>0?'k-warn':'k-ok')
+       + kpi('% dispersado',       Math.round(disp*100)+'%', disp>=0.999?'k-ok':'k-warn')
+     +'</div>'
+     +'<div class="sec">Reparto por proyecto</div>'
+     +'<div class="chips">'+chips+'</div>'
+     +'<table><thead><tr><th>Personal</th><th>Obra</th>';
+    cols.slice(1).forEach(function(c){ d += '<th>'+c.t+'</th>'; });
+    d += '</tr></thead><tbody>'+cuerpo+'</tbody></table>'
+     +'<div class="firmas">'
+       +'<div class="fm">Elaboró</div><div class="fm">Autorizó</div><div class="fm">Dispersó</div>'
+     +'</div>'
+     +'<div class="pie"><span>PROCEPAL · Nómina '+esc(etiquetaSemana(NOM.sem))+'</span>'
+       +'<span>Documento de archivo — conservar con los comprobantes de dispersión</span></div>'
+     +'</body></html>';
+
+    var w = window.open('','_blank','width=1250,height=850');
     if(!w){ showToast('Permite las ventanas emergentes', true); return; }
     w.document.write(d); w.document.close(); w.focus();
   };
