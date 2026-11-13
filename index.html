@@ -11482,6 +11482,15 @@ return { montar:montar, calcular:calcular, recargar:function(){
     }
     recalcular(r);
     NOM.guardar(r);
+
+    // La celda que se acaba de editar se reescribe con formato aqui mismo.
+    // Depender del blur era fragil: 'change' se dispara durante el blur y el
+    // orden varia, asi que a veces quedaba el texto crudo (2441 en vez de
+    // 2,441.00). En este punto ya terminaste de escribir en ella.
+    if(inp && inp.type !== 'checkbox' && campo !== 'obra_id' && campo !== 'personal'){
+      inp.value = dec2(r[campo]);
+    }
+
     // Cambiar de equipo reagrupa la tabla; eso si necesita repintado completo.
     if(campo === 'equipo') NOM.pintar();
     else { actualizarFila(r); actualizarTotales(); }
