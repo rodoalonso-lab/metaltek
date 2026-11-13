@@ -422,6 +422,11 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
   padding:4px 10px;font-size:10px;font-weight:700;color:var(--text);
   font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
 #nom-res-v .nom-mini:hover{border-color:var(--accent);color:var(--accent)}
+
+#cobra-host .cobra-mini{background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:3px 9px;font-size:10px;font-weight:700;color:var(--text);
+  font-family:Barlow,sans-serif;cursor:pointer;white-space:nowrap}
+#cobra-host .cobra-mini:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -10170,15 +10175,15 @@ function pintaEstim(el){
 
   h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
      '<div class="card-label" style="margin:0">ESTIMACIONES</div>'+
-     (puede('estimaciones')?'<button id="cobra-nueva-estim" class="add-btn">+ Estimación</button>':'')+
+     (puede('estimaciones')?'<button id="cobra-nueva-estim" class="add-btn">+ Estimación / Anticipo</button>':'')+
      '</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
      '<tr style="text-align:right"><th style="text-align:left;padding:4px">No.</th>'+
      '<th style="text-align:left">Tipo</th><th>Ejecutado</th><th>Amortización</th><th>Retención</th>'+
      '<th>Subtotal</th><th>IVA</th><th>Total</th><th style="text-align:left">Presentada</th>'+
-     '<th>Cobrado</th></tr>';
+     '<th>Cobrado</th><th></th></tr>';
   if(!ESTIM.length){
-    h+='<tr><td colspan="10" class="item-sub" style="padding:10px">Sin estimaciones. '+
-       'El anticipo se genera al cargar el contrato.</td></tr>';
+    h+='<tr><td colspan="11" class="item-sub" style="padding:10px">Sin documentos de cobro. '+
+       'Usa «+ Estimación / Anticipo» para registrar el primero.</td></tr>';
   }
   ESTIM.forEach(function(e){
     var vieja = e.fecha_presentada && !e.fecha_pagada &&
@@ -10191,7 +10196,13 @@ function pintaEstim(el){
       '<td>'+money(e.retencion)+'</td><td>'+money(e.subtotal)+'</td>'+
       '<td>'+money(e.iva)+'</td><td style="font-weight:700">'+money(e.total)+'</td>'+
       '<td style="text-align:left">'+fecha(e.fecha_presentada)+(vieja?' ⚠️':'')+'</td>'+
-      '<td>'+money(e.importe_cobrado)+'</td></tr>';
+      '<td style="color:'+(n(e.importe_cobrado)>=n(e.total)-0.01 && n(e.total)>0 ? '#10B981':'var(--text)')+'">'+
+        money(e.importe_cobrado)+'</td>'+
+      '<td style="text-align:right">'+
+        (puede('estimaciones')
+          ? '<button class="cobra-mini" data-cobro="'+e.id+'">'+
+            (n(e.importe_cobrado)>=n(e.total)-0.01 && n(e.total)>0 ? '✎' : '💵 Cobro')+'</button>'
+          : '')+'</td></tr>';
   });
   h+='</table></div>';
   h+='<div class="item-sub" style="margin-top:8px">En rojo, las presentadas hace más de 30 días sin cobrar. '+
@@ -10200,6 +10211,10 @@ function pintaEstim(el){
 
   var btn=$('cobra-nueva-estim');
   if(btn) btn.addEventListener('click', nuevaEstimacion);
+  // REGLAS.md: nada de onclick dentro de innerHTML.
+  el.querySelectorAll('[data-cobro]').forEach(function(b){
+    b.addEventListener('click', function(){ registrarCobro(b.getAttribute('data-cobro')); });
+  });
 }
 
 function nuevaEstimacion(){
