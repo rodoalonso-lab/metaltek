@@ -10650,7 +10650,12 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   var NOM = window.NOM = {
     semanas: [], sem: null, rows: [], obras: [], prestamos: [],
-    guardando: {}, cargando: false
+    guardando: {}, cargando: false,
+    // El seguro arranca puesto: la hoja se abre en modo lectura. Teclear por
+    // accidente sobre una nomina ya pagada es muy facil, y el guardado es
+    // automatico, asi que no hay un "guardar" donde arrepentirse.
+    editable: false,
+    original: {}        // copia al cargar, para "descartar cambios"
   };
 
   var n  = function(v){ var x = parseFloat(v); return isFinite(x) ? x : 0; };
@@ -10779,9 +10784,35 @@ return { montar:montar, calcular:calcular, recargar:function(){
         recalcular(r);
       });
     }
+    // Foto de como quedo al abrir. Es contra esto que se comparan los cambios.
+    NOM.original = {};
+    NOM.rows.forEach(function(r){ NOM.original[r.id] = JSON.parse(JSON.stringify(r)); });
+    NOM.editable = false;     // cada vez que se abre una semana, seguro puesto
     NOM.cargando = false;
     NOM.pintar();
   };
+
+  // ── Cambios pendientes contra la foto original ───────────────────
+  var CAMPOS = ['personal','equipo','obra_id','sueldo','pp','horas','tarifa_hora',
+                'viaticos','reembolso','descuentos','abonos','tarjeta','total_horas',
+                'pago','por_pagar','saldo','abono','nuevo_saldo',
+                'pag_tarjeta','pag_efectivo'];
+
+  function cambiado(r){
+    var o = NOM.original[r.id];
+    if(!o) return false;
+    for(var i=0;i<CAMPOS.length;i++){
+      var k = CAMPOS[i];
+      var a = r[k], b = o[k];
+      if(typeof a === 'boolean' || typeof b === 'boolean'){
+        if(!!a !== !!b) return true;
+      } else if(k === 'obra_id' || k === 'personal' || k === 'equipo'){
+        if(String(a||'') !== String(b||'')) return true;
+      } else if(Math.abs(n(a) - n(b)) > 0.005) return true;
+    }
+    return JSON.stringify(r.forzados||{}) !== JSON.stringify(o.forzados||{});
+  }
+  function listaCambios(){ return NOM.rows.filter(cambiado); }
 
   // ── Totales ─────────────────────────────────────────────────────
   function totales(rows){
@@ -10818,6 +10849,14 @@ return { montar:montar, calcular:calcular, recargar:function(){
     h +=     '<button class="nom-btn" data-nom="nueva">+ Nueva semana</button>';
     if(NOM.sem){
       var cerrada = String(NOM.sem.estado).toLowerCase()==='cerrada';
+      var pend = listaCambios().length;
+      // Seguro: mientras este puesto, ninguna celda acepta tecleo.
+      h +=   '<button class="nom-btn '+(NOM.editable?'nom-btn-edit':'')+'" data-nom="seguro">'
+           + (NOM.editable ? '🔓 Editando — poner seguro' : '🔒 Seguro puesto — editar') + '</button>';
+      if(pend > 0){
+        h += '<button class="nom-btn nom-btn-danger" data-nom="descartar">'
+           + '↩ Cerrar sin cambios ('+pend+')</button>';
+      }
       h +=   '<button class="nom-btn" data-nom="agregar">+ Persona</button>';
       h +=   '<button class="nom-btn" data-nom="imprimir">🖨️ Imprimir</button>';
       h +=   '<button class="nom-btn '+(cerrada?'nom-btn-warn':'nom-btn-ok')+'" data-nom="'+(cerrada?'abrir':'cerrar')+'">'
@@ -10898,7 +10937,13 @@ return { montar:montar, calcular:calcular, recargar:function(){
     }
     h += '</tbody></table></div>';
 
-    h += '<div class="nom-pie">Las celdas con borde ámbar están forzadas a mano: '
+    h += '<div class="nom-pie">'
+       + (NOM.editable
+          ? '<b style="color:#F0A500">Edición abierta.</b> Lo que escribas se guarda solo. '
+            + 'Si te equivocas, «Cerrar sin cambios» devuelve la semana a como estaba al abrirla. '
+          : '<b style="color:#10B981">Seguro puesto.</b> La hoja está en lectura; '
+            + 'toca «editar» para capturar. ')
+       + 'Las celdas con borde ámbar están forzadas a mano: '
        + 'la fórmula ya no las toca. Bórralas para que vuelvan a calcularse. '
        + 'Al cerrar la semana, el PAGO de cada renglón carga a mano de obra de su obra.</div>';
 
@@ -10913,8 +10958,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   function fila(r){
     var cerrada = NOM.sem && String(NOM.sem.estado).toLowerCase()==='cerrada';
-    var dis = cerrada ? ' disabled' : '';
-    var h = '<tr data-id="'+r.id+'">';
+    var dis = (cerrada || !NOM.editable) ? ' disabled' : '';
+    var h = '<tr data-id="'+r.id+'"'+(cambiado(r)?' class="nom-cambiado"':'')+'>';
     COLS.forEach(function(c){
       var v = r[c.k];
       var cls = 'nom-cell';
@@ -10956,6 +11001,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
       if(!b) return;
       var acc = b.getAttribute('data-nom');
       if(acc === 'nueva')     NOM.nuevaSemana();
+      else if(acc === 'seguro')   { NOM.editable = !NOM.editable; NOM.pintar(); }
+      else if(acc === 'descartar') NOM.descartar();
       else if(acc === 'agregar')  NOM.agregarPersona();
       else if(acc === 'cerrar')   NOM.cambiarEstado('cerrada');
       else if(acc === 'abrir')    NOM.cambiarEstado('abierta');
@@ -10984,6 +11031,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   // ── Edición ─────────────────────────────────────────────────────
   NOM.editar = function(id, campo, inp){
+    if(!NOM.editable){ NOM.pintar(); return; }   // seguro puesto: no se toca nada
     var r = NOM.rows.find(function(x){ return x.id === id; });
     if(!r) return;
     if(!r.forzados) r.forzados = {};
@@ -11007,6 +11055,42 @@ return { montar:montar, calcular:calcular, recargar:function(){
     recalcular(r);
     NOM.guardar(r);
     NOM.pintar();
+  };
+
+  // Cerrar sin cambios: devuelve cada renglon tocado a como estaba al abrir
+  // la semana. El guardado es automatico, asi que esto es el unico
+  // arrepentimiento posible; por eso pide confirmar y dice cuantos y quienes.
+  NOM.descartar = async function(){
+    var cam = listaCambios();
+    if(!cam.length){ showToast('No hay cambios que descartar'); return; }
+    var quienes = cam.slice(0,6).map(function(r){ return '· '+r.personal; }).join('\n')
+                + (cam.length>6 ? '\n· y '+(cam.length-6)+' más' : '');
+    var ok = await hojaConfirmar('Cerrar sin cambios',
+      'Se devuelven '+cam.length+' renglón'+(cam.length===1?'':'es')+
+      ' a como estaban al abrir la semana:\n\n'+quienes+
+      '\n\nLo que escribiste en ellos se pierde.', 'Descartar cambios');
+    if(!ok) return;
+
+    var fallos = 0;
+    for(var i=0;i<cam.length;i++){
+      var r = cam[i];
+      var o = NOM.original[r.id];
+      if(!o) continue;
+      clearTimeout(_timers[r.id]);
+      var p = {};
+      CAMPOS.forEach(function(k){
+        p[k] = (k==='pag_tarjeta'||k==='pag_efectivo') ? !!o[k]
+             : (k==='obra_id') ? (o[k]||null)
+             : (k==='personal'||k==='equipo') ? o[k]
+             : n(o[k]);
+      });
+      p.forzados = o.forzados || {};
+      try { await db('PATCH','nom_renglon?id=eq.'+r.id, p); }
+      catch(e){ fallos++; }
+    }
+    showToast(fallos ? '⚠️ '+fallos+' renglones no se pudieron revertir'
+                     : '↩ '+cam.length+' renglones devueltos a su estado original');
+    await NOM.cargar(NOM.sem.id);
   };
 
   var _timers = {};
