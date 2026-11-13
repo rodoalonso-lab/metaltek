@@ -10591,25 +10591,25 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   // ── Columnas, en el orden de la hoja SEMANA ─────────────────────
   var COLS = [
-    {k:'personal',    t:'PERSONAL',       tipo:'texto', w:188, fijo:true},
-    {k:'obra_id',     t:'OBRA',           tipo:'obra',  w:170},
-    {k:'sueldo',      t:'SUELDO',         tipo:'num',   w:92},
-    {k:'viaticos',    t:'VIATICOS',       tipo:'num',   w:88},
-    {k:'pp',          t:'P/P',            tipo:'num',   w:74},
-    {k:'horas',       t:'HORAS',          tipo:'num',   w:72},
-    {k:'tarifa_hora', t:'HORA EXTRA',     tipo:'num',   w:92},
-    {k:'total_horas', t:'TOTAL DE HORAS', tipo:'num',   w:100, calc:true},
-    {k:'reembolso',   t:'REEMBOLSO',      tipo:'num',   w:94},
-    {k:'descuentos',  t:'DESCUENTOS',     tipo:'num',   w:98},
-    {k:'abonos',      t:'ABONOS',         tipo:'num',   w:88},
-    {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:94},
-    {k:'pago',        t:'PAGO',           tipo:'num',   w:100, calc:true, fuerte:true},
-    {k:'por_pagar',   t:'POR PAGAR',      tipo:'num',   w:100, calc:true, fuerte:true},
-    {k:'saldo',       t:'SALDO',          tipo:'num',   w:88},
-    {k:'abono',       t:'ABONO',          tipo:'num',   w:84, calc:true},
-    {k:'nuevo_saldo', t:'NUEVO SALDO',    tipo:'num',   w:98, calc:true},
-    {k:'pag_tarjeta', t:'PAG. TARJETA',   tipo:'check', w:92},
-    {k:'pag_efectivo',t:'PAG. EFECTIVO',  tipo:'check', w:96}
+    {k:'personal',    t:'PERSONAL',       tipo:'texto', w:142, fijo:true},
+    {k:'obra_id',     t:'OBRA',           tipo:'obra',  w:118},
+    {k:'sueldo',      t:'SUELDO',         tipo:'num',   w:66},
+    {k:'viaticos',    t:'VIÁ-<br>TICOS',  tipo:'num',   w:62},
+    {k:'pp',          t:'P/P',            tipo:'num',   w:48},
+    {k:'horas',       t:'HRS',            tipo:'num',   w:44},
+    {k:'tarifa_hora', t:'HORA<br>EXTRA',  tipo:'num',   w:56},
+    {k:'total_horas', t:'TOTAL<br>HORAS', tipo:'num',   w:64, calc:true},
+    {k:'reembolso',   t:'REEM-<br>BOLSO', tipo:'num',   w:64},
+    {k:'descuentos',  t:'DES-<br>CUENTOS',tipo:'num',   w:68},
+    {k:'abonos',      t:'ABONOS',         tipo:'num',   w:58},
+    {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:68},
+    {k:'pago',        t:'PAGO',           tipo:'num',   w:74, calc:true, fuerte:true},
+    {k:'por_pagar',   t:'POR<br>PAGAR',   tipo:'num',   w:74, calc:true, fuerte:true},
+    {k:'saldo',       t:'SALDO',          tipo:'num',   w:62},
+    {k:'abono',       t:'ABONO',          tipo:'num',   w:58, calc:true},
+    {k:'nuevo_saldo', t:'NUEVO<br>SALDO', tipo:'num',   w:68, calc:true},
+    {k:'pag_tarjeta', t:'✔<br>TARJ',      tipo:'check', w:42},
+    {k:'pag_efectivo',t:'✔<br>EFVO',      tipo:'check', w:42}
   ];
   // Columnas que suman en los subtotales
   var SUMABLES = ['sueldo','viaticos','pp','horas','total_horas','reembolso',
@@ -10749,9 +10749,9 @@ return { montar:montar, calcular:calcular, recargar:function(){
     // Rejilla
     h += '<div class="nom-grid-wrap"><table class="nom-grid"><thead><tr>';
     COLS.forEach(function(c){
-      h += '<th'+(c.fijo?' class="nom-fijo"':'')+' style="min-width:'+c.w+'px">'+esc(c.t)+'</th>';
+      h += '<th'+(c.fijo?' class="nom-fijo"':'')+' style="min-width:'+c.w+'px">'+c.t+'</th>';
     });
-    h += '<th style="min-width:40px"></th></tr></thead><tbody>';
+    h += '<th style="min-width:26px"></th></tr></thead><tbody>';
 
     var equipos = [];
     NOM.rows.forEach(function(r){
