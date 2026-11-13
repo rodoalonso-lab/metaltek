@@ -10331,6 +10331,114 @@ function nuevaEstimacion(){
   });
 }
 
+
+// Editar una estimación ya creada. subtotal, iva y total son columnas
+// GENERADAS en la base ((ejecutado+amortizacion+retencion)*1.16), asi que
+// aqui solo se tocan los tres campos de origen: escribirlas daria error.
+function editarEstimacion(estimId){
+  var e = ESTIM.find(function(x){ return x.id===estimId; });
+  if(!e) return;
+  var tieneCobro = n(e.importe_cobrado) > 0;
+
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center';
+  var card=document.createElement('div');
+  card.style.cssText='background:var(--card,#0f1b33);color:var(--text,#fff);width:100%;max-width:520px;'+
+    'border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:92vh;overflow:auto';
+
+  var opt=function(v,t){ return '<option value="'+v+'"'+(String(e.tipo)===v?' selected':'')+'>'+t+'</option>'; };
+
+  card.innerHTML='<div style="font-weight:800;font-size:15px;margin-bottom:3px">Editar documento No. '+esc(e.no)+'</div>'+
+    '<div class="item-sub" style="margin-bottom:12px">Revisa que los importes hayan quedado bien cargados.</div>'+
+    (tieneCobro
+      ? '<div style="background:rgba(240,165,0,.12);border:1px solid rgba(240,165,0,.3);border-radius:8px;'+
+        'padding:9px 11px;font-size:11px;color:#F0A500;margin-bottom:12px">⚠️ Ya tiene '+
+        money(e.importe_cobrado)+' cobrado. Si cambias el importe, revisa también su CxC en Finanzas.</div>'
+      : '')+
+    '<label class="cobra-lbl">Tipo</label>'+
+    '<select id="ed-tipo" class="form-input" style="width:100%;margin-bottom:10px">'+
+      opt('estimacion','📄 Estimación')+opt('anticipo','💰 Anticipo')+opt('finiquito','🏁 Finiquito')+
+    '</select>'+
+    '<label class="cobra-lbl">Periodo o concepto</label>'+
+    '<input id="ed-per" class="form-input" style="width:100%;margin-bottom:10px" value="'+esc(e.periodo||'')+'">'+
+    '<label class="cobra-lbl">Importe ejecutado (sin IVA)</label>'+
+    '<input id="ed-imp" type="number" step="0.01" class="form-input" style="width:100%;margin-bottom:10px" value="'+n(e.importe_ejecutado).toFixed(2)+'">'+
+    '<div style="display:flex;gap:8px">'+
+      '<div style="flex:1"><label class="cobra-lbl">Amortización (negativa)</label>'+
+      '<input id="ed-am" type="number" step="0.01" class="form-input" style="width:100%;margin-bottom:10px" value="'+n(e.amortizacion).toFixed(2)+'"></div>'+
+      '<div style="flex:1"><label class="cobra-lbl">Retención (negativa)</label>'+
+      '<input id="ed-re" type="number" step="0.01" class="form-input" style="width:100%;margin-bottom:10px" value="'+n(e.retencion).toFixed(2)+'"></div>'+
+    '</div>'+
+    '<label class="cobra-lbl">Fecha de presentación</label>'+
+    '<input id="ed-fp" type="date" class="form-input" style="width:100%;margin-bottom:12px" value="'+
+      (e.fecha_presentada ? String(e.fecha_presentada).slice(0,10) : '')+'">'+
+    '<div id="ed-prev" class="item-sub" style="margin-bottom:14px"></div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<button id="ed-ok" class="btn-primary" style="flex:1">Guardar</button>'+
+      '<button id="ed-x" class="btn-secondary" style="flex:1">Cancelar</button></div>'+
+    '<button id="ed-del" class="btn-danger" style="width:100%">🗑 Eliminar documento</button>';
+  ov.appendChild(card); document.body.appendChild(ov);
+
+  var calc=function(){
+    var imp=Number(card.querySelector('#ed-imp').value)||0;
+    var am =Number(card.querySelector('#ed-am').value)||0;
+    var re =Number(card.querySelector('#ed-re').value)||0;
+    var st = imp+am+re;
+    card.querySelector('#ed-prev').innerHTML =
+      'Subtotal <b>'+money(st)+'</b> · IVA '+money(st*0.16)+
+      ' · <b style="color:var(--accent)">Total '+money(st*1.16)+'</b>'+
+      '<br><span style="color:var(--dim)">La base recalcula estos tres: aquí sólo se ven.</span>';
+  };
+  ['#ed-imp','#ed-am','#ed-re'].forEach(function(sel){
+    card.querySelector(sel).addEventListener('input', calc);
+  });
+  calc();
+
+  var cerrar=function(){ document.body.removeChild(ov); };
+  card.querySelector('#ed-x').addEventListener('click', cerrar);
+  ov.addEventListener('click', function(ev){ if(ev.target===ov) cerrar(); });
+
+  card.querySelector('#ed-ok').addEventListener('click', function(){
+    db('PATCH','obra_estimaciones?id=eq.'+estimId, {
+      tipo: card.querySelector('#ed-tipo').value,
+      periodo: card.querySelector('#ed-per').value || null,
+      importe_ejecutado: Number(card.querySelector('#ed-imp').value)||0,
+      amortizacion: Number(card.querySelector('#ed-am').value)||0,
+      retencion: Number(card.querySelector('#ed-re').value)||0,
+      fecha_presentada: card.querySelector('#ed-fp').value || null
+    }).then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('✅ Documento actualizado');
+        pinta();
+      })
+      .catch(function(err){
+        if(typeof showToast==='function') showToast('No se guardó: '+err.message, true);
+      });
+  });
+
+  card.querySelector('#ed-del').addEventListener('click', function(){
+    var b=card.querySelector('#ed-del');
+    if(b.dataset.confirma!=='1'){
+      b.dataset.confirma='1';
+      b.textContent='⚠️ Toca otra vez para eliminar definitivamente';
+      setTimeout(function(){
+        if(b && b.dataset){ b.dataset.confirma=''; b.textContent='🗑 Eliminar documento'; }
+      }, 4000);
+      return;
+    }
+    db('DELETE','obra_estimaciones?id=eq.'+estimId)
+      .then(function(){ cerrar(); return cargar(OBRA.id); })
+      .then(function(){
+        if(typeof showToast==='function') showToast('Documento eliminado');
+        pinta();
+      })
+      .catch(function(err){
+        if(typeof showToast==='function') showToast('No se eliminó: '+err.message, true);
+      });
+  });
+}
+
 // Registrar el cobro de una estimación. Es el momento en que deja de ser un
 // derecho de cobro y se vuelve dinero: hasta aquí no tocaba nada.
 function registrarCobro(estimId){
