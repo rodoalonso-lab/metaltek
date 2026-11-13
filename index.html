@@ -10899,6 +10899,13 @@ return { montar:montar, calcular:calcular, recargar:function(){
       if(!tr) return;
       NOM.editar(tr.getAttribute('data-id'), inp.getAttribute('data-k'), inp);
     });
+
+    // Ahora que toda celda muestra 0.00, al entrar se selecciona todo: asi se
+    // escribe encima sin tener que borrar el cero primero.
+    el.addEventListener('focusin', function(ev){
+      var inp = ev.target.closest('.nom-in-num, .nom-in-txt');
+      if(inp && inp.select) setTimeout(function(){ try { inp.select(); } catch(e){} }, 0);
+    });
   }
 
   // ── Edición ─────────────────────────────────────────────────────
