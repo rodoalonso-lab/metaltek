@@ -11439,6 +11439,33 @@ return { montar:montar, calcular:calcular, recargar:function(){
       if(inp && inp.select) setTimeout(function(){ try { inp.select(); } catch(e){} }, 0);
     });
 
+    // Enter cierra la celda; Escape se arrepiente. En una hoja de captura uno
+    // teclea y da Enter sin pensarlo: antes Enter no hacia nada y habia que
+    // salir con el raton o con Tab.
+    el.addEventListener('keydown', function(ev){
+      var inp = ev.target.closest('.nom-in-num, .nom-in-txt');
+      if(!inp) return;
+
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        inp.blur();            // el blur dispara el change y el formateo
+        return;
+      }
+
+      if(ev.key === 'Escape'){
+        ev.preventDefault();
+        var tr = inp.closest('tr[data-id]');
+        var r  = tr && NOM.rows.find(function(x){ return x.id === tr.getAttribute('data-id'); });
+        if(r){
+          var k = inp.getAttribute('data-k');
+          // Se repone el valor guardado. Al coincidir con el que tenia al
+          // entrar, el navegador ya no dispara 'change' y no se guarda nada.
+          inp.value = inp.classList.contains('nom-in-num') ? dec2(r[k]) : (r[k] || '');
+        }
+        inp.blur();
+      }
+    });
+
     // Al salir de una celda numerica se reescribe con formato. El evento
     // 'change' se dispara durante el blur, cuando la celda todavia figura como
     // la activa, asi que actualizarFila la respetaba para no pisar el cursor y
