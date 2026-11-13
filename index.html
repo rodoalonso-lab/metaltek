@@ -11590,21 +11590,61 @@ return { montar:montar, calcular:calcular, recargar:function(){
         }), null);
 
     // ── préstamos ──
-    if(prest.length){
+    // El saldo se lee del último renglón de cada persona, no de nom_prestamo:
+    // esa tabla era una foto del Excel y nada la actualizaba, así que el
+    // Resumen mostraba saldos viejos (fue lo que pasó con Juan Covarrubias).
+    var ultSaldo = {}, abonadoNom = {}, ultSem = {};
+    var ordenadas = regs.slice().sort(function(a,b){
+      var sa = semDe[a.semana_id], sb = semDe[b.semana_id];
+      return ((sa?sa.anio:0)*100 + (sa?sa.semana:0)) - ((sb?sb.anio:0)*100 + (sb?sb.semana:0));
+    });
+    ordenadas.forEach(function(r){
+      var k = String(r.personal||'').toUpperCase().trim();
+      var sm = semDe[r.semana_id];
+      abonadoNom[k] = (abonadoNom[k]||0) + n(r.abono);
+      // el último renglón manda el saldo vigente
+      if(n(r.saldo) !== 0 || n(r.nuevo_saldo) !== 0 || n(r.abono) !== 0){
+        ultSaldo[k] = n(r.nuevo_saldo);
+        ultSem[k]   = sm ? sm.semana : null;
+      }
+    });
+
+    var personasPrest = {};
+    prest.forEach(function(p){ personasPrest[String(p.personal).toUpperCase().trim()] = p; });
+    Object.keys(ultSaldo).forEach(function(k){
+      if(!personasPrest[k] && (ultSaldo[k] > 0 || abonadoNom[k] > 0)){
+        personasPrest[k] = { personal:k, monto_original:null, abonado:0, saldo:ultSaldo[k] };
+      }
+    });
+
+    var claves = Object.keys(personasPrest).sort();
+    if(claves.length){
+      var sumSaldo = 0, sumAbon = 0;
+      var filasP = claves.map(function(k){
+        var p   = personasPrest[k];
+        var viv = (k in ultSaldo) ? ultSaldo[k] : n(p.saldo);
+        var ab  = n(p.abonado) + n(abonadoNom[k]);
+        sumSaldo += viv; sumAbon += ab;
+        var desfase = Math.abs(viv - n(p.saldo)) > 0.01 && p.monto_original !== null;
+        return ['<b>'+esc(p.personal)+'</b>',
+                p.monto_original === null ? '—' : money0(p.monto_original),
+                money0(ab),
+                '<b style="color:'+(viv>0?'#F0A500':'#10B981')+'">'+money0(viv)+'</b>'
+                  + (desfase ? '<div style="font-size:9px;color:#EF4444">la tabla decía '
+                               + money0(p.saldo) + '</div>' : ''),
+                (k in ultSem) && ultSem[k] ? String(ultSem[k]) : '—'];
+      });
       h += bloque('PRÉSTAMOS AL PERSONAL',
-        ['Personal','Préstamo original','Abonado','Saldo actual','Últ. sem.'],
-        prest.map(function(p){
-          return ['<b>'+esc(p.personal)+'</b>', money0(p.monto_original),
-                  money0(p.abonado),
-                  '<b style="color:'+(n(p.saldo)>0?'#F0A500':'#10B981')+'">'+money0(p.saldo)+'</b>',
-                  p.ultima_semana ? String(p.ultima_semana) : '—'];
-        }),
-        ['TOTAL', '', '', money0(prest.reduce(function(a,p){ return a+n(p.saldo); },0)), '']);
+        ['Personal','Préstamo original','Abonado','Saldo vigente','Últ. mov.'],
+        filasP, ['TOTAL', '', money0(sumAbon), money0(sumSaldo), '']);
     }
 
     h += '<div class="nom-pie">El efectivo es lo que quedó por pagar después de '
        + 'tarjeta, descuentos y abonos. «Estructura» son los renglones sin obra: '
-       + 'no cargan a ningún presupuesto.</div>';
+       + 'no cargan a ningún presupuesto.<br>'
+       + 'El saldo de préstamo sale del último movimiento capturado en la nómina. '
+       + '<b>Descuento</b> y <b>abono</b> no son lo mismo: el descuento es lo que se '
+       + 'retiene del pago, el abono es lo que se aplica al préstamo.</div>';
     el.innerHTML = h;
   };
 
