@@ -11324,6 +11324,32 @@ return { montar:montar, calcular:calcular, recargar:function(){
         };
       });
     }
+    // Union con el personal activo: copiar solo la semana anterior hacia que
+    // quien faltara una semana desapareciera para siempre de la nomina. Le
+    // paso a Alberto Garcia, que estuvo semanas en una obra que se saco.
+    try {
+      var activos = await db('GET','trabajadores?activo=is.true&cuadrilla=not.is.null'
+                           + '&order=cuadrilla,nombre') || [];
+      var yaEstan = {};
+      nuevos.forEach(function(x){ yaEstan[String(x.personal).toUpperCase().trim()] = true; });
+      var saldosP = {};
+      NOM.prestamos.forEach(function(pr){
+        saldosP[String(pr.personal).toUpperCase().trim()] = n(pr.saldo);
+      });
+      activos.forEach(function(t){
+        var k = String(t.nombre).toUpperCase().trim();
+        if(yaEstan[k]) return;
+        nuevos.push({
+          semana_id:semNueva.id, trabajador_id:t.id, personal:t.nombre,
+          equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null,
+          orden:nuevos.length, sueldo:n(t.sueldo_semanal), pp:n(t.pp_default),
+          tarifa_hora:n(t.tarifa_hora), viaticos:n(t.viaticos_default), tarjeta:0,
+          horas:0, reembolso:0, descuentos:0, abonos:0,
+          saldo:saldosP[k] || 0, abono:0, forzados:{}
+        });
+      });
+    } catch(e){}
+
     nuevos.forEach(recalcular);
     if(nuevos.length){
       try { await db('POST','nom_renglon', nuevos); }
