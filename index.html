@@ -10589,8 +10589,13 @@ return { montar:montar, calcular:calcular, recargar:function(){
   var money = function(v){
     return '$' + (n(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   };
+  // Dos decimales siempre, aunque sean .00: en una nomina un numero sin
+  // centavos se lee como redondeado y luego no cuadra contra el banco.
   var money0 = function(v){
-    return '$' + Math.round(n(v)).toLocaleString('es-MX');
+    return '$' + n(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2});
+  };
+  var dec2 = function(v){
+    return n(v).toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2});
   };
   var esc = function(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -10857,8 +10862,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
         h += '<td class="'+cls+' nom-chk"><input type="checkbox" class="nom-in" data-k="'+c.k+'"'
            + (v?' checked':'')+dis+'></td>';
       } else {
-        h += '<td class="'+cls+'"><input class="nom-in nom-in-num" type="number" step="0.01" '
-           + 'data-k="'+c.k+'" value="'+(n(v)===0 && !v ? '' : v)+'"'+dis
+        h += '<td class="'+cls+'"><input class="nom-in nom-in-num" type="text" '
+           + 'inputmode="decimal" data-k="'+c.k+'" value="'+dec2(v)+'"'+dis
            + (c.calc?' title="Calculado. Si escribes aquí, queda forzado."':'')+'></td>';
       }
     });
@@ -10909,7 +10914,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     } else if(campo === 'personal'){
       r.personal = inp.value.trim();
     } else {
-      var crudo = inp.value.trim();
+      var crudo = inp.value.replace(/[$\s,]/g,'').trim();
       // Un calculado se fuerza solo si se escribe algo. Vaciarlo lo devuelve
       // a la formula: es la salida para quien se arrepiente del ajuste.
       if(ORDEN_CALC.indexOf(campo) >= 0){
