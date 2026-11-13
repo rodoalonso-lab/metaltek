@@ -10649,9 +10649,11 @@ return { montar:montar, calcular:calcular, recargar:function(){
     try { NOM.prestamos = await db('GET','nom_prestamo?activo=is.true') || []; }
     catch(e){ NOM.prestamos = []; }
 
-    var id = semanaId || (NOM.sem && NOM.sem.id) ||
-             (NOM.semanas[0] && NOM.semanas[0].id);
-    NOM.sem = NOM.semanas.find(function(s){ return s.id === id; }) || null;
+    // Si el id pedido ya no esta en la lista (se borro, o se recargo con
+    // otro estado), cae en la mas reciente en vez de quedarse sin semana.
+    var id = semanaId || (NOM.sem && NOM.sem.id);
+    NOM.sem = NOM.semanas.find(function(s){ return s.id === id; })
+              || NOM.semanas[0] || null;
     NOM.rows = [];
     if(NOM.sem){
       try {
