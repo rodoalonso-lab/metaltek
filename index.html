@@ -11914,6 +11914,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
   // no el blanco y negro de un volante. El logo se lee del <img> del
   // encabezado en vez de duplicar sus 51 KB de base64 en el codigo.
   function logoProcepal(){
+    // El logo vive en procepal-lib.js para que las cuatro apps impriman igual.
+    if(typeof LOGO_PROCEPAL !== 'undefined' && LOGO_PROCEPAL) return LOGO_PROCEPAL;
     var el = document.getElementById('logo-procepal');
     return el && el.src ? el.src : '';
   }
