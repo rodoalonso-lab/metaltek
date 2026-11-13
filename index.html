@@ -289,20 +289,20 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-nom-v .nom-grid-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);
   border-radius:10px;background:var(--surface)}
 #nom-nom-v .nom-grid{border-collapse:separate;border-spacing:0;font-size:11.5px;
-  width:max-content;table-layout:fixed}
+  width:max-content}
 #nom-nom-v .nom-grid th{position:sticky;top:0;z-index:3;background:#0A1628;color:#fff;
   padding:5px 4px;font-size:8.5px;letter-spacing:.02em;text-align:center;
   line-height:1.15;white-space:normal;border-bottom:1px solid #1e293b}
 #nom-nom-v .nom-grid th.nom-fijo{left:0;z-index:5;text-align:left}
 #nom-nom-v .nom-cell{padding:0;border-bottom:1px solid var(--border);
-  border-right:1px solid rgba(255,255,255,.04);overflow:hidden}
+  border-right:1px solid rgba(255,255,255,.04);white-space:nowrap}
 #nom-nom-v .nom-cell.nom-fijo{position:sticky;left:0;z-index:2;background:var(--surface)}
-#nom-nom-v .nom-in{width:100%;max-width:100%;min-width:0;box-sizing:border-box;
-  background:transparent;border:none;outline:none;text-overflow:ellipsis;
-  color:var(--text);font-family:Barlow,sans-serif;font-size:11.5px;padding:5px 5px}
+#nom-nom-v .nom-in{width:100%;box-sizing:border-box;
+  background:transparent;border:none;outline:none;
+  color:var(--text);font-family:Barlow,sans-serif;font-size:11.5px;padding:5px 6px}
 #nom-nom-v .nom-in-num{text-align:right;font-variant-numeric:tabular-nums}
 #nom-nom-v .nom-in-txt{font-weight:700;font-size:11px}
-#nom-nom-v .nom-in-sel{cursor:pointer;font-size:10px;padding-left:3px;padding-right:0}
+#nom-nom-v .nom-in-sel{cursor:pointer;font-size:10.5px;padding-left:4px}
 #nom-nom-v .nom-in:focus{background:rgba(91,196,192,.13);box-shadow:inset 0 0 0 1px var(--accent)}
 #nom-nom-v .nom-in:disabled{color:var(--dim);cursor:not-allowed}
 #nom-nom-v .nom-in::-webkit-outer-spin-button,
@@ -10700,23 +10700,23 @@ return { montar:montar, calcular:calcular, recargar:function(){
 
   // ── Columnas, en el orden de la hoja SEMANA ─────────────────────
   var COLS = [
-    {k:'personal',    t:'PERSONAL',       tipo:'texto', w:142, fijo:true},
-    {k:'obra_id',     t:'OBRA',           tipo:'obra',  w:118},
-    {k:'sueldo',      t:'SUELDO',         tipo:'num',   w:66},
-    {k:'viaticos',    t:'VIÁ-<br>TICOS',  tipo:'num',   w:62},
-    {k:'pp',          t:'P/P',            tipo:'num',   w:48},
-    {k:'horas',       t:'HRS',            tipo:'num',   w:44},
-    {k:'tarifa_hora', t:'HORA<br>EXTRA',  tipo:'num',   w:56},
-    {k:'total_horas', t:'TOTAL<br>HORAS', tipo:'num',   w:64, calc:true},
-    {k:'reembolso',   t:'REEM-<br>BOLSO', tipo:'num',   w:64},
-    {k:'descuentos',  t:'DES-<br>CUENTOS',tipo:'num',   w:68},
-    {k:'abonos',      t:'ABONOS',         tipo:'num',   w:58},
-    {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:68},
-    {k:'pago',        t:'PAGO',           tipo:'num',   w:74, calc:true, fuerte:true},
-    {k:'por_pagar',   t:'POR<br>PAGAR',   tipo:'num',   w:74, calc:true, fuerte:true},
-    {k:'saldo',       t:'SALDO',          tipo:'num',   w:62},
-    {k:'abono',       t:'ABONO',          tipo:'num',   w:58, calc:true},
-    {k:'nuevo_saldo', t:'NUEVO<br>SALDO', tipo:'num',   w:68, calc:true},
+    {k:'personal',    t:'PERSONAL',       tipo:'texto', w:168, fijo:true},
+    {k:'obra_id',     t:'OBRA',           tipo:'obra',  w:210},
+    {k:'sueldo',      t:'SUELDO',         tipo:'num',   w:84},
+    {k:'viaticos',    t:'VIÁ-<br>TICOS',  tipo:'num',   w:80},
+    {k:'pp',          t:'P/P',            tipo:'num',   w:72},
+    {k:'horas',       t:'HRS',            tipo:'num',   w:60},
+    {k:'tarifa_hora', t:'HORA<br>EXTRA',  tipo:'num',   w:72},
+    {k:'total_horas', t:'TOTAL<br>HORAS', tipo:'num',   w:80, calc:true},
+    {k:'reembolso',   t:'REEM-<br>BOLSO', tipo:'num',   w:80},
+    {k:'descuentos',  t:'DES-<br>CUENTOS',tipo:'num',   w:84},
+    {k:'abonos',      t:'ABONOS',         tipo:'num',   w:78},
+    {k:'tarjeta',     t:'TARJETA',        tipo:'num',   w:84},
+    {k:'pago',        t:'PAGO',           tipo:'num',   w:90, calc:true, fuerte:true},
+    {k:'por_pagar',   t:'POR<br>PAGAR',   tipo:'num',   w:90, calc:true, fuerte:true},
+    {k:'saldo',       t:'SALDO',          tipo:'num',   w:84},
+    {k:'abono',       t:'ABONO',          tipo:'num',   w:78, calc:true},
+    {k:'nuevo_saldo', t:'NUEVO<br>SALDO', tipo:'num',   w:84, calc:true},
     {k:'pag_tarjeta', t:'✔<br>TARJ',      tipo:'check', w:42},
     {k:'pag_efectivo',t:'✔<br>EFVO',      tipo:'check', w:42}
   ];
@@ -10858,8 +10858,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     // Rejilla
     h += '<div class="nom-grid-wrap"><table class="nom-grid"><thead><tr>';
     COLS.forEach(function(c){
-      h += '<th'+(c.fijo?' class="nom-fijo"':'')
-         + ' style="width:'+c.w+'px;min-width:'+c.w+'px;max-width:'+c.w+'px">'+c.t+'</th>';
+      h += '<th'+(c.fijo?' class="nom-fijo"':'')+' style="min-width:'+c.w+'px">'+c.t+'</th>';
     });
     h += '<th style="min-width:26px"></th></tr></thead><tbody>';
 
