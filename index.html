@@ -4999,6 +4999,21 @@ function renderNTab(){
 }
 
 // ─ TRABAJADORES ─
+// Sugiere los equipos que ya existen, para que no se inventen variantes
+// ("TALLER" vs "Taller") que partirían el grupo en la hoja semanal.
+function llenarEquiposSugeridos(){
+  var dl=document.getElementById('ft-equipos');
+  if(!dl) return;
+  var eqs={};
+  (trabajadoresData||[]).forEach(function(t){
+    var e=(t.cuadrilla||t.area||'').trim().toUpperCase();
+    if(e) eqs[e]=1;
+  });
+  dl.innerHTML=Object.keys(eqs).sort().map(function(e){
+    return '<option value="'+e+'">';
+  }).join('');
+}
+
 function renderTrabajadores(){
   const el=document.getElementById('nom-trab-v');
   if(!trabajadoresData.length){
@@ -5099,6 +5114,10 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-persona-id').value='';
   document.getElementById('ft-puesto').value='';
   document.getElementById('ft-sueldo').value='';
+  ['ft-equipo','ft-sueldo-sem','ft-tarifa','ft-viaticos'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.value='';
+  });
+  llenarEquiposSugeridos();
   document.getElementById('ft-forma').value='efectivo';
   document.getElementById('ft-banco').value='';
   document.getElementById('ft-tarjeta').value='';
@@ -5125,6 +5144,12 @@ function editTrabajador(id){
   document.getElementById('ft-id').value=t.id;
   document.getElementById('ft-puesto').value=t.puesto||'';
   document.getElementById('ft-sueldo').value=t.sueldo_diario||'';
+  var _set=function(id,v){ var e=document.getElementById(id); if(e) e.value=(v||v===0)?v:''; };
+  _set('ft-equipo', t.cuadrilla||t.area||'');
+  _set('ft-sueldo-sem', t.sueldo_semanal||'');
+  _set('ft-tarifa', t.tarifa_hora||'');
+  _set('ft-viaticos', t.viaticos_default||'');
+  llenarEquiposSugeridos();
   document.getElementById('ft-forma').value=t.forma_pago||'efectivo';
   document.getElementById('ft-banco').value=t.banco||'';
   document.getElementById('ft-tarjeta').value=t.numero_tarjeta||'';
