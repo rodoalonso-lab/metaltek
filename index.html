@@ -732,13 +732,15 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <div class="form-label" style="margin-bottom:10px">DATOS DE ASIGNACIÓN</div>
       <div class="form-group"><label class="form-label" for="ft-puesto">Puesto</label>
       <input class="form-input" id="ft-puesto" type="text" placeholder="Ej. Instalador, Soldador"></div>
-      <div class="form-group"><label class="form-label" for="ft-area">Área o equipo</label>
-      <input class="form-input" id="ft-area" list="ft-equipos" autocomplete="off"
-             placeholder="Ej. EQUIPO DAVID, HERRERIA, TALLER, OFICINA"
-             style="text-transform:uppercase">
-      <datalist id="ft-equipos"></datalist>
-      <div class="item-sub" style="margin-top:4px">Escribe el que sea o elige de la lista.
-        Con este nombre se agrupa en la nómina semanal.</div>
+      <div class="form-group"><label class="form-label" for="ft-area">Equipo</label>
+      <select class="form-input" id="ft-area" onchange="onEquipoChange(this.value)"></select>
+      <div id="ft-equipo-nuevo-wrap" style="display:none;margin-top:8px">
+        <input class="form-input" id="ft-equipo-nuevo" placeholder="Nombre del equipo nuevo"
+               style="text-transform:uppercase">
+        <div class="item-sub" style="margin-top:4px">Se guarda en el catálogo: la próxima vez
+          sólo lo seleccionas.</div>
+      </div>
+      <div class="item-sub" style="margin-top:4px">Con este nombre se agrupa en la nómina semanal.</div>
       </div>
       <div class="form-group"><label class="form-label" for="ft-razon">Razón Social</label>
       <select class="form-input" id="ft-razon" onchange="onRazonChange(this.value)">
@@ -4996,19 +4998,62 @@ function renderNTab(){
 }
 
 // ─ TRABAJADORES ─
-// Sugiere los equipos que ya existen, para que no se inventen variantes
-// ("TALLER" vs "Taller") que partirían el grupo en la hoja semanal.
-function llenarEquiposSugeridos(){
-  var dl=document.getElementById('ft-equipos');
-  if(!dl) return;
-  var eqs={CAMPO:1, TALLER:1, OFICINA:1};
-  (trabajadoresData||[]).forEach(function(t){
-    var e=(t.cuadrilla||t.area||'').trim().toUpperCase();
-    if(e) eqs[e]=1;
-  });
-  dl.innerHTML=Object.keys(eqs).sort().map(function(e){
-    return '<option value="'+e+'">';
-  }).join('');
+// Catálogo de equipos. Vive en su propia tabla y no se deduce de los
+// trabajadores: así un equipo no desaparece de la lista cuando se da de baja
+// al último de sus integrantes.
+let equiposData = [];
+
+async function cargarEquipos(){
+  try { equiposData = await db('GET','cat_equipos?activo=is.true&order=orden,nombre') || []; }
+  catch(e){ equiposData = []; }
+  return equiposData;
+}
+
+function llenarEquiposSugeridos(seleccionado){
+  var sel=document.getElementById('ft-area');
+  if(!sel) return;
+  var actual = seleccionado || sel.value || '';
+  var pinta = function(){
+    var h = '<option value="">— elige el equipo —</option>';
+    equiposData.forEach(function(e){
+      h += '<option value="'+e.nombre+'"'+(e.nombre===actual?' selected':'')+'>'+e.nombre+'</option>';
+    });
+    // Si trae un equipo que ya no está en el catálogo, no se pierde
+    if(actual && !equiposData.some(function(e){ return e.nombre===actual; })){
+      h += '<option value="'+actual+'" selected>'+actual+'</option>';
+    }
+    h += '<option value="__nuevo__">➕ Nuevo equipo…</option>';
+    sel.innerHTML = h;
+  };
+  if(!equiposData.length) cargarEquipos().then(pinta); else pinta();
+}
+
+function onEquipoChange(v){
+  var w=document.getElementById('ft-equipo-nuevo-wrap');
+  if(!w) return;
+  w.style.display = (v==='__nuevo__') ? 'block' : 'none';
+  if(v==='__nuevo__'){
+    var i=document.getElementById('ft-equipo-nuevo');
+    if(i){ i.value=''; setTimeout(function(){ i.focus(); },50); }
+  }
+}
+
+// Devuelve el equipo elegido y, si es nuevo, lo da de alta en el catálogo.
+async function equipoElegido(){
+  var sel=document.getElementById('ft-area');
+  if(!sel) return null;
+  if(sel.value !== '__nuevo__') return sel.value || null;
+  var nom=(document.getElementById('ft-equipo-nuevo')||{}).value||'';
+  nom = nom.trim().toUpperCase();
+  if(!nom) return null;
+  if(!equiposData.some(function(e){ return e.nombre===nom; })){
+    try {
+      await db('POST','cat_equipos', { nombre:nom,
+        created_by: currentUser ? currentUser.nombre : null });
+      await cargarEquipos();
+    } catch(e){ /* si ya existía por carrera, no importa */ }
+  }
+  return nom;
 }
 
 function renderTrabajadores(){
