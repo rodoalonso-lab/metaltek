@@ -11862,179 +11862,170 @@ return { montar:montar, calcular:calcular, recargar:function(){
   }
 
   // ── Dibujo ──
+  // Es la misma tabla que Rodolfo mandaba desde el Excel: todas las columnas
+  // con monto, sin omitir los ceros. Un comprobante recortado genera dudas;
+  // uno completo se explica solo.
+  var COLS_IMG = [
+    {k:'personal',   t:'PERSONAL',        w:186, txt:true},
+    {k:'sueldo',     t:'SUELDO',          w:96},
+    {k:'viaticos',   t:'VIATICOS',        w:96},
+    {k:'pp',         t:'P/P',             w:84},
+    {k:'horas',      t:'HORAS',           w:66, dec1:true},
+    {k:'tarifa_hora',t:'HORA EXTRA',      w:92},
+    {k:'total_horas',t:'TOTAL DE HORAS',  w:104},
+    {k:'reembolso',  t:'REEMBOLSO',       w:96},
+    {k:'descuentos', t:'DESCUENTOS',      w:100},
+    {k:'abonos',     t:'ABONOS',          w:86},
+    {k:'tarjeta',    t:'TARJETA',         w:98, acento:true},
+    {k:'pago',       t:'PAGO',            w:98, fuerte:true},
+    {k:'por_pagar',  t:'POR PAGAR',       w:100, fuerte:true}
+  ];
+
   function dibujarComprobante(dest, cb){
     var T = totales(dest.rows);
     var esG = dest.tipo === 'grupo';
-    var W = 620;
-    // Se dibuja en un lienzo alto y al final se recorta a la altura real: con
-    // un alto fijo, a quien tenia pocos conceptos le sobraba media tarjeta.
-    var HMAX = 1600;
-    var H = HMAX;
 
-    var dpr = Math.min(3, window.devicePixelRatio || 2);
+    var W = COLS_IMG.reduce(function(a,c){ return a + c.w; }, 0) + 48;
+    var HEAD = 96, THEAD = 36, HBANDA = 32, HFILA = 34, HSUB = 40, PIE = 44;
+    var H = HEAD + 26 + THEAD + HBANDA + dest.rows.length*HFILA + HSUB + PIE;
+
+    var dpr = Math.min(2, window.devicePixelRatio || 2);
     var cv = document.createElement('canvas');
-    cv.width = W*dpr; cv.height = HMAX*dpr;
+    cv.width = W*dpr; cv.height = H*dpr;
     var g = cv.getContext('2d');
     g.scale(dpr, dpr);
 
-    var TINTA='#0A1628', ACENTO='#5BC4C0', TEXTO='#E8F4F8',
-        TENUE='#8BBFD4', LINEA='rgba(91,196,192,.22)', SUP='#112240';
+    var TINTA='#0A1628', ACENTO='#5BC4C0', TEXTO='#E8F4F8', TENUE='#8BBFD4',
+        SUP='#112240', BANDA='#1B3254', FILA='#0D1D35', FILA2='#101F3A',
+        LINEA='rgba(91,196,192,.18)';
 
-    var money2 = function(v){
-      return (n(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var m2 = function(v){
+      return '$'+(n(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
     };
+    var d1 = function(v){ return (n(v)).toLocaleString('es-MX',{minimumFractionDigits:1,maximumFractionDigits:1}); };
 
-    // Fondo
-    g.fillStyle = TINTA; g.fillRect(0,0,W,HMAX);
-    g.fillStyle = SUP;   g.fillRect(0,0,W,96);
-    g.fillStyle = ACENTO; g.fillRect(0,94,W,2);
+    g.fillStyle = TINTA; g.fillRect(0,0,W,H);
+    g.fillStyle = SUP;   g.fillRect(0,0,W,HEAD);
+    g.fillStyle = ACENTO; g.fillRect(0,HEAD-2,W,2);
 
-    var anchoLogo = 0;   // lo fija el onload del logo
-    var pintaResto = function(){
-      // Encabezado. El logo ya trae el nombre, así que sólo va el subtítulo.
-      var xTxt = anchoLogo ? 26 + anchoLogo + 16 : 26;
+    var pintaResto = function(anchoLogo){
+      // ── Encabezado ──
+      var xTxt = anchoLogo ? 24 + anchoLogo + 16 : 24;
       g.fillStyle = ACENTO;
       g.font = '700 12px Barlow, sans-serif';
-      g.fillText('NÓMINA SEMANAL', xTxt, anchoLogo ? 55 : 44);
+      g.fillText('NÓMINA SEMANAL', xTxt, anchoLogo ? 55 : 42);
       if(!anchoLogo){
-        g.fillStyle = TEXTO;
-        g.font = '800 26px Barlow, sans-serif';
-        g.fillText('PROCEPAL', 26, 40);
+        g.fillStyle = TEXTO; g.font = '800 24px Barlow, sans-serif';
+        g.fillText('PROCEPAL', 24, 38);
       }
-      g.fillStyle = TENUE;
-      g.font = '600 13px Barlow, sans-serif';
-      g.textAlign = 'right';
-      g.fillText(etiquetaSemana(NOM.sem).replace('  ·  ',' · '), W-26, 44);
-      g.font = '500 11px Barlow, sans-serif';
-      g.fillText(T.n + (T.n===1?' persona':' personas'), W-26, 64);
-      g.textAlign = 'left';
-
-      var y = 140;
-
-      // Nombre del destinatario
       g.fillStyle = TEXTO;
-      g.font = '800 27px Barlow, sans-serif';
-      g.fillText(dest.nombre, 26, y);
-      if(!esG){
-        g.fillStyle = TENUE;
-        g.font = '600 13px Barlow, sans-serif';
-        g.fillText(dest.equipo || '', 26, y+22);
-      }
-      y += esG ? 34 : 52;
-
-      var linea = function(){
-        g.strokeStyle = LINEA; g.lineWidth = 1;
-        g.beginPath(); g.moveTo(26, y); g.lineTo(W-26, y); g.stroke();
-        y += 26;
-      };
-      var reng = function(etq, val, opc){
-        opc = opc || {};
-        g.fillStyle = opc.tenue ? TENUE : TEXTO;
-        g.font = (opc.fuerte ? '800 ' : '500 ') + (opc.grande?18:15) + 'px Barlow, sans-serif';
-        g.textAlign = 'left';  g.fillText(etq, 26, y);
-        g.fillStyle = opc.color || (opc.tenue ? TENUE : TEXTO);
-        g.font = (opc.fuerte ? '800 ' : '600 ') + (opc.grande?18:15) + 'px Barlow, sans-serif';
-        g.textAlign = 'right'; g.fillText('$'+money2(val), W-26, y);
-        g.textAlign = 'left';
-        y += opc.grande ? 32 : 27;
-      };
-
-      linea();
-
-      if(esG){
-        // Un renglón por integrante, con lo que recibe en efectivo
-        dest.rows.forEach(function(r){
-          g.fillStyle = TEXTO;
-          g.font = '700 15px Barlow, sans-serif';
-          g.fillText(r.personal, 26, y);
-          g.fillStyle = TENUE;
-          g.font = '500 11px Barlow, sans-serif';
-          var det = 'Pago $'+money2(r.pago)
-                  + (n(r.tarjeta)? '  ·  Tarjeta $'+money2(r.tarjeta) : '')
-                  + (n(r.descuentos)? '  ·  Desc. $'+money2(r.descuentos) : '');
-          g.fillText(det, 26, y+17);
-          g.fillStyle = ACENTO;
-          g.font = '800 18px Barlow, sans-serif';
-          g.textAlign = 'right';
-          g.fillText('$'+money2(r.por_pagar), W-26, y+6);
-          g.textAlign = 'left';
-          y += 46;
-        });
-        y += 4; linea();
-        reng('Pago total del equipo', T.pago, {tenue:true});
-        if(T.tarjeta)    reng('Pagado con tarjeta', T.tarjeta, {tenue:true});
-        if(T.descuentos) reng('Descuentos', T.descuentos, {tenue:true});
-      } else {
-        var r = dest.rows[0];
-        reng('Sueldo', r.sueldo);
-        if(n(r.viaticos))   reng('Viáticos', r.viaticos);
-        if(n(r.pp))         reng('P/P', r.pp);
-        if(n(r.total_horas))reng('Horas extra ('+money2(r.horas)+' hrs)', r.total_horas);
-        if(n(r.reembolso))  reng('Reembolso', r.reembolso);
-        y += 2; linea();
-        reng('PAGO', r.pago, {fuerte:true});
-        if(n(r.tarjeta))    reng('Pagado con tarjeta', -n(r.tarjeta), {tenue:true});
-        if(n(r.descuentos)) reng('Descuentos', -n(r.descuentos), {tenue:true});
-        if(n(r.abonos))     reng('Otros descuentos', -n(r.abonos), {tenue:true});
-        if(n(r.saldo) || n(r.nuevo_saldo)){
-          y += 2; linea();
-          reng('Saldo de préstamo', r.nuevo_saldo, {tenue:true});
-        }
-      }
-
-      // Caja del total a recibir
-      y += 8;
-      var boxY = y, boxH = 70;
-      g.fillStyle = 'rgba(91,196,192,.12)';
-      g.strokeStyle = ACENTO; g.lineWidth = 2;
-      if(g.roundRect){ g.beginPath(); g.roundRect(26, boxY, W-52, boxH, 12); g.fill(); g.stroke(); }
-      else { g.fillRect(26, boxY, W-52, boxH); g.strokeRect(26, boxY, W-52, boxH); }
-      g.fillStyle = TENUE;
-      g.font = '700 11px Barlow, sans-serif';
-      g.fillText(esG ? 'EFECTIVO DEL EQUIPO' : 'TE TOCA EN EFECTIVO', 44, boxY+26);
-      g.fillStyle = ACENTO;
-      g.font = '800 30px Barlow, sans-serif';
+      g.font = '800 19px Barlow, sans-serif';
       g.textAlign = 'right';
-      g.fillText('$'+money2(T.por_pagar), W-44, boxY+52);
+      g.fillText(etiquetaSemana(NOM.sem).replace('  ·  ',' · '), W-24, 44);
+      g.fillStyle = TENUE;
+      g.font = '600 12px Barlow, sans-serif';
+      g.fillText(T.n + (T.n===1?' persona':' personas'), W-24, 66);
       g.textAlign = 'left';
 
-      // Altura real = lo dibujado + el espacio del pie
-      H = boxY + boxH + 46;
+      var y = HEAD + 26;
 
-      g.fillStyle = 'rgba(139,191,212,.55)';
+      // ── Cabecera de la tabla ──
+      g.fillStyle = TINTA; g.fillRect(24, y, W-48, THEAD);
+      g.strokeStyle = ACENTO; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(24, y+THEAD); g.lineTo(W-24, y+THEAD); g.stroke();
+      var x = 24;
+      g.font = '800 10.5px Barlow, sans-serif';
+      COLS_IMG.forEach(function(c){
+        g.fillStyle = TENUE;
+        if(c.txt){ g.textAlign='left';  g.fillText(c.t, x+10, y+23); }
+        else      { g.textAlign='right'; g.fillText(c.t, x+c.w-10, y+23); }
+        x += c.w;
+      });
+      g.textAlign = 'left';
+      y += THEAD;
+
+      // ── Banda del grupo o de la persona ──
+      g.fillStyle = BANDA; g.fillRect(24, y, W-48, HBANDA);
+      g.fillStyle = ACENTO;
+      g.font = '800 13px Barlow, sans-serif';
+      g.fillText(esG ? dest.nombre : (dest.equipo || dest.nombre), 34, y+21);
+      y += HBANDA;
+
+      // ── Renglones ──
+      dest.rows.forEach(function(r, i){
+        g.fillStyle = i%2 ? FILA2 : FILA;
+        g.fillRect(24, y, W-48, HFILA);
+        var xx = 24;
+        COLS_IMG.forEach(function(c){
+          if(c.txt){
+            g.fillStyle = TEXTO;
+            g.font = '700 13px Barlow, sans-serif';
+            g.textAlign = 'left';
+            g.fillText(String(r.personal||''), xx+10, y+22);
+          } else {
+            g.fillStyle = c.acento ? ACENTO : (c.fuerte ? TEXTO : TENUE);
+            g.font = (c.fuerte||c.acento ? '800 ' : '500 ') + '13px Barlow, sans-serif';
+            g.textAlign = 'right';
+            g.fillText(c.dec1 ? d1(r[c.k]) : m2(r[c.k]), xx+c.w-10, y+22);
+          }
+          xx += c.w;
+        });
+        g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(24, y+HFILA); g.lineTo(W-24, y+HFILA); g.stroke();
+        y += HFILA;
+      });
+
+      // ── Subtotal ──
+      g.fillStyle = TINTA; g.fillRect(24, y, W-48, HSUB);
+      g.strokeStyle = ACENTO; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(24, y); g.lineTo(W-24, y); g.stroke();
+      var xs = 24;
+      COLS_IMG.forEach(function(c){
+        if(c.txt){
+          g.fillStyle = ACENTO;
+          g.font = '800 12.5px Barlow, sans-serif';
+          g.textAlign = 'left';
+          g.fillText(esG ? ('SUBTOTAL '+dest.nombre) : 'TOTAL', xs+10, y+26);
+        } else if(c.k === 'tarifa_hora'){
+          // la tarifa no se suma: sumar precios por hora no significa nada
+        } else {
+          g.fillStyle = (c.fuerte||c.acento) ? ACENTO : TEXTO;
+          g.font = '800 13px Barlow, sans-serif';
+          g.textAlign = 'right';
+          g.fillText(c.dec1 ? d1(T[c.k]) : m2(T[c.k]), xs+c.w-10, y+26);
+        }
+        xs += c.w;
+      });
+      g.textAlign = 'left';
+      y += HSUB;
+
+      // ── Pie ──
+      g.fillStyle = 'rgba(139,191,212,.5)';
       g.font = '500 10px Barlow, sans-serif';
       g.fillText('Generado ' + new Date().toLocaleDateString('es-MX',
-                 {day:'2-digit',month:'long',year:'numeric'}), 26, H-18);
+                 {day:'2-digit',month:'long',year:'numeric'}), 24, H-16);
       g.textAlign = 'right';
-      g.fillText('PROCEPAL', W-26, H-18);
+      g.fillText('PROCEPAL', W-24, H-16);
       g.textAlign = 'left';
 
-      // Recorte al alto real
-      var fin = document.createElement('canvas');
-      fin.width = W*dpr; fin.height = H*dpr;
-      fin.getContext('2d').drawImage(cv, 0, 0, W*dpr, H*dpr, 0, 0, W*dpr, H*dpr);
-      cb(fin);
+      cb(cv);
     };
 
-    // El logo es base64, así que carga al instante; aun así se espera.
     var logo = logoProcepal();
     if(logo){
       var img = new Image();
       img.onload = function(){
-        // Alto fijo y ancho tope: el logo es apaisado y sin tope invadía el
-        // encabezado.
-        var h = 50, w = img.width * (h/img.height);
-        if(w > 190){ w = 190; h = img.height * (w/img.width); }
-        var yL = (96 - h)/2;
-        if(g.roundRect){ g.save(); g.beginPath(); g.roundRect(26,yL,w,h,8); g.clip(); }
-        g.drawImage(img, 26, yL, w, h);
+        var hh = 46, ww = img.width * (hh/img.height);
+        if(ww > 170){ ww = 170; hh = img.height * (ww/img.width); }
+        var yL = (HEAD - 2 - hh)/2;
+        if(g.roundRect){ g.save(); g.beginPath(); g.roundRect(24,yL,ww,hh,8); g.clip(); }
+        g.drawImage(img, 24, yL, ww, hh);
         if(g.roundRect) g.restore();
-        anchoLogo = w;
-        pintaResto();
+        pintaResto(ww);
       };
-      img.onerror = pintaResto;
+      img.onerror = function(){ pintaResto(0); };
       img.src = logo;
-    } else pintaResto();
+    } else pintaResto(0);
   }
 
   // Marca el comprobante como enviado. En un grupo se marcan todos sus
