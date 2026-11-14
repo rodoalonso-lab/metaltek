@@ -11697,7 +11697,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       nuevos = trabs.map(function(t, i){
         return {
           semana_id:semNueva.id, trabajador_id:t.id, personal:t.nombre,
-          equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null, orden:i,
+          equipo:String(t.cuadrilla || t.area || 'SIN EQUIPO').trim().toUpperCase(), obra_id:null, orden:i,
           sueldo:n(t.sueldo_semanal), pp:n(t.pp_default), tarifa_hora:n(t.tarifa_hora),
           viaticos:n(t.viaticos_default), tarjeta:0,
           horas:0, reembolso:0, descuentos:0, abonos:0,
@@ -11722,7 +11722,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
         if(yaEstan[k]) return;
         nuevos.push({
           semana_id:semNueva.id, trabajador_id:t.id, personal:t.nombre,
-          equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null,
+          equipo:String(t.cuadrilla || t.area || 'SIN EQUIPO').trim().toUpperCase(), obra_id:null,
           orden:nuevos.length, sueldo:n(t.sueldo_semanal), pp:n(t.pp_default),
           tarifa_hora:n(t.tarifa_hora), viaticos:n(t.viaticos_default), tarjeta:0,
           horas:0, reembolso:0, descuentos:0, abonos:0,
@@ -11793,7 +11793,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       if(pr) saldoPrev = n(pr.saldo);
       var fila = recalcular({
         semana_id:NOM.sem.id, trabajador_id:t.id, personal:t.nombre,
-        equipo:t.cuadrilla || t.area || 'SIN EQUIPO', obra_id:null,
+        equipo:String(t.cuadrilla || t.area || 'SIN EQUIPO').trim().toUpperCase(), obra_id:null,
         orden:NOM.rows.length, sueldo:n(t.sueldo_semanal), pp:n(t.pp_default),
         tarifa_hora:n(t.tarifa_hora), viaticos:n(t.viaticos_default), tarjeta:0,
         horas:0, reembolso:0, descuentos:0, abonos:0, saldo:saldoPrev, forzados:{}
