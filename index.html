@@ -11831,6 +11831,279 @@ return { montar:montar, calcular:calcular, recargar:function(){
   }
 
 
+
+  // ── COMPROBANTE EN IMAGEN ────────────────────────────────────────
+  // Lo que se le manda al trabajador. Se dibuja en canvas para que salga un
+  // PNG de verdad y se pueda compartir por WhatsApp, no una captura de
+  // pantalla recortada a mano.
+  // Equipo Daniel y Equipo David van como grupo; el resto, individual.
+  var EQUIPOS_GRUPO = ['EQUIPO DANIEL','EQUIPO DAVID'];
+
+  function esGrupo(eq){
+    return EQUIPOS_GRUPO.indexOf(String(eq||'').toUpperCase().trim()) >= 0;
+  }
+
+  // Agrupa los renglones de la semana en "destinatarios": un grupo por
+  // cuadrilla, y uno por persona para los demás.
+  function destinatarios(){
+    var out = [], porEq = {};
+    NOM.rows.forEach(function(r){
+      var eq = r.equipo || 'SIN EQUIPO';
+      if(esGrupo(eq)){
+        if(!porEq[eq]) porEq[eq] = { tipo:'grupo', nombre:eq, rows:[] };
+        porEq[eq].rows.push(r);
+      } else {
+        out.push({ tipo:'persona', nombre:r.personal, equipo:eq, rows:[r] });
+      }
+    });
+    return Object.keys(porEq).map(function(k){ return porEq[k]; }).concat(out);
+  }
+
+  // ── Dibujo ──
+  function dibujarComprobante(dest, cb){
+    var T = totales(dest.rows);
+    var esG = dest.tipo === 'grupo';
+    var W = 620;
+    var filasDetalle = esG ? dest.rows.length : 0;
+    var H = esG ? (300 + filasDetalle*46 + 120) : 640;
+
+    var dpr = Math.min(3, window.devicePixelRatio || 2);
+    var cv = document.createElement('canvas');
+    cv.width = W*dpr; cv.height = H*dpr;
+    var g = cv.getContext('2d');
+    g.scale(dpr, dpr);
+
+    var TINTA='#0A1628', ACENTO='#5BC4C0', TEXTO='#E8F4F8',
+        TENUE='#8BBFD4', LINEA='rgba(91,196,192,.22)', SUP='#112240';
+
+    var money2 = function(v){
+      return (n(v)).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    };
+
+    // Fondo
+    g.fillStyle = TINTA; g.fillRect(0,0,W,H);
+    g.fillStyle = SUP;   g.fillRect(0,0,W,96);
+    g.fillStyle = ACENTO; g.fillRect(0,94,W,2);
+
+    var pintaResto = function(){
+      // Encabezado
+      g.fillStyle = TEXTO;
+      g.font = '800 26px Barlow, sans-serif';
+      g.fillText('PROCEPAL', 104, 44);
+      g.fillStyle = ACENTO;
+      g.font = '700 12px Barlow, sans-serif';
+      g.fillText('NÓMINA SEMANAL', 104, 64);
+      g.fillStyle = TENUE;
+      g.font = '600 13px Barlow, sans-serif';
+      g.textAlign = 'right';
+      g.fillText(etiquetaSemana(NOM.sem).replace('  ·  ',' · '), W-26, 44);
+      g.font = '500 11px Barlow, sans-serif';
+      g.fillText(T.n + (T.n===1?' persona':' personas'), W-26, 64);
+      g.textAlign = 'left';
+
+      var y = 140;
+
+      // Nombre del destinatario
+      g.fillStyle = TEXTO;
+      g.font = '800 27px Barlow, sans-serif';
+      g.fillText(dest.nombre, 26, y);
+      if(!esG){
+        g.fillStyle = TENUE;
+        g.font = '600 13px Barlow, sans-serif';
+        g.fillText(dest.equipo || '', 26, y+22);
+      }
+      y += esG ? 34 : 52;
+
+      var linea = function(){
+        g.strokeStyle = LINEA; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(26, y); g.lineTo(W-26, y); g.stroke();
+        y += 26;
+      };
+      var reng = function(etq, val, opc){
+        opc = opc || {};
+        g.fillStyle = opc.tenue ? TENUE : TEXTO;
+        g.font = (opc.fuerte ? '800 ' : '500 ') + (opc.grande?18:15) + 'px Barlow, sans-serif';
+        g.textAlign = 'left';  g.fillText(etq, 26, y);
+        g.fillStyle = opc.color || (opc.tenue ? TENUE : TEXTO);
+        g.font = (opc.fuerte ? '800 ' : '600 ') + (opc.grande?18:15) + 'px Barlow, sans-serif';
+        g.textAlign = 'right'; g.fillText('$'+money2(val), W-26, y);
+        g.textAlign = 'left';
+        y += opc.grande ? 32 : 27;
+      };
+
+      linea();
+
+      if(esG){
+        // Un renglón por integrante, con lo que recibe en efectivo
+        dest.rows.forEach(function(r){
+          g.fillStyle = TEXTO;
+          g.font = '700 15px Barlow, sans-serif';
+          g.fillText(r.personal, 26, y);
+          g.fillStyle = TENUE;
+          g.font = '500 11px Barlow, sans-serif';
+          var det = 'Pago $'+money2(r.pago)
+                  + (n(r.tarjeta)? '  ·  Tarjeta $'+money2(r.tarjeta) : '')
+                  + (n(r.descuentos)? '  ·  Desc. $'+money2(r.descuentos) : '');
+          g.fillText(det, 26, y+17);
+          g.fillStyle = ACENTO;
+          g.font = '800 18px Barlow, sans-serif';
+          g.textAlign = 'right';
+          g.fillText('$'+money2(r.por_pagar), W-26, y+6);
+          g.textAlign = 'left';
+          y += 46;
+        });
+        y += 4; linea();
+        reng('Pago total del equipo', T.pago, {tenue:true});
+        if(T.tarjeta)    reng('Pagado con tarjeta', T.tarjeta, {tenue:true});
+        if(T.descuentos) reng('Descuentos', T.descuentos, {tenue:true});
+      } else {
+        var r = dest.rows[0];
+        reng('Sueldo', r.sueldo);
+        if(n(r.viaticos))   reng('Viáticos', r.viaticos);
+        if(n(r.pp))         reng('P/P', r.pp);
+        if(n(r.total_horas))reng('Horas extra ('+money2(r.horas)+' hrs)', r.total_horas);
+        if(n(r.reembolso))  reng('Reembolso', r.reembolso);
+        y += 2; linea();
+        reng('PAGO', r.pago, {fuerte:true});
+        if(n(r.tarjeta))    reng('Pagado con tarjeta', -n(r.tarjeta), {tenue:true});
+        if(n(r.descuentos)) reng('Descuentos', -n(r.descuentos), {tenue:true});
+        if(n(r.abonos))     reng('Otros descuentos', -n(r.abonos), {tenue:true});
+        if(n(r.saldo) || n(r.nuevo_saldo)){
+          y += 2; linea();
+          reng('Saldo de préstamo', r.nuevo_saldo, {tenue:true});
+        }
+      }
+
+      // Caja del total a recibir
+      y += 8;
+      var boxY = y, boxH = 70;
+      g.fillStyle = 'rgba(91,196,192,.12)';
+      g.strokeStyle = ACENTO; g.lineWidth = 2;
+      if(g.roundRect){ g.beginPath(); g.roundRect(26, boxY, W-52, boxH, 12); g.fill(); g.stroke(); }
+      else { g.fillRect(26, boxY, W-52, boxH); g.strokeRect(26, boxY, W-52, boxH); }
+      g.fillStyle = TENUE;
+      g.font = '700 11px Barlow, sans-serif';
+      g.fillText(esG ? 'EFECTIVO DEL EQUIPO' : 'TE TOCA EN EFECTIVO', 44, boxY+26);
+      g.fillStyle = ACENTO;
+      g.font = '800 30px Barlow, sans-serif';
+      g.textAlign = 'right';
+      g.fillText('$'+money2(T.por_pagar), W-44, boxY+52);
+      g.textAlign = 'left';
+
+      // Pie
+      g.fillStyle = 'rgba(139,191,212,.55)';
+      g.font = '500 10px Barlow, sans-serif';
+      g.fillText('Generado ' + new Date().toLocaleDateString('es-MX',
+                 {day:'2-digit',month:'long',year:'numeric'}), 26, H-20);
+      g.textAlign = 'right';
+      g.fillText('PROCEPAL', W-26, H-20);
+      g.textAlign = 'left';
+
+      cb(cv);
+    };
+
+    // El logo es base64, así que carga al instante; aun así se espera.
+    var logo = logoProcepal();
+    if(logo){
+      var img = new Image();
+      img.onload = function(){
+        var h = 56, w = img.width * (h/img.height);
+        if(g.roundRect){ g.save(); g.beginPath(); g.roundRect(26,20,w,h,8); g.clip(); }
+        g.drawImage(img, 26, 20, w, h);
+        if(g.roundRect) g.restore();
+        pintaResto();
+      };
+      img.onerror = pintaResto;
+      img.src = logo;
+    } else pintaResto();
+  }
+
+  // ── Hoja de comprobantes ──
+  NOM.comprobantes = function(){
+    if(!NOM.sem || !NOM.rows.length){ showToast('No hay nómina en esta semana', true); return; }
+    var dests = destinatarios();
+    var prev = $('nom-compro'); if(prev) prev.remove();
+
+    var d = document.createElement('div');
+    d.id = 'nom-compro';
+    d.className = 'nom-modal';
+    var h = '<div class="nom-modal-caja" style="max-width:520px">'
+          + '<div class="nom-modal-tit">🖼 Comprobantes de la semana ' + NOM.sem.semana + '</div>'
+          + '<div class="nom-modal-txt" style="margin-bottom:12px">Equipo Daniel y Equipo David salen '
+          + 'como grupo; los demás, individuales. Toca uno para generar su imagen.</div>'
+          + '<div class="nom-modal-lista">';
+    dests.forEach(function(dd, i){
+      var t = totales(dd.rows);
+      h += '<button class="nom-modal-op" data-compro="'+i+'">'
+         + '<span>' + (dd.tipo==='grupo' ? '👥 ' : '👤 ') + esc(dd.nombre)
+         + '<span style="display:block;font-size:10px;color:var(--dim);font-weight:600">'
+         + (dd.tipo==='grupo' ? dd.rows.length+' integrantes · ' : '')
+         + 'efectivo ' + money0(t.por_pagar) + '</span></span></button>';
+    });
+    h += '</div><button class="btn-secondary" data-compro-cerrar="1">Cerrar</button></div>';
+    d.innerHTML = h;
+    document.body.appendChild(d);
+
+    d.addEventListener('click', function(ev){
+      if(ev.target === d || ev.target.closest('[data-compro-cerrar]')){ d.remove(); return; }
+      var b = ev.target.closest('[data-compro]');
+      if(!b) return;
+      var dd = dests[parseInt(b.getAttribute('data-compro'),10)];
+      if(!dd) return;
+      d.remove();
+      dibujarComprobante(dd, function(cv){ mostrarComprobante(cv, dd); });
+    });
+  };
+
+  function mostrarComprobante(cv, dest){
+    var nombreArch = 'Nomina_SEM' + NOM.sem.semana + '_' +
+      String(dest.nombre).replace(/[^A-Za-z0-9]+/g,'_') + '.png';
+
+    var d = document.createElement('div');
+    d.className = 'nom-modal';
+    d.innerHTML = '<div class="nom-modal-caja" style="max-width:420px;text-align:center">'
+      + '<div class="nom-modal-tit" style="text-align:left">'+esc(dest.nombre)+'</div>'
+      + '<div id="nom-cv-wrap" style="margin-bottom:14px"></div>'
+      + '<button class="btn-primary" data-compartir="1" style="margin-bottom:8px">📲 Compartir</button>'
+      + '<button class="btn-secondary" data-bajar="1" style="margin-bottom:8px">⬇ Descargar imagen</button>'
+      + '<button class="btn-secondary" data-cerrar="1">Cerrar</button></div>';
+    document.body.appendChild(d);
+
+    cv.style.cssText = 'width:100%;height:auto;border-radius:12px;display:block';
+    d.querySelector('#nom-cv-wrap').appendChild(cv);
+
+    var conBlob = function(fn){ cv.toBlob(function(b){ if(b) fn(b); }, 'image/png'); };
+
+    d.addEventListener('click', function(ev){
+      if(ev.target === d || ev.target.closest('[data-cerrar]')){ d.remove(); return; }
+
+      if(ev.target.closest('[data-bajar]')){
+        conBlob(function(b){
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(b); a.download = nombreArch;
+          a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+        });
+        return;
+      }
+
+      if(ev.target.closest('[data-compartir]')){
+        conBlob(function(b){
+          var file = new File([b], nombreArch, {type:'image/png'});
+          // En celular abre WhatsApp directo; en escritorio no siempre existe,
+          // por eso queda el botón de descargar como salida.
+          if(navigator.canShare && navigator.canShare({files:[file]})){
+            navigator.share({ files:[file],
+              title:'Nómina semana '+NOM.sem.semana,
+              text:'Nómina semana '+NOM.sem.semana+' · '+dest.nombre })
+              .catch(function(){});
+          } else {
+            showToast('Tu navegador no comparte archivos: usa Descargar', true);
+          }
+        });
+      }
+    });
+  }
+
   // ── RESUMEN ──────────────────────────────────────────────────────
   // La hoja RESUMEN del Excel: acumulado del año, por semana, por
   // trabajador, por proyecto (centro de costo), por equipo y los
