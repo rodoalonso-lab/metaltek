@@ -11883,7 +11883,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     };
 
     // Fondo
-    g.fillStyle = TINTA; g.fillRect(0,0,W,H);
+    g.fillStyle = TINTA; g.fillRect(0,0,W,HMAX);
     g.fillStyle = SUP;   g.fillRect(0,0,W,96);
     g.fillStyle = ACENTO; g.fillRect(0,94,W,2);
 
@@ -11996,16 +11996,22 @@ return { montar:montar, calcular:calcular, recargar:function(){
       g.fillText('$'+money2(T.por_pagar), W-44, boxY+52);
       g.textAlign = 'left';
 
-      // Pie
+      // Altura real = lo dibujado + el espacio del pie
+      H = boxY + boxH + 46;
+
       g.fillStyle = 'rgba(139,191,212,.55)';
       g.font = '500 10px Barlow, sans-serif';
       g.fillText('Generado ' + new Date().toLocaleDateString('es-MX',
-                 {day:'2-digit',month:'long',year:'numeric'}), 26, H-20);
+                 {day:'2-digit',month:'long',year:'numeric'}), 26, H-18);
       g.textAlign = 'right';
-      g.fillText('PROCEPAL', W-26, H-20);
+      g.fillText('PROCEPAL', W-26, H-18);
       g.textAlign = 'left';
 
-      cb(cv);
+      // Recorte al alto real
+      var fin = document.createElement('canvas');
+      fin.width = W*dpr; fin.height = H*dpr;
+      fin.getContext('2d').drawImage(cv, 0, 0, W*dpr, H*dpr, 0, 0, W*dpr, H*dpr);
+      cb(fin);
     };
 
     // El logo es base64, así que carga al instante; aun así se espera.
