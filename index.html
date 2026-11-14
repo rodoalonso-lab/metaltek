@@ -12149,6 +12149,22 @@ return { montar:montar, calcular:calcular, recargar:function(){
     cv.style.cssText = 'width:100%;height:auto;border-radius:12px;display:block';
     d.querySelector('#nom-cv-wrap').appendChild(cv);
 
+    // Sello de enviado sobre la vista previa, para que no se mande dos veces.
+    var marcaUI = function(){
+      var t = d.querySelector('#nom-sello-env');
+      if(!t) return;
+      t.style.display = 'block';
+      t.textContent = '✓ Enviado · ' + new Date().toLocaleTimeString('es-MX',
+                        {hour:'2-digit',minute:'2-digit'});
+    };
+    var sello = document.createElement('div');
+    sello.id = 'nom-sello-env';
+    sello.style.cssText = 'display:none;background:rgba(16,185,129,.15);border:1px solid #10B98155;'
+      + 'color:#10B981;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800;'
+      + 'margin-bottom:10px';
+    d.querySelector('#nom-cv-wrap').appendChild(sello);
+    if(dest.rows.every(function(r){ return !!r.comprobante_enviado; })) marcaUI();
+
     var conBlob = function(fn){ cv.toBlob(function(b){ if(b) fn(b); }, 'image/png'); };
 
     // WhatsApp no deja adjuntar una imagen desde un link: wa.me solo acepta
@@ -12164,6 +12180,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
         navigator.clipboard.write([ new ClipboardItem({'image/png': b}) ])
           .then(function(){
             showToast('📋 Imagen copiada');
+            NOM.marcarEnviado(dest, true).then(marcaUI);
             if(paso){
               paso.style.display = 'block';
               paso.innerHTML = '<b style="color:#25D366">Ya está copiada.</b> '
@@ -12206,7 +12223,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
             navigator.share({ files:[file],
               title:'Nómina semana '+NOM.sem.semana,
               text:'Nómina semana '+NOM.sem.semana+' · '+dest.nombre })
-              .catch(function(){});
+              .then(function(){ NOM.marcarEnviado(dest, true).then(marcaUI); })
+              .catch(function(){});   // si cancela el compartir, no se marca
           } else {
             copiarAlPortapapeles();
           }
