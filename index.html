@@ -280,7 +280,7 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
 #nom-nom-v .nom-btn-ok{background:rgba(16,185,129,.12);border-color:#10B98155;color:#10B981}
 #nom-nom-v .nom-btn-warn{background:rgba(240,165,0,.12);border-color:#F0A50055;color:#F0A500}
 #nom-nom-v .nom-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:8px}
-#nom-nom-v .nom-kpis-2{grid-template-columns:repeat(5,1fr);margin-bottom:14px}
+#nom-nom-v .nom-kpis-2{grid-template-columns:repeat(6,1fr);margin-bottom:14px}
 #nom-nom-v .nom-kpi{background:var(--surface);border:1px solid var(--border);
   border-radius:10px;padding:10px 12px}
 #nom-nom-v .nom-kpi-l{font-size:9px;letter-spacing:.09em;color:var(--dim);
@@ -11309,6 +11309,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
        + kpi('TARJETA PENDIENTE', money0(tarjPend),  tarjPend>0?'#EF4444':'#10B981')
        + kpi('EFECTIVO PAGADO',   money0(T.efectivoPagado), '#10B981')
        + kpi('EFECTIVO PENDIENTE',money0(efecPend),  efecPend>0?'#EF4444':'#10B981')
+       + kpi('FALTA DISPERSAR', money0(tarjPend + efecPend),
+             (tarjPend+efecPend)>0.01?'#EF4444':'#10B981')
        + kpi('% DISPERSADO', Math.round(disp*100)+'%', disp>=0.999?'#10B981':'#F0A500')
        + '</div>';
 
@@ -11458,6 +11460,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
     setKpi('TARJETA PENDIENTE', money0(tarjPend), tarjPend>0?'#EF4444':'#10B981');
     setKpi('EFECTIVO PAGADO',   money0(T.efectivoPagado));
     setKpi('EFECTIVO PENDIENTE',money0(efecPend), efecPend>0?'#EF4444':'#10B981');
+    setKpi('FALTA DISPERSAR', money0(tarjPend + efecPend),
+           (tarjPend+efecPend)>0.01?'#EF4444':'#10B981');
     setKpi('% DISPERSADO', Math.round(disp*100)+'%', disp>=0.999?'#10B981':'#F0A500');
 
     var pintaFila = function(tr, tot){
@@ -12882,7 +12886,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
      +'.sello-abi{background:#F0A500;color:#0A1628}'
      /* ── Indicadores ── */
      +'.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:6px}'
-     +'.kpis2{grid-template-columns:repeat(5,1fr);margin-bottom:10px}'
+     +'.kpis2{grid-template-columns:repeat(6,1fr);margin-bottom:10px}'
      +'.k{border:1px solid #D7E3EA;border-left:3px solid #5BC4C0;border-radius:6px;padding:6px 8px}'
      +'.k-l{font-size:7.5px;letter-spacing:.09em;text-transform:uppercase;color:#5A8FA8;font-weight:700}'
      +'.k-v{font-size:13px;font-weight:900;margin-top:1px;color:#0A1628}'
@@ -12954,6 +12958,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
        + kpi('Tarjeta pendiente',  money0(tarjPend), tarjPend>0?'k-warn':'k-ok')
        + kpi('Efectivo pagado',    money0(T.efectivoPagado), 'k-ok')
        + kpi('Efectivo pendiente', money0(efecPend), efecPend>0?'k-warn':'k-ok')
+       + kpi('Falta dispersar',    money0(tarjPend + efecPend),
+                                   (tarjPend+efecPend)>0.01?'k-warn':'k-ok')
        + kpi('% dispersado',       Math.round(disp*100)+'%', disp>=0.999?'k-ok':'k-warn')
      +'</div>'
      +'<div class="sec">Reparto por proyecto</div>'
