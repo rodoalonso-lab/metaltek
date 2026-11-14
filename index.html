@@ -12037,6 +12037,33 @@ return { montar:montar, calcular:calcular, recargar:function(){
     } else pintaResto();
   }
 
+  // Marca el comprobante como enviado. En un grupo se marcan todos sus
+  // integrantes: la tarjeta salió una sola vez para el equipo entero.
+  NOM.marcarEnviado = async function(dest, enviado){
+    var cuando = enviado ? new Date().toISOString() : null;
+    var ids = dest.rows.map(function(r){ return r.id; });
+    dest.rows.forEach(function(r){ r.comprobante_enviado = cuando; });
+    try {
+      await db('PATCH','nom_renglon?id=in.('+ids.join(',')+')',
+               { comprobante_enviado: cuando });
+    } catch(e){
+      dest.rows.forEach(function(r){ r.comprobante_enviado = enviado ? null : cuando; });
+      showToast('No se pudo marcar: '+e.message, true);
+    }
+  };
+
+  function enviadoDe(dest){
+    // El grupo cuenta como enviado sólo si todos sus integrantes lo están.
+    return dest.rows.length > 0 && dest.rows.every(function(r){ return !!r.comprobante_enviado; });
+  }
+  function fechaEnvio(dest){
+    var f = dest.rows[0] && dest.rows[0].comprobante_enviado;
+    if(!f) return '';
+    var d = new Date(f);
+    return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) + ' ' +
+           d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  }
+
   // ── Hoja de comprobantes ──
   NOM.comprobantes = function(){
     if(!NOM.sem || !NOM.rows.length){ showToast('No hay nómina en esta semana', true); return; }
@@ -12046,25 +12073,51 @@ return { montar:montar, calcular:calcular, recargar:function(){
     var d = document.createElement('div');
     d.id = 'nom-compro';
     d.className = 'nom-modal';
+    var yaEnv = dests.filter(enviadoDe).length;
     var h = '<div class="nom-modal-caja" style="max-width:520px">'
           + '<div class="nom-modal-tit">🖼 Comprobantes de la semana ' + NOM.sem.semana + '</div>'
-          + '<div class="nom-modal-txt" style="margin-bottom:12px">Equipo Daniel y Equipo David salen '
-          + 'como grupo; los demás, individuales. Toca uno para generar su imagen.</div>'
+          + '<div class="nom-modal-txt" style="margin-bottom:10px">Equipo Daniel y Equipo David salen '
+          + 'como grupo; los demás, individuales.</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+          + '<div style="flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden">'
+          + '<div style="height:100%;width:'+Math.round(yaEnv/dests.length*100)+'%;'
+          + 'background:#10B981;border-radius:99px"></div></div>'
+          + '<span style="font-size:11px;font-weight:700;color:'+(yaEnv===dests.length?'#10B981':'var(--dim)')+'">'
+          + yaEnv + ' de ' + dests.length + ' enviados</span></div>'
           + '<div class="nom-modal-lista">';
     dests.forEach(function(dd, i){
       var t = totales(dd.rows);
-      h += '<button class="nom-modal-op" data-compro="'+i+'">'
+      var env = enviadoDe(dd);
+      h += '<div style="display:flex;align-items:stretch;gap:6px">'
+         + '<button class="nom-modal-op" data-compro="'+i+'" style="flex:1'
+         +   (env?';opacity:.65':'')+'">'
          + '<span>' + (dd.tipo==='grupo' ? '👥 ' : '👤 ') + esc(dd.nombre)
          + '<span style="display:block;font-size:10px;color:var(--dim);font-weight:600">'
          + (dd.tipo==='grupo' ? dd.rows.length+' integrantes · ' : '')
-         + 'efectivo ' + money0(t.por_pagar) + '</span></span></button>';
+         + 'efectivo ' + money0(t.por_pagar)
+         + (env ? ' · <span style="color:#10B981">enviado '+esc(fechaEnvio(dd))+'</span>' : '')
+         + '</span></span></button>'
+         + '<button class="nom-chk-env" data-toggle-env="'+i+'" '
+         + 'title="'+(env?'Marcar como no enviado':'Marcar como enviado')+'" '
+         + 'style="flex:none;width:44px;border:1px solid '+(env?'#10B981':'var(--border)')+';'
+         + 'border-radius:9px;background:'+(env?'rgba(16,185,129,.15)':'var(--surface)')+';'
+         + 'color:'+(env?'#10B981':'var(--dim)')+';font-size:17px;cursor:pointer">'
+         + (env?'✓':'○')+'</button></div>';
     });
     h += '</div><button class="btn-secondary" data-compro-cerrar="1">Cerrar</button></div>';
     d.innerHTML = h;
     document.body.appendChild(d);
 
-    d.addEventListener('click', function(ev){
+    d.addEventListener('click', async function(ev){
       if(ev.target === d || ev.target.closest('[data-compro-cerrar]')){ d.remove(); return; }
+
+      var t = ev.target.closest('[data-toggle-env]');
+      if(t){
+        var dt = dests[parseInt(t.getAttribute('data-toggle-env'),10)];
+        if(dt){ await NOM.marcarEnviado(dt, !enviadoDe(dt)); d.remove(); NOM.comprobantes(); }
+        return;
+      }
+
       var b = ev.target.closest('[data-compro]');
       if(!b) return;
       var dd = dests[parseInt(b.getAttribute('data-compro'),10)];
