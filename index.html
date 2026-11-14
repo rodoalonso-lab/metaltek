@@ -753,6 +753,23 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <select class="form-input" id="ft-obra"></select></div>
     <div class="form-group"><label class="form-label" for="ft-sueldo">Sueldo diario ($)</label>
       <input class="form-input" id="ft-sueldo" type="number" placeholder="0"></div>
+    <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px">
+      <div class="form-label" style="margin-bottom:4px">DATOS PARA LA NÓMINA SEMANAL</div>
+      <div class="item-sub" style="margin-bottom:10px">Sin esto, la persona entra a la hoja
+        con todo en cero y en un equipo aparte.</div>
+      <div class="form-group"><label class="form-label" for="ft-equipo">Equipo o cuadrilla</label>
+        <input class="form-input" id="ft-equipo" list="ft-equipos" placeholder="Ej. EQUIPO DAVID, HERRERIA, TALLER"
+               style="text-transform:uppercase">
+        <datalist id="ft-equipos"></datalist></div>
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1"><label class="form-label" for="ft-sueldo-sem">Sueldo semanal ($)</label>
+          <input class="form-input" id="ft-sueldo-sem" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="form-group" style="flex:1"><label class="form-label" for="ft-tarifa">Hora extra ($/hora)</label>
+          <input class="form-input" id="ft-tarifa" type="number" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="form-group"><label class="form-label" for="ft-viaticos">Viáticos por semana ($)</label>
+        <input class="form-input" id="ft-viaticos" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
     <div class="form-group"><label class="form-label" for="ft-forma">Forma de pago</label>
       <select class="form-input" id="ft-forma" onchange="onFormaPagoChange(this.value)">
         <option value="efectivo">💵 Efectivo</option>
@@ -5244,6 +5261,12 @@ async function saveTrabajador(){
     obra_id: (obraSelVal==='__todos__'||obraSelVal==='') ? null : obraSelVal,
     todos_proyectos: obraSelVal==='__todos__',
     sueldo_diario:parseFloat(document.getElementById('ft-sueldo').value)||0,
+    // La nómina agrupa por cuadrilla en mayúsculas: 'taller' y 'TALLER'
+    // serían dos equipos distintos en la hoja semanal.
+    cuadrilla:(document.getElementById('ft-equipo')?.value||'').trim().toUpperCase()||null,
+    sueldo_semanal:parseFloat(document.getElementById('ft-sueldo-sem')?.value)||0,
+    tarifa_hora:parseFloat(document.getElementById('ft-tarifa')?.value)||0,
+    viaticos_default:parseFloat(document.getElementById('ft-viaticos')?.value)||0,
     forma_pago:document.getElementById('ft-forma').value||'efectivo',
     banco:document.getElementById('ft-banco').value.trim()||null,
     numero_tarjeta:document.getElementById('ft-tarjeta').value.trim()||null,
