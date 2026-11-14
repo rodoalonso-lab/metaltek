@@ -11871,7 +11871,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
     {k:'viaticos',   t:'VIATICOS',        w:96},
     {k:'pp',         t:'P/P',             w:84},
     {k:'horas',      t:'HORAS',           w:66, dec1:true},
-    {k:'tarifa_hora',t:'HORA EXTRA',      w:92},
+    {k:'tarifa_hora',t:'HORA EXTRA',      w:92, depende:'total_horas'},
     {k:'total_horas',t:'TOTAL DE HORAS',  w:104},
     {k:'reembolso',  t:'REEMBOLSO',       w:96},
     {k:'descuentos', t:'DESCUENTOS',      w:100},
@@ -11887,7 +11887,10 @@ return { montar:montar, calcular:calcular, recargar:function(){
   function columnasConMonto(rows){
     return COLS_IMG.filter(function(c){
       if(c.fijo) return true;
-      return rows.some(function(r){ return Math.abs(n(r[c.k])) > 0.004; });
+      // HORA EXTRA es la tarifa por hora: sola no suma al pago. Solo se
+      // muestra si de verdad se trabajaron horas extra esa semana.
+      var clave = c.depende || c.k;
+      return rows.some(function(r){ return Math.abs(n(r[clave])) > 0.004; });
     });
   }
 
