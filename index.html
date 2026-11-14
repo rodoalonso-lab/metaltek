@@ -5156,10 +5156,11 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-persona-id').value='';
   document.getElementById('ft-puesto').value='';
   document.getElementById('ft-sueldo').value='';
-  ['ft-sueldo-sem','ft-tarifa','ft-viaticos'].forEach(function(id){
+  ['ft-sueldo-sem','ft-tarifa','ft-viaticos','ft-equipo-nuevo'].forEach(function(id){
     var e=document.getElementById(id); if(e) e.value='';
   });
-  llenarEquiposSugeridos();
+  var _wn=document.getElementById('ft-equipo-nuevo-wrap'); if(_wn) _wn.style.display='none';
+  llenarEquiposSugeridos('');
   document.getElementById('ft-forma').value='efectivo';
   document.getElementById('ft-banco').value='';
   document.getElementById('ft-tarjeta').value='';
@@ -5187,7 +5188,8 @@ function editTrabajador(id){
   document.getElementById('ft-puesto').value=t.puesto||'';
   document.getElementById('ft-sueldo').value=t.sueldo_diario||'';
   var _set=function(id,v){ var e=document.getElementById(id); if(e) e.value=(v||v===0)?v:''; };
-  _set('ft-area', t.cuadrilla||t.area||'');
+  llenarEquiposSugeridos((t.cuadrilla||t.area||'').trim().toUpperCase());
+  var _wn2=document.getElementById('ft-equipo-nuevo-wrap'); if(_wn2) _wn2.style.display='none';
   _set('ft-sueldo-sem', t.sueldo_semanal||'');
   _set('ft-tarifa', t.tarifa_hora||'');
   _set('ft-viaticos', t.viaticos_default||'');
@@ -5316,6 +5318,9 @@ async function saveTrabajador(){
       razonesData.push({id:razonId, nombre:rNom, rfc:rfc});
     }catch(e){ showToast('Error al crear razón social: '+e.message,true); btn.textContent='Guardar'; btn.disabled=false; return; }
   }
+  // Si eligió "nuevo equipo", aquí se da de alta en el catálogo.
+  const equipoNom = await equipoElegido();
+
   const data={
     nombre:nom,
     razon_social_id: (razonId && razonId!=='__nueva__') ? razonId : null,
@@ -5330,7 +5335,7 @@ async function saveTrabajador(){
     sueldo_diario:parseFloat(document.getElementById('ft-sueldo').value)||0,
     // La nómina agrupa por cuadrilla en mayúsculas: 'taller' y 'TALLER'
     // serían dos equipos distintos en la hoja semanal.
-    cuadrilla:(document.getElementById('ft-area')?.value||'').trim().toUpperCase()||null,
+    cuadrilla: equipoNom,
     sueldo_semanal:parseFloat(document.getElementById('ft-sueldo-sem')?.value)||0,
     tarifa_hora:parseFloat(document.getElementById('ft-tarifa')?.value)||0,
     viaticos_default:parseFloat(document.getElementById('ft-viaticos')?.value)||0,
@@ -5340,7 +5345,7 @@ async function saveTrabajador(){
     fecha_ingreso:document.getElementById('ft-ingreso').value||null,
     registro_patronal:document.getElementById('ft-rp-alta').value||null,
     pin_checador: pinVal,
-    area:(document.getElementById('ft-area').value||'').trim().toUpperCase()||'CAMPO',
+    area: equipoNom || 'SIN EQUIPO',
     activo:true
   };
   try{
