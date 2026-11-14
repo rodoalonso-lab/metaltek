@@ -11175,6 +11175,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
            + '↩ Cerrar sin cambios ('+pend+')</button>';
       }
       h +=   '<button class="nom-btn" data-nom="agregar">+ Persona</button>';
+      h +=   '<button class="nom-btn" data-nom="comprobantes">🖼 Comprobantes</button>';
       h +=   '<button class="nom-btn" data-nom="imprimir">🖨️ Imprimir</button>';
       h +=   '<button class="nom-btn '+(cerrada?'nom-btn-warn':'nom-btn-ok')+'" data-nom="'+(cerrada?'abrir':'cerrar')+'">'
            + (cerrada ? '🔓 Reabrir semana' : '🔒 Cerrar semana') + '</button>';
@@ -11415,6 +11416,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       else if(acc === 'cerrar')   NOM.cambiarEstado('cerrada');
       else if(acc === 'abrir')    NOM.cambiarEstado('abierta');
       else if(acc === 'imprimir') NOM.imprimir();
+      else if(acc === 'comprobantes') NOM.comprobantes();
       else if(acc === 'borrar'){
         var tr = b.closest('tr[data-id]');
         if(tr) NOM.quitar(tr.getAttribute('data-id'));
