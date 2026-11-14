@@ -10289,7 +10289,9 @@ function pintaEstim(el){
     h+='<tr style="text-align:right;border-bottom:1px solid var(--border)'+
        (vieja?';background:rgba(239,68,68,.08)':'')+'">'+
       '<td style="text-align:left;padding:5px 4px">'+esc(e.no)+'</td>'+
-      '<td style="text-align:left">'+esc(e.tipo)+'</td>'+
+      '<td style="text-align:left">'+esc(e.tipo)+
+        (e.factura?'<div style="font-size:10px;color:var(--accent)">'+esc(e.factura)+'</div>':
+          '<div style="font-size:10px;color:#F0A500">sin factura</div>')+'</td>'+
       '<td>'+money(e.importe_ejecutado)+'</td><td>'+money(e.amortizacion)+'</td>'+
       '<td>'+money(e.retencion)+'</td><td>'+money(e.subtotal)+'</td>'+
       '<td>'+money(e.iva)+'</td><td style="font-weight:700">'+money(e.total)+'</td>'+
@@ -10358,7 +10360,16 @@ function nuevaEstimacion(){
       'margin-bottom:10px">$0.00</div>'+
     '<label class="cobra-lbl">Periodo o concepto</label>'+
     '<input id="cobra-per" class="form-input" style="width:100%;margin-bottom:10px" placeholder="Ej. 1 al 15 de noviembre">'+
-    '<label class="cobra-lbl">Fecha de presentación (opcional)</label>'+
+    '<div style="display:flex;gap:8px">'+
+      '<div style="flex:1"><label class="cobra-lbl">Factura</label>'+
+      '<input id="cobra-fact" class="form-input" style="width:100%;margin-bottom:10px" placeholder="Ej. A-1234"></div>'+
+      '<div style="flex:1"><label class="cobra-lbl">Fecha de factura</label>'+
+      '<input id="cobra-ff" type="date" class="form-input" style="width:100%;margin-bottom:10px"></div>'+
+    '</div>'+
+    '<label class="cobra-lbl">UUID fiscal (opcional)</label>'+
+    '<input id="cobra-uuid" class="form-input" style="width:100%;margin-bottom:10px;font-size:11px" '+
+      'placeholder="folio fiscal del CFDI">'+
+    '<label class="cobra-lbl">Fecha de presentación al cliente</label>'+
     '<input id="cobra-fp" type="date" class="form-input" style="width:100%;margin-bottom:10px">'+
     '<div id="cobra-prev" class="item-sub" style="margin-bottom:12px"></div>'+
     '<div style="display:flex;gap:8px">'+
@@ -10442,6 +10453,9 @@ function nuevaEstimacion(){
       importe_ejecutado: imp,
       amortizacion: am,
       retencion: re,
+      factura: (card.querySelector('#cobra-fact').value||'').trim().toUpperCase() || null,
+      uuid_fiscal: (card.querySelector('#cobra-uuid').value||'').trim().toUpperCase() || null,
+      fecha_factura: card.querySelector('#cobra-ff').value || null,
       fecha_presentada: card.querySelector('#cobra-fp').value || null
     }).then(function(){ cerrar(); return cargar(OBRA.id); })
       .then(function(){
@@ -10495,6 +10509,15 @@ function editarEstimacion(estimId){
       '<div style="flex:1"><label class="cobra-lbl">FG · Fondo de garantía</label>'+
       '<input id="ed-re" type="number" step="0.01" class="form-input" style="width:100%;margin-bottom:10px" value="'+n(e.retencion).toFixed(2)+'"></div>'+
     '</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<div style="flex:1"><label class="cobra-lbl">Factura</label>'+
+      '<input id="ed-fact" class="form-input" style="width:100%;margin-bottom:10px" value="'+esc(e.factura||'')+'"></div>'+
+      '<div style="flex:1"><label class="cobra-lbl">Fecha de factura</label>'+
+      '<input id="ed-ff" type="date" class="form-input" style="width:100%;margin-bottom:10px" value="'+
+        (e.fecha_factura ? String(e.fecha_factura).slice(0,10) : '')+'"></div>'+
+    '</div>'+
+    '<label class="cobra-lbl">UUID fiscal</label>'+
+    '<input id="ed-uuid" class="form-input" style="width:100%;margin-bottom:10px;font-size:11px" value="'+esc(e.uuid_fiscal||'')+'">'+
     '<label class="cobra-lbl">Fecha de presentación</label>'+
     '<input id="ed-fp" type="date" class="form-input" style="width:100%;margin-bottom:12px" value="'+
       (e.fecha_presentada ? String(e.fecha_presentada).slice(0,10) : '')+'">'+
@@ -10531,6 +10554,9 @@ function editarEstimacion(estimId){
       importe_ejecutado: Number(card.querySelector('#ed-imp').value)||0,
       amortizacion: Number(card.querySelector('#ed-am').value)||0,
       retencion: Number(card.querySelector('#ed-re').value)||0,
+      factura: (card.querySelector('#ed-fact').value||'').trim().toUpperCase() || null,
+      uuid_fiscal: (card.querySelector('#ed-uuid').value||'').trim().toUpperCase() || null,
+      fecha_factura: card.querySelector('#ed-ff').value || null,
       fecha_presentada: card.querySelector('#ed-fp').value || null
     }).then(function(){ cerrar(); return cargar(OBRA.id); })
       .then(function(){
