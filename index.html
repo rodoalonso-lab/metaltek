@@ -11866,12 +11866,14 @@ return { montar:montar, calcular:calcular, recargar:function(){
     var T = totales(dest.rows);
     var esG = dest.tipo === 'grupo';
     var W = 620;
-    var filasDetalle = esG ? dest.rows.length : 0;
-    var H = esG ? (300 + filasDetalle*46 + 120) : 640;
+    // Se dibuja en un lienzo alto y al final se recorta a la altura real: con
+    // un alto fijo, a quien tenia pocos conceptos le sobraba media tarjeta.
+    var HMAX = 1600;
+    var H = HMAX;
 
     var dpr = Math.min(3, window.devicePixelRatio || 2);
     var cv = document.createElement('canvas');
-    cv.width = W*dpr; cv.height = H*dpr;
+    cv.width = W*dpr; cv.height = HMAX*dpr;
     var g = cv.getContext('2d');
     g.scale(dpr, dpr);
 
