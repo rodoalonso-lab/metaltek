@@ -10263,12 +10263,43 @@ function guardarProyectado(tipo, importe, nota, causa, cobrable){
 function pintaEstim(el){
   var c=CONTRATO||{}, x=calcular();
   var hoy=new Date();
+  // Indicadores de cobranza: lo que de verdad se pregunta uno al abrir esta
+  // pestaña. Antes mostraban el avance físico del Control de Obra, que sale
+  // de otro lado y daba un "por estimar" negativo sin sentido.
+  var ejecutado = ESTIM.filter(function(e){ return low(e.tipo)!=='anticipo'; })
+                       .reduce(function(a,e){ return a+n(e.importe_ejecutado); }, 0);
+  var anticipo  = ESTIM.filter(function(e){ return low(e.tipo)==='anticipo'; })
+                       .reduce(function(a,e){ return a+n(e.subtotal); }, 0);
+  var documentado = ESTIM.reduce(function(a,e){ return a+n(e.total); }, 0);
+  var cobradoAc   = ESTIM.reduce(function(a,e){ return a+n(e.importe_cobrado); }, 0);
+  var porCobrar   = documentado - cobradoAc;
+  var amortizado  = ESTIM.reduce(function(a,e){ return a+Math.abs(n(e.amortizacion)); }, 0);
+  var retenido    = ESTIM.reduce(function(a,e){ return a+Math.abs(n(e.retencion)); }, 0);
+  var porAmort    = Math.max(0, anticipo - amortizado);
+  var contrato    = n(c.monto_sin_iva);
+  var pctEjec     = contrato>0 ? ejecutado/contrato : 0;
+
   var h='<div class="cobra-kpis">'+
-    tarjeta('Ejecutado', money(x.ejecutado), pct(x.avance)+' de avance')+
-    tarjeta('Estimado', money(x.estimado), 'sin contar anticipo')+
-    tarjeta('Por estimar', money(x.porEstimar), 'ejecutado − estimado',
-            x.porEstimar>0?'#F59E0B':null)+
-    tarjeta('Cobrado', money(x.cobrado), 'facturado '+money(x.facturado))+
+    tarjeta('Ejecutado', money(ejecutado),
+            contrato>0 ? pct(pctEjec)+' del contrato ('+money(contrato)+')' : 'acumulado sin IVA')+
+    tarjeta('Por cobrar', money(porCobrar),
+            porCobrar>0.01 ? 'de '+money(documentado)+' facturado' : 'todo cobrado',
+            porCobrar>0.01?'#F0A500':'#10B981')+
+    tarjeta('Amortizado', money(amortizado),
+            anticipo>0 ? 'faltan '+money(porAmort)+' del anticipo' : 'sin anticipo',
+            porAmort>0.01?'#3B9EBF':'#10B981')+
+    tarjeta('Retenido · FG', money(retenido),
+            retenido>0.01 ? 'se recupera en el finiquito' : 'sin retención',
+            retenido>0.01?'#A78BFA':null)+
+    '</div>'+
+    '<div class="cobra-kpis" style="margin-top:8px">'+
+    tarjeta('Facturado', money(documentado), ESTIM.length+' documento'+(ESTIM.length!==1?'s':''))+
+    tarjeta('Cobrado', money(cobradoAc),
+            documentado>0 ? pct(cobradoAc/documentado)+' de lo facturado' : '—', '#10B981')+
+    tarjeta('Anticipo recibido', money(anticipo),
+            contrato>0 ? pct(contrato>0?anticipo/contrato:0)+' del contrato' : '—')+
+    tarjeta('Pendiente de facturar', money(Math.max(0, contrato - ejecutado - anticipo)),
+            'contrato − ejecutado − anticipo')+
     '</div>';
 
   h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
