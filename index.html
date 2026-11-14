@@ -732,12 +732,13 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <div class="form-label" style="margin-bottom:10px">DATOS DE ASIGNACIÓN</div>
       <div class="form-group"><label class="form-label" for="ft-puesto">Puesto</label>
       <input class="form-input" id="ft-puesto" type="text" placeholder="Ej. Instalador, Soldador"></div>
-      <div class="form-group"><label class="form-label" for="ft-area">Área</label>
-      <select class="form-input" id="ft-area">
-          <option value="campo">🏗 Campo</option>
-          <option value="taller">🔧 Taller</option>
-          <option value="oficina">🏢 Oficina</option>
-        </select>
+      <div class="form-group"><label class="form-label" for="ft-area">Área o equipo</label>
+      <input class="form-input" id="ft-area" list="ft-equipos" autocomplete="off"
+             placeholder="Ej. EQUIPO DAVID, HERRERIA, TALLER, OFICINA"
+             style="text-transform:uppercase">
+      <datalist id="ft-equipos"></datalist>
+      <div class="item-sub" style="margin-top:4px">Escribe el que sea o elige de la lista.
+        Con este nombre se agrupa en la nómina semanal.</div>
       </div>
       <div class="form-group"><label class="form-label" for="ft-razon">Razón Social</label>
       <select class="form-input" id="ft-razon" onchange="onRazonChange(this.value)">
@@ -757,10 +758,6 @@ body.tema-claro .theme-icon-sol{color:var(--accent)}
       <div class="form-label" style="margin-bottom:4px">DATOS PARA LA NÓMINA SEMANAL</div>
       <div class="item-sub" style="margin-bottom:10px">Sin esto, la persona entra a la hoja
         con todo en cero y en un equipo aparte.</div>
-      <div class="form-group"><label class="form-label" for="ft-equipo">Equipo o cuadrilla</label>
-        <input class="form-input" id="ft-equipo" list="ft-equipos" placeholder="Ej. EQUIPO DAVID, HERRERIA, TALLER"
-               style="text-transform:uppercase">
-        <datalist id="ft-equipos"></datalist></div>
       <div style="display:flex;gap:8px">
         <div class="form-group" style="flex:1"><label class="form-label" for="ft-sueldo-sem">Sueldo semanal ($)</label>
           <input class="form-input" id="ft-sueldo-sem" type="number" step="0.01" placeholder="0.00"></div>
@@ -5004,7 +5001,7 @@ function renderNTab(){
 function llenarEquiposSugeridos(){
   var dl=document.getElementById('ft-equipos');
   if(!dl) return;
-  var eqs={};
+  var eqs={CAMPO:1, TALLER:1, OFICINA:1};
   (trabajadoresData||[]).forEach(function(t){
     var e=(t.cuadrilla||t.area||'').trim().toUpperCase();
     if(e) eqs[e]=1;
@@ -5114,7 +5111,7 @@ function abrirNuevoTrabajador(){
   document.getElementById('ft-persona-id').value='';
   document.getElementById('ft-puesto').value='';
   document.getElementById('ft-sueldo').value='';
-  ['ft-equipo','ft-sueldo-sem','ft-tarifa','ft-viaticos'].forEach(function(id){
+  ['ft-sueldo-sem','ft-tarifa','ft-viaticos'].forEach(function(id){
     var e=document.getElementById(id); if(e) e.value='';
   });
   llenarEquiposSugeridos();
@@ -5145,7 +5142,7 @@ function editTrabajador(id){
   document.getElementById('ft-puesto').value=t.puesto||'';
   document.getElementById('ft-sueldo').value=t.sueldo_diario||'';
   var _set=function(id,v){ var e=document.getElementById(id); if(e) e.value=(v||v===0)?v:''; };
-  _set('ft-equipo', t.cuadrilla||t.area||'');
+  _set('ft-area', t.cuadrilla||t.area||'');
   _set('ft-sueldo-sem', t.sueldo_semanal||'');
   _set('ft-tarifa', t.tarifa_hora||'');
   _set('ft-viaticos', t.viaticos_default||'');
@@ -5288,7 +5285,7 @@ async function saveTrabajador(){
     sueldo_diario:parseFloat(document.getElementById('ft-sueldo').value)||0,
     // La nómina agrupa por cuadrilla en mayúsculas: 'taller' y 'TALLER'
     // serían dos equipos distintos en la hoja semanal.
-    cuadrilla:(document.getElementById('ft-equipo')?.value||'').trim().toUpperCase()||null,
+    cuadrilla:(document.getElementById('ft-area')?.value||'').trim().toUpperCase()||null,
     sueldo_semanal:parseFloat(document.getElementById('ft-sueldo-sem')?.value)||0,
     tarifa_hora:parseFloat(document.getElementById('ft-tarifa')?.value)||0,
     viaticos_default:parseFloat(document.getElementById('ft-viaticos')?.value)||0,
@@ -5298,7 +5295,7 @@ async function saveTrabajador(){
     fecha_ingreso:document.getElementById('ft-ingreso').value||null,
     registro_patronal:document.getElementById('ft-rp-alta').value||null,
     pin_checador: pinVal,
-    area:document.getElementById('ft-area').value||'campo',
+    area:(document.getElementById('ft-area').value||'').trim().toUpperCase()||'CAMPO',
     activo:true
   };
   try{
