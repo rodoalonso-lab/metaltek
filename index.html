@@ -11866,8 +11866,8 @@ return { montar:montar, calcular:calcular, recargar:function(){
   // con monto, sin omitir los ceros. Un comprobante recortado genera dudas;
   // uno completo se explica solo.
   var COLS_IMG = [
-    {k:'personal',   t:'PERSONAL',        w:186, txt:true},
-    {k:'sueldo',     t:'SUELDO',          w:96},
+    {k:'personal',   t:'PERSONAL',        w:186, txt:true,  fijo:true},
+    {k:'sueldo',     t:'SUELDO',          w:96,             fijo:true},
     {k:'viaticos',   t:'VIATICOS',        w:96},
     {k:'pp',         t:'P/P',             w:84},
     {k:'horas',      t:'HORAS',           w:66, dec1:true},
@@ -11877,15 +11877,26 @@ return { montar:montar, calcular:calcular, recargar:function(){
     {k:'descuentos', t:'DESCUENTOS',      w:100},
     {k:'abonos',     t:'ABONOS',          w:86},
     {k:'tarjeta',    t:'TARJETA',         w:98, acento:true},
-    {k:'pago',       t:'PAGO',            w:98, fuerte:true},
-    {k:'por_pagar',  t:'POR PAGAR',       w:100, fuerte:true}
+    {k:'pago',       t:'PAGO',            w:98, fuerte:true, fijo:true},
+    {k:'por_pagar',  t:'POR PAGAR',       w:100, fuerte:true, fijo:true}
   ];
+
+  // Una columna entera en cero no aporta nada y roba ancho: se omite. Las
+  // marcadas 'fijo' siempre van, aunque den cero, porque son el esqueleto
+  // del comprobante.
+  function columnasConMonto(rows){
+    return COLS_IMG.filter(function(c){
+      if(c.fijo) return true;
+      return rows.some(function(r){ return Math.abs(n(r[c.k])) > 0.004; });
+    });
+  }
 
   function dibujarComprobante(dest, cb){
     var T = totales(dest.rows);
     var esG = dest.tipo === 'grupo';
 
-    var W = COLS_IMG.reduce(function(a,c){ return a + c.w; }, 0) + 48;
+    var COLS = columnasConMonto(dest.rows);
+    var W = COLS.reduce(function(a,c){ return a + c.w; }, 0) + 48;
     var HEAD = 96, THEAD = 36, HBANDA = 32, HFILA = 34, HSUB = 40, PIE = 44;
     var H = HEAD + 26 + THEAD + HBANDA + dest.rows.length*HFILA + HSUB + PIE;
 
@@ -11935,7 +11946,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       g.beginPath(); g.moveTo(24, y+THEAD); g.lineTo(W-24, y+THEAD); g.stroke();
       var x = 24;
       g.font = '800 10.5px Barlow, sans-serif';
-      COLS_IMG.forEach(function(c){
+      COLS.forEach(function(c){
         g.fillStyle = TENUE;
         if(c.txt){ g.textAlign='left';  g.fillText(c.t, x+10, y+23); }
         else      { g.textAlign='right'; g.fillText(c.t, x+c.w-10, y+23); }
@@ -11956,7 +11967,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
         g.fillStyle = i%2 ? FILA2 : FILA;
         g.fillRect(24, y, W-48, HFILA);
         var xx = 24;
-        COLS_IMG.forEach(function(c){
+        COLS.forEach(function(c){
           if(c.txt){
             g.fillStyle = TEXTO;
             g.font = '700 13px Barlow, sans-serif';
@@ -11980,7 +11991,7 @@ return { montar:montar, calcular:calcular, recargar:function(){
       g.strokeStyle = ACENTO; g.lineWidth = 1.5;
       g.beginPath(); g.moveTo(24, y); g.lineTo(W-24, y); g.stroke();
       var xs = 24;
-      COLS_IMG.forEach(function(c){
+      COLS.forEach(function(c){
         if(c.txt){
           g.fillStyle = ACENTO;
           g.font = '800 12.5px Barlow, sans-serif';
