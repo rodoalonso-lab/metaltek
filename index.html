@@ -12084,6 +12084,11 @@ return { montar:montar, calcular:calcular, recargar:function(){
       + '<div class="nom-modal-tit" style="text-align:left">'+esc(dest.nombre)+'</div>'
       + '<div id="nom-cv-wrap" style="margin-bottom:14px"></div>'
       + '<button class="btn-primary" data-compartir="1" style="margin-bottom:8px">📲 Compartir</button>'
+      + '<button class="btn-primary" data-copiar="1" style="background:#25D366;color:#063;margin-bottom:8px">'
+      +   '📋 Copiar para WhatsApp</button>'
+      + '<div id="nom-paso-wa" style="display:none;font-size:11px;color:var(--dim);'
+      +   'background:var(--surface);border:1px solid var(--border);border-radius:9px;'
+      +   'padding:9px 11px;margin-bottom:8px;text-align:left;line-height:1.5"></div>'
       + '<button class="btn-secondary" data-bajar="1" style="margin-bottom:8px">⬇ Descargar imagen</button>'
       + '<button class="btn-secondary" data-cerrar="1">Cerrar</button></div>';
     document.body.appendChild(d);
@@ -12092,6 +12097,33 @@ return { montar:montar, calcular:calcular, recargar:function(){
     d.querySelector('#nom-cv-wrap').appendChild(cv);
 
     var conBlob = function(fn){ cv.toBlob(function(b){ if(b) fn(b); }, 'image/png'); };
+
+    // WhatsApp no deja adjuntar una imagen desde un link: wa.me solo acepta
+    // texto. El camino que si funciona en escritorio es copiar el PNG al
+    // portapapeles y pegarlo con Ctrl+V dentro del chat.
+    var copiarAlPortapapeles = function(){
+      var paso = d.querySelector('#nom-paso-wa');
+      if(!navigator.clipboard || !window.ClipboardItem){
+        showToast('Tu navegador no copia imágenes: usa Descargar', true);
+        return;
+      }
+      conBlob(function(b){
+        navigator.clipboard.write([ new ClipboardItem({'image/png': b}) ])
+          .then(function(){
+            showToast('📋 Imagen copiada');
+            if(paso){
+              paso.style.display = 'block';
+              paso.innerHTML = '<b style="color:#25D366">Ya está copiada.</b> '
+                + 'Abre el chat y pégala con <b>Ctrl + V</b>.'
+                + '<button class="btn-secondary" data-abrir-wa="1" '
+                + 'style="width:100%;margin-top:8px">💬 Abrir WhatsApp Web</button>';
+            }
+          })
+          .catch(function(){
+            showToast('No se pudo copiar: usa Descargar', true);
+          });
+      });
+    };
 
     d.addEventListener('click', function(ev){
       if(ev.target === d || ev.target.closest('[data-cerrar]')){ d.remove(); return; }
@@ -12105,18 +12137,25 @@ return { montar:montar, calcular:calcular, recargar:function(){
         return;
       }
 
+      if(ev.target.closest('[data-copiar]')){ copiarAlPortapapeles(); return; }
+
+      if(ev.target.closest('[data-abrir-wa]')){
+        window.open('https://web.whatsapp.com/', '_blank', 'noopener');
+        return;
+      }
+
       if(ev.target.closest('[data-compartir]')){
         conBlob(function(b){
           var file = new File([b], nombreArch, {type:'image/png'});
-          // En celular abre WhatsApp directo; en escritorio no siempre existe,
-          // por eso queda el botón de descargar como salida.
+          // En celular abre la hoja de compartir del sistema y de ahi a
+          // WhatsApp. En escritorio casi nunca existe: ahi se cae al copiado.
           if(navigator.canShare && navigator.canShare({files:[file]})){
             navigator.share({ files:[file],
               title:'Nómina semana '+NOM.sem.semana,
               text:'Nómina semana '+NOM.sem.semana+' · '+dest.nombre })
               .catch(function(){});
           } else {
-            showToast('Tu navegador no comparte archivos: usa Descargar', true);
+            copiarAlPortapapeles();
           }
         });
       }
